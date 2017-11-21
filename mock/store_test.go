@@ -26,8 +26,8 @@ func TestMockStore(t *testing.T) {
 		s := NewStore("foobar", rss)
 		require.NotNil(t, s)
 
-		rss, err := s.Get("/a/b/c")
+		rs, err := s.Get("/a/b/c")
 		require.NoError(t, err)
-		require.Len(t, *rss, 1)
+		require.Len(t, rs, 1)
 	})
 }
