@@ -3,7 +3,6 @@ package rule
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/tidwall/gjson"
 )
@@ -157,16 +156,6 @@ type OpEq struct {
 // Eq creates an Eq operator.
 func Eq(ops ...Operand) func() (Operator, error) {
 	return func() (Operator, error) {
-		for _, op := range ops {
-			switch op.(type) {
-			case *OpValue:
-			case *OpVariable:
-			case *OpTrue:
-			default:
-				return nil, fmt.Errorf("invalid operand type %T for eq operator", op)
-			}
-		}
-
 		return &OpEq{
 			Kind:     "eq",
 			Operands: ops,
