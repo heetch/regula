@@ -1,6 +1,20 @@
-hash: 95450afe5b375ceec4e3741cc49340c648920d1310f0a8aa93d99a5f7dae596d
-updated: 2017-11-21T12:11:19.272558985+01:00
+hash: ebf2995e2a5130aee08bd9cf2a0f1af0214cc4af1f0b0b690123f1621a6872e2
+updated: 2017-11-21T16:08:46.130883759+01:00
 imports:
+- name: github.com/hashicorp/consul
+  version: 9564c2978b59c060aed0657e662a4eb1c6f35356
+  subpackages:
+  - api
+- name: github.com/hashicorp/go-cleanhttp
+  version: 3573b8b52aa7b37b9358d966a898feb387f62437
+- name: github.com/hashicorp/go-rootcerts
+  version: 6bb64b370b90e7ef1fa532be9e591a81c3493e00
+- name: github.com/hashicorp/serf
+  version: bbeddf0b3ab3072a60525afbd6b6f47d33839eee
+  subpackages:
+  - coordinate
+- name: github.com/mitchellh/go-homedir
+  version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/tidwall/gjson
   version: 67e2a63ac70d273b6bc7589f12f07180bc9fc189
 - name: github.com/tidwall/match

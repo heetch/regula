@@ -21,14 +21,14 @@ func NewStore(namespace string, ruleSets map[string]rules.RuleSet) *Store {
 }
 
 // Get ...
-func (s *Store) Get(key string) (*rules.RuleSet, error) {
+func (s *Store) Get(key string) (rules.RuleSet, error) {
 	rs, ok := s.ruleSets[key]
 	if !ok {
 		err := errors.New("Key not found")
 		return nil, err
 	}
 
-	return &rs, nil
+	return rs, nil
 }
 
 // FetchAll ...
