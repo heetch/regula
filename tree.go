@@ -7,6 +7,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// RuleSet ...
+type RuleSet []Rule
+
 // Rule represents the AST of a single rule.
 type Rule struct {
 	Root   Node
