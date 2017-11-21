@@ -3,17 +3,17 @@ package mock
 import (
 	"errors"
 
-	rules "github.com/heetch/rules-engine"
+	"github.com/heetch/rules-engine/rule"
 )
 
 // Store ...
 type Store struct {
 	namespace string
-	ruleSets  map[string]rules.RuleSet
+	ruleSets  map[string]rule.Ruleset
 }
 
 // NewStore ...
-func NewStore(namespace string, ruleSets map[string]rules.RuleSet) *Store {
+func NewStore(namespace string, ruleSets map[string]rule.Ruleset) *Store {
 	return &Store{
 		namespace: namespace,
 		ruleSets:  ruleSets,
@@ -21,7 +21,7 @@ func NewStore(namespace string, ruleSets map[string]rules.RuleSet) *Store {
 }
 
 // Get ...
-func (s *Store) Get(key string) (rules.RuleSet, error) {
+func (s *Store) Get(key string) (rule.Ruleset, error) {
 	rs, ok := s.ruleSets[key]
 	if !ok {
 		err := errors.New("Key not found")
