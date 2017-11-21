@@ -21,9 +21,9 @@ func TestOperands(t *testing.T) {
 		var ops operands
 
 		err := ops.UnmarshalJSON([]byte(`[
-			{"kind": "eq"},
-			{"kind": "eq"},
-			{"kind": "eq"}
+			{"kind": "value"},
+			{"kind": "variable"},
+			{"kind": "true"}
 		]`))
 		require.NoError(t, err)
 		require.Len(t, ops.Ops, 3)
@@ -31,14 +31,14 @@ func TestOperands(t *testing.T) {
 	})
 }
 
-func TestParseOp(t *testing.T) {
+func TestParseOperator(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		_, err := parseOp("", []byte(``))
+		_, err := parseOperator("", []byte(``))
 		require.Error(t, err)
 	})
 
 	t.Run("Unknown kind", func(t *testing.T) {
-		_, err := parseOp("kiwi", []byte(``))
+		_, err := parseOperator("kiwi", []byte(``))
 		require.Error(t, err)
 	})
 
@@ -53,7 +53,38 @@ func TestParseOp(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			n, err := parseOp(test.kind, test.data)
+			n, err := parseOperator(test.kind, test.data)
+			require.NoError(t, err)
+			require.NotNil(t, n)
+			require.IsType(t, test.typ, n)
+		}
+	})
+}
+
+func TestParseOperand(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		_, err := parseOperand("", []byte(``))
+		require.Error(t, err)
+	})
+
+	t.Run("Unknown kind", func(t *testing.T) {
+		_, err := parseOperand("kiwi", []byte(``))
+		require.Error(t, err)
+	})
+
+	t.Run("OK", func(t *testing.T) {
+		tests := []struct {
+			kind string
+			data []byte
+			typ  interface{}
+		}{
+			{"variable", []byte(`{"kind":"variable"}`), new(OpVariable)},
+			{"value", []byte(`{"kind":"value"}`), new(OpValue)},
+			{"true", []byte(`{"kind":"true"}`), new(OpTrue)},
+		}
+
+		for _, test := range tests {
+			n, err := parseOperand(test.kind, test.data)
 			require.NoError(t, err)
 			require.NotNil(t, n)
 			require.IsType(t, test.typ, n)

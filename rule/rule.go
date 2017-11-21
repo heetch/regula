@@ -13,12 +13,12 @@ type Ruleset []Rule
 
 // Rule represents the AST of a single rule.
 type Rule struct {
-	Root   Op      `json:"root"`
-	Result *Result `json:"result"`
+	Root   Operator `json:"root"`
+	Result *Result  `json:"result"`
 }
 
 // New rule.
-func New(fn func() (Op, error), res *Result) (*Rule, error) {
+func New(fn func() (Operator, error), res *Result) (*Rule, error) {
 	op, err := fn()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
-	n, err := parseOp(res.Str, []byte(tree.Root))
+	n, err := parseOperator(res.Str, []byte(tree.Root))
 	if err != nil {
 		return err
 	}
@@ -67,12 +67,40 @@ func Returns(value, typ string) *Result {
 	}
 }
 
-// Op is an operand or an operator.
-type Op interface {
+// Operator represents a rule operator.
+type Operator interface {
 }
 
-func parseOp(kind string, data []byte) (Op, error) {
-	var n Op
+// Operand is used by an operator.
+type Operand interface {
+}
+
+func parseOperand(kind string, data []byte) (Operand, error) {
+	var n Operand
+	var err error
+
+	switch kind {
+	case "value":
+		var v OpValue
+		n = &v
+		err = json.Unmarshal(data, &v)
+	case "variable":
+		var v OpVariable
+		n = &v
+		err = json.Unmarshal(data, &v)
+	case "true":
+		var v OpTrue
+		n = &v
+		err = json.Unmarshal(data, &v)
+	default:
+		err = errors.New("unknown operand kind")
+	}
+
+	return n, err
+}
+
+func parseOperator(kind string, data []byte) (Operator, error) {
+	var n Operator
 	var err error
 
 	switch kind {
@@ -84,16 +112,8 @@ func parseOp(kind string, data []byte) (Op, error) {
 		var in OpIn
 		n = &in
 		err = in.UnmarshalJSON(data)
-	case "value":
-		var v OpValue
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "variable":
-		var v OpVariable
-		n = &v
-		err = json.Unmarshal(data, &v)
 	default:
-		err = errors.New("unknown kind")
+		err = errors.New("unknown operator kind")
 	}
 
 	return n, err
@@ -101,7 +121,7 @@ func parseOp(kind string, data []byte) (Op, error) {
 
 type operands struct {
 	Ops   []json.RawMessage `json:"operands"`
-	Nodes []Op
+	Nodes []Operand
 }
 
 func (o *operands) UnmarshalJSON(data []byte) error {
@@ -112,7 +132,7 @@ func (o *operands) UnmarshalJSON(data []byte) error {
 
 	for _, op := range o.Ops {
 		r := gjson.Get(string(op), "kind")
-		n, err := parseOp(r.Str, []byte(op))
+		n, err := parseOperand(r.Str, []byte(op))
 		if err != nil {
 			return err
 		}
@@ -130,13 +150,13 @@ type nodeOps struct {
 
 // OpEq represents the Eq operator.
 type OpEq struct {
-	Kind     string `json:"kind"`
-	Operands []Op   `json:"operands"`
+	Kind     string    `json:"kind"`
+	Operands []Operand `json:"operands"`
 }
 
 // Eq creates an Eq operator.
-func Eq(ops ...Op) func() (Op, error) {
-	return func() (Op, error) {
+func Eq(ops ...Operand) func() (Operator, error) {
+	return func() (Operator, error) {
 		for _, op := range ops {
 			switch op.(type) {
 			case *OpValue:
@@ -155,7 +175,7 @@ func Eq(ops ...Op) func() (Op, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (n *OpEq) UnmarshalJSON(data []byte) error {
+func (o *OpEq) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -163,27 +183,27 @@ func (n *OpEq) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	n.Kind = node.Kind
-	n.Operands = node.Operands.Nodes
+	o.Kind = node.Kind
+	o.Operands = node.Operands.Nodes
 
 	return nil
 }
 
 // OpIn represents the In operator.
 type OpIn struct {
-	Kind     string `json:"kind"`
-	Operands []Op   `json:"operands"`
+	Kind     string    `json:"kind"`
+	Operands []Operand `json:"operands"`
 }
 
 // In creates an In operator.
-func In(v *OpVariable, vals ...*OpValue) func() (Op, error) {
-	ops := make([]Op, len(vals)+1)
+func In(v *OpVariable, vals ...*OpValue) func() (Operator, error) {
+	ops := make([]Operand, len(vals)+1)
 	ops[0] = v
 	for i := range vals {
 		ops[i+1] = vals[i]
 	}
 
-	return func() (Op, error) {
+	return func() (Operator, error) {
 		o := &OpIn{
 			Kind:     "in",
 			Operands: ops,
