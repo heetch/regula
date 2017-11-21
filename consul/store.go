@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
-	rules "github.com/heetch/rules-engine"
+	"github.com/heetch/rules-engine/rule"
 )
 
 // Store holds a collection of rules by their keys
 type Store struct {
-	ruleSets map[string]rules.RuleSet
+	ruleSets map[string]rule.Ruleset
 }
 
 // NewStore returns a Consul backed store, scoped on a given `keyPrefix`
@@ -31,10 +31,10 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 		return nil, err
 	}
 
-	m := map[string]rules.RuleSet{}
+	m := map[string]rule.Ruleset{}
 
 	for _, v := range pairs {
-		rs, err := parseRuleSet(v.Value)
+		rs, err := parseRuleset(v.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +47,7 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 }
 
 // Get returns a rule-set based on a given key
-func (s *Store) Get(key string) (rules.RuleSet, error) {
+func (s *Store) Get(key string) (rule.Ruleset, error) {
 	rs, ok := s.ruleSets["/"+key]
 
 	if !ok {
@@ -57,8 +57,8 @@ func (s *Store) Get(key string) (rules.RuleSet, error) {
 	return rs, nil
 }
 
-func parseRuleSet(b []byte) (rules.RuleSet, error) {
-	var rs rules.RuleSet
+func parseRuleset(b []byte) (rule.Ruleset, error) {
+	var rs rule.Ruleset
 	if err := json.Unmarshal(b, &rs); err != nil {
 		return nil, err
 	}
