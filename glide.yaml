@@ -1,2 +1,4 @@
 package: github.com/heetch/rules-engine
-import: []
+import:
+- package: github.com/tidwall/gjson
+  version: ~1.0.2
