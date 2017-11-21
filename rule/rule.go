@@ -8,6 +8,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// A Ruleset is list of rules.
+type Ruleset []Rule
+
 // Rule represents the AST of a single rule.
 type Rule struct {
 	Root   Op      `json:"root"`
