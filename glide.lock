@@ -1,6 +1,10 @@
-hash: 95450afe5b375ceec4e3741cc49340c648920d1310f0a8aa93d99a5f7dae596d
-updated: 2017-11-21T12:11:19.272558985+01:00
+hash: ebf2995e2a5130aee08bd9cf2a0f1af0214cc4af1f0b0b690123f1621a6872e2
+updated: 2017-11-21T15:29:47.824061387+01:00
 imports:
+- name: github.com/hashicorp/consul
+  version: 9564c2978b59c060aed0657e662a4eb1c6f35356
+  subpackages:
+  - api
 - name: github.com/tidwall/gjson
   version: 67e2a63ac70d273b6bc7589f12f07180bc9fc189
 - name: github.com/tidwall/match
