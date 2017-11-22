@@ -12,12 +12,12 @@ type Ruleset []Rule
 
 // Rule represents the AST of a single rule.
 type Rule struct {
-	Root   Operator `json:"root"`
-	Result *Result  `json:"result"`
+	Root   Node    `json:"root"`
+	Result *Result `json:"result"`
 }
 
 // New rule.
-func New(fn func() (Operator, error), res *Result) (*Rule, error) {
+func New(fn func() (Node, error), res *Result) (*Rule, error) {
 	op, err := fn()
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
-	n, err := parseOperator(res.Str, []byte(tree.Root))
+	n, err := parseNode(res.Str, []byte(tree.Root))
 	if err != nil {
 		return err
 	}
@@ -58,61 +58,45 @@ type Result struct {
 	Type  string `json:"type"`
 }
 
-// Returns specifies the result returned by the rule if matched.
-func Returns(value, typ string) *Result {
+// ReturnsStr specifies the result returned by the rule if matched.
+func ReturnsStr(value string) *Result {
 	return &Result{
 		Value: value,
-		Type:  typ,
+		Type:  "string",
 	}
 }
 
-// Operator represents a rule operator.
-type Operator interface {
+// Node represents a rule Node.
+type Node interface {
 }
 
-// Operand is used by an operator.
-type Operand interface {
-}
-
-func parseOperand(kind string, data []byte) (Operand, error) {
-	var n Operand
-	var err error
-
-	switch kind {
-	case "value":
-		var v OpValue
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "variable":
-		var v OpVariable
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "true":
-		var v OpTrue
-		n = &v
-		err = json.Unmarshal(data, &v)
-	default:
-		err = errors.New("unknown operand kind")
-	}
-
-	return n, err
-}
-
-func parseOperator(kind string, data []byte) (Operator, error) {
-	var n Operator
+func parseNode(kind string, data []byte) (Node, error) {
+	var n Node
 	var err error
 
 	switch kind {
 	case "eq":
-		var eq OpEq
+		var eq NodeEq
 		n = &eq
 		err = eq.UnmarshalJSON(data)
 	case "in":
-		var in OpIn
+		var in NodeIn
 		n = &in
 		err = in.UnmarshalJSON(data)
+	case "value":
+		var v NodeValue
+		n = &v
+		err = json.Unmarshal(data, &v)
+	case "variable":
+		var v NodeVariable
+		n = &v
+		err = json.Unmarshal(data, &v)
+	case "true":
+		var v NodeTrue
+		n = &v
+		err = json.Unmarshal(data, &v)
 	default:
-		err = errors.New("unknown operator kind")
+		err = errors.New("unknown node kind")
 	}
 
 	return n, err
@@ -120,7 +104,7 @@ func parseOperator(kind string, data []byte) (Operator, error) {
 
 type operands struct {
 	Ops   []json.RawMessage `json:"operands"`
-	Nodes []Operand
+	Nodes []Node
 }
 
 func (o *operands) UnmarshalJSON(data []byte) error {
@@ -131,7 +115,7 @@ func (o *operands) UnmarshalJSON(data []byte) error {
 
 	for _, op := range o.Ops {
 		r := gjson.Get(string(op), "kind")
-		n, err := parseOperand(r.Str, []byte(op))
+		n, err := parseNode(r.Str, []byte(op))
 		if err != nil {
 			return err
 		}
@@ -147,24 +131,24 @@ type nodeOps struct {
 	Operands operands `json:"operands"`
 }
 
-// OpEq represents the Eq operator.
-type OpEq struct {
-	Kind     string    `json:"kind"`
-	Operands []Operand `json:"operands"`
+// NodeEq represents the Eq Node.
+type NodeEq struct {
+	Kind     string `json:"kind"`
+	Operands []Node `json:"operands"`
 }
 
-// Eq creates an Eq operator.
-func Eq(ops ...Operand) func() (Operator, error) {
-	return func() (Operator, error) {
-		return &OpEq{
+// Eq creates an Eq Node.
+func Eq(v1, v2 Node, vN ...Node) func() (Node, error) {
+	return func() (Node, error) {
+		return &NodeEq{
 			Kind:     "eq",
-			Operands: ops,
+			Operands: append([]Node{v1, v2}, vN...),
 		}, nil
 	}
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (o *OpEq) UnmarshalJSON(data []byte) error {
+func (o *NodeEq) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -175,34 +159,39 @@ func (o *OpEq) UnmarshalJSON(data []byte) error {
 	o.Kind = node.Kind
 	o.Operands = node.Operands.Nodes
 
+	if len(node.Operands.Nodes) < 2 {
+		return errors.New("invalid number of operands in eq func")
+	}
+
+	n, err := Eq(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)()
+	if err != nil {
+		return err
+	}
+
+	*o = *(n.(*NodeEq))
+
 	return nil
 }
 
-// OpIn represents the In operator.
-type OpIn struct {
-	Kind     string    `json:"kind"`
-	Operands []Operand `json:"operands"`
+// NodeIn represents the In Node.
+type NodeIn struct {
+	Kind     string `json:"kind"`
+	Operands []Node `json:"operands"`
 }
 
-// In creates an In operator.
-func In(v *OpVariable, vals ...*OpValue) func() (Operator, error) {
-	ops := make([]Operand, len(vals)+1)
-	ops[0] = v
-	for i := range vals {
-		ops[i+1] = vals[i]
-	}
-
-	return func() (Operator, error) {
-		o := &OpIn{
+// In creates an In Node.
+func In(v, e1 Node, eN ...Node) func() (Node, error) {
+	return func() (Node, error) {
+		o := &NodeIn{
 			Kind:     "in",
-			Operands: ops,
+			Operands: append([]Node{v, e1}, eN...),
 		}
 		return o, nil
 	}
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (n *OpIn) UnmarshalJSON(data []byte) error {
+func (i *NodeIn) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -210,52 +199,62 @@ func (n *OpIn) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	n.Kind = node.Kind
-	n.Operands = node.Operands.Nodes
+	i.Kind = node.Kind
+
+	if len(node.Operands.Nodes) < 2 {
+		return errors.New("invalid number of operands in in func")
+	}
+
+	n, err := In(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)()
+	if err != nil {
+		return err
+	}
+
+	*i = *(n.(*NodeIn))
 
 	return nil
 }
 
-// Variable creates the variable operand.
-func Variable(name, typ string) *OpVariable {
-	return &OpVariable{
-		Kind: "variable",
-		Type: typ,
-		Name: name,
-	}
-}
-
-// OpVariable represents the variable operand.
-type OpVariable struct {
+// NodeVariable represents the variable node.
+type NodeVariable struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// Value creates the value operand.
-func Value(value, typ string) *OpValue {
-	return &OpValue{
-		Kind:  "value",
-		Type:  typ,
-		Value: value,
+// VarStr creates a variable node of type string.
+func VarStr(name string) *NodeVariable {
+	return &NodeVariable{
+		Kind: "variable",
+		Type: "string",
+		Name: name,
 	}
 }
 
-// OpValue represents the value operand.
-type OpValue struct {
+// NodeValue represents the value node.
+type NodeValue struct {
 	Kind  string `json:"kind"`
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
-// True creates the true operand.
-func True() *OpTrue {
-	return &OpTrue{
-		Kind: "true",
+// ValStr creates a value node of type string.
+func ValStr(value string) *NodeValue {
+	return &NodeValue{
+		Kind:  "value",
+		Type:  "string",
+		Value: value,
 	}
 }
 
-// OpTrue represents the true operand.
-type OpTrue struct {
+// NodeTrue represents the true node.
+type NodeTrue struct {
 	Kind string `json:"kind"`
+}
+
+// True creates a true node.
+func True() *NodeTrue {
+	return &NodeTrue{
+		Kind: "true",
+	}
 }

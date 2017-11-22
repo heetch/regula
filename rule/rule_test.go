@@ -23,22 +23,24 @@ func TestOperands(t *testing.T) {
 		err := ops.UnmarshalJSON([]byte(`[
 			{"kind": "value"},
 			{"kind": "variable"},
-			{"kind": "true"}
+			{"kind": "true"},
+			{"kind": "eq","operands": [{"kind": "value"}, {"kind": "variable"}]},
+			{"kind": "in","operands": [{"kind": "value"}, {"kind": "variable"}]}
 		]`))
 		require.NoError(t, err)
-		require.Len(t, ops.Ops, 3)
-		require.Len(t, ops.Nodes, 3)
+		require.Len(t, ops.Ops, 5)
+		require.Len(t, ops.Nodes, 5)
 	})
 }
 
-func TestParseOperator(t *testing.T) {
+func TestParseNode(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		_, err := parseOperator("", []byte(``))
+		_, err := parseNode("", []byte(``))
 		require.Error(t, err)
 	})
 
 	t.Run("Unknown kind", func(t *testing.T) {
-		_, err := parseOperator("kiwi", []byte(``))
+		_, err := parseNode("kiwi", []byte(``))
 		require.Error(t, err)
 	})
 
@@ -48,12 +50,15 @@ func TestParseOperator(t *testing.T) {
 			data []byte
 			typ  interface{}
 		}{
-			{"eq", []byte(`{"kind":"eq"}`), new(OpEq)},
-			{"in", []byte(`{"kind":"in"}`), new(OpIn)},
+			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "variable"}]}`), new(NodeEq)},
+			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "variable"}]}`), new(NodeIn)},
+			{"variable", []byte(`{"kind":"variable"}`), new(NodeVariable)},
+			{"value", []byte(`{"kind":"value"}`), new(NodeValue)},
+			{"true", []byte(`{"kind":"true"}`), new(NodeTrue)},
 		}
 
 		for _, test := range tests {
-			n, err := parseOperator(test.kind, test.data)
+			n, err := parseNode(test.kind, test.data)
 			require.NoError(t, err)
 			require.NotNil(t, n)
 			require.IsType(t, test.typ, n)
@@ -61,38 +66,7 @@ func TestParseOperator(t *testing.T) {
 	})
 }
 
-func TestParseOperand(t *testing.T) {
-	t.Run("Empty", func(t *testing.T) {
-		_, err := parseOperand("", []byte(``))
-		require.Error(t, err)
-	})
-
-	t.Run("Unknown kind", func(t *testing.T) {
-		_, err := parseOperand("kiwi", []byte(``))
-		require.Error(t, err)
-	})
-
-	t.Run("OK", func(t *testing.T) {
-		tests := []struct {
-			kind string
-			data []byte
-			typ  interface{}
-		}{
-			{"variable", []byte(`{"kind":"variable"}`), new(OpVariable)},
-			{"value", []byte(`{"kind":"value"}`), new(OpValue)},
-			{"true", []byte(`{"kind":"true"}`), new(OpTrue)},
-		}
-
-		for _, test := range tests {
-			n, err := parseOperand(test.kind, test.data)
-			require.NoError(t, err)
-			require.NotNil(t, n)
-			require.IsType(t, test.typ, n)
-		}
-	})
-}
-
-func TestRule(t *testing.T) {
+func TestRuleUnmarshalling(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		var rule Rule
 
@@ -112,25 +86,41 @@ func TestRule(t *testing.T) {
 						"kind": "value",
 						"type": "string",
 						"value": "bar"
+					},
+					{
+						"kind": "eq",
+						"operands": [
+							{
+								"kind": "variable",
+								"type": "string",
+								"name": "foo"
+							},
+							{
+								"kind": "value",
+								"type": "string",
+								"value": "bar"
+							}
+						]
 					}
 				]
 			}
 		}`))
 		require.NoError(t, err)
 		require.Equal(t, "foo", rule.Result.Value)
-		require.IsType(t, new(OpEq), rule.Root)
-		eq := rule.Root.(*OpEq)
-		require.Len(t, eq.Operands, 2)
-		require.IsType(t, new(OpVariable), eq.Operands[0])
-		require.IsType(t, new(OpValue), eq.Operands[1])
+		require.IsType(t, new(NodeEq), rule.Root)
+		eq := rule.Root.(*NodeEq)
+		require.Len(t, eq.Operands, 3)
+		require.IsType(t, new(NodeVariable), eq.Operands[0])
+		require.IsType(t, new(NodeValue), eq.Operands[1])
+		require.IsType(t, new(NodeEq), eq.Operands[2])
 	})
 }
 
 func TestRuleMarshalling(t *testing.T) {
 	t.Run("Eq", func(t *testing.T) {
 		r, err := New(
-			Eq(Variable("foo", "string"), Value("bar", "string"), True()),
-			Returns("value", "string"),
+			Eq(VarStr("foo"), ValStr("bar")),
+			ReturnsStr("value"),
 		)
 		require.NoError(t, err)
 
@@ -142,8 +132,7 @@ func TestRuleMarshalling(t *testing.T) {
 					"kind": "eq",
 					"operands": [
 						{"kind": "variable", "type": "string", "name": "foo"},
-						{"kind": "value", "type": "string", "value": "bar"},
-						{"kind": "true"}
+						{"kind": "value", "type": "string", "value": "bar"}
 					]
 				},
 				"result": {
@@ -156,8 +145,8 @@ func TestRuleMarshalling(t *testing.T) {
 
 	t.Run("In", func(t *testing.T) {
 		r, err := New(
-			In(Variable("foo", "string"), Value("bar", "string"), Value("foo", "string")),
-			Returns("value", "string"),
+			In(VarStr("foo"), ValStr("bar"), ValStr("foo")),
+			ReturnsStr("value"),
 		)
 		require.NoError(t, err)
 
