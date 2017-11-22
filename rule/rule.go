@@ -17,14 +17,9 @@ type Rule struct {
 }
 
 // New rule.
-func New(fn func() (Node, error), res *Result) (*Rule, error) {
-	op, err := fn()
-	if err != nil {
-		return nil, err
-	}
-
+func New(node Node, res *Result) (*Rule, error) {
 	return &Rule{
-		Root:   op,
+		Root:   node,
 		Result: res,
 	}, nil
 }
@@ -68,6 +63,7 @@ func ReturnsStr(value string) *Result {
 
 // Node represents a rule Node.
 type Node interface {
+	Eval(map[string]string) (*Value, error)
 }
 
 func parseNode(kind string, data []byte) (Node, error) {
@@ -138,17 +134,41 @@ type NodeEq struct {
 }
 
 // Eq creates an Eq Node.
-func Eq(v1, v2 Node, vN ...Node) func() (Node, error) {
-	return func() (Node, error) {
-		return &NodeEq{
-			Kind:     "eq",
-			Operands: append([]Node{v1, v2}, vN...),
-		}, nil
+func Eq(v1, v2 Node, vN ...Node) *NodeEq {
+	return &NodeEq{
+		Kind:     "eq",
+		Operands: append([]Node{v1, v2}, vN...),
 	}
 }
 
+// Eval evaluates into true if all the operands are equal.
+func (n *NodeEq) Eval(ctx map[string]string) (*Value, error) {
+	if len(n.Operands) < 2 {
+		return nil, errors.New("invalid number of operands in eq func")
+	}
+
+	opA := n.Operands[0]
+	vA, err := opA.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.Operands); i++ {
+		vB, err := n.Operands[i].Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if !vA.Equal(vB) {
+			return NewBoolValue(false), nil
+		}
+	}
+
+	return NewBoolValue(true), nil
+}
+
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (o *NodeEq) UnmarshalJSON(data []byte) error {
+func (n *NodeEq) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -156,20 +176,12 @@ func (o *NodeEq) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	o.Kind = node.Kind
-	o.Operands = node.Operands.Nodes
-
 	if len(node.Operands.Nodes) < 2 {
 		return errors.New("invalid number of operands in eq func")
 	}
 
-	n, err := Eq(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)()
-	if err != nil {
-		return err
-	}
-
-	*o = *(n.(*NodeEq))
-
+	eq := Eq(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
+	*n = *eq
 	return nil
 }
 
@@ -180,18 +192,41 @@ type NodeIn struct {
 }
 
 // In creates an In Node.
-func In(v, e1 Node, eN ...Node) func() (Node, error) {
-	return func() (Node, error) {
-		o := &NodeIn{
-			Kind:     "in",
-			Operands: append([]Node{v, e1}, eN...),
-		}
-		return o, nil
+func In(v, e1 Node, eN ...Node) *NodeIn {
+	return &NodeIn{
+		Kind:     "in",
+		Operands: append([]Node{v, e1}, eN...),
 	}
 }
 
+// Eval evaluates to true if the first operand is equal to one of the others.
+func (n *NodeIn) Eval(ctx map[string]string) (*Value, error) {
+	if len(n.Operands) < 2 {
+		return nil, errors.New("invalid number of operands in eq func")
+	}
+
+	toFind := n.Operands[0]
+	vA, err := toFind.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.Operands); i++ {
+		vB, err := n.Operands[i].Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if vA.Equal(vB) {
+			return NewBoolValue(true), nil
+		}
+	}
+
+	return NewBoolValue(false), nil
+}
+
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (i *NodeIn) UnmarshalJSON(data []byte) error {
+func (n *NodeIn) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -199,18 +234,13 @@ func (i *NodeIn) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	i.Kind = node.Kind
-
 	if len(node.Operands.Nodes) < 2 {
 		return errors.New("invalid number of operands in in func")
 	}
 
-	n, err := In(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)()
-	if err != nil {
-		return err
-	}
+	in := In(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
 
-	*i = *(n.(*NodeIn))
+	*n = *in
 
 	return nil
 }
@@ -231,6 +261,20 @@ func VarStr(name string) *NodeVariable {
 	}
 }
 
+// Eval evaluates to the value of the variable contained in the given context.
+// If not found it returns an error.
+func (n *NodeVariable) Eval(ctx map[string]string) (*Value, error) {
+	val, ok := ctx[n.Name]
+	if !ok {
+		return nil, errors.New("variable not found in given context")
+	}
+
+	return &Value{
+		Type: n.Type,
+		Data: val,
+	}, nil
+}
+
 // NodeValue represents the value node.
 type NodeValue struct {
 	Kind  string `json:"kind"`
@@ -247,6 +291,14 @@ func ValStr(value string) *NodeValue {
 	}
 }
 
+// Eval evaluates into a value of the same type and value as the NodeValue.
+func (n *NodeValue) Eval(map[string]string) (*Value, error) {
+	return &Value{
+		Type: n.Type,
+		Data: n.Value,
+	}, nil
+}
+
 // NodeTrue represents the true node.
 type NodeTrue struct {
 	Kind string `json:"kind"`
@@ -257,4 +309,9 @@ func True() *NodeTrue {
 	return &NodeTrue{
 		Kind: "true",
 	}
+}
+
+// Eval always evaluates to true.
+func (v *NodeTrue) Eval(map[string]string) (*Value, error) {
+	return NewBoolValue(true), nil
 }
