@@ -18,7 +18,7 @@ func TestStore(t *testing.T) {
 		insert(
 			"a/b/c",
 			[]byte(
-				`[{"result":{"value":"foo"},"root":{"kind":"eq"}},{"result":{"value":"foo"},"root":{"kind":"eq"}}]`,
+				`[{"result":{"value":"foo"},"root":{"kind":"eq","operands":[{"kind":"value"},{"kind": "value"}]}},{"result":{"value":"foo"},"root":{"kind":"eq","operands":[{"kind":"value"},{"kind": "value"}]}}]`,
 			))
 
 		s, err := NewStore("127.0.0.1:8500", keyPrefix)

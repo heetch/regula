@@ -2,8 +2,9 @@ package consul
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
+
+	"github.com/heetch/rules-engine"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/heetch/rules-engine/rule"
@@ -51,7 +52,7 @@ func (s *Store) Get(key string) (rule.Ruleset, error) {
 	rs, ok := s.ruleSets["/"+key]
 
 	if !ok {
-		return nil, errors.New("Key not found")
+		return nil, rules.ErrRulesetNotFound
 	}
 
 	return rs, nil
