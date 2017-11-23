@@ -1,5 +1,5 @@
-hash: ebf2995e2a5130aee08bd9cf2a0f1af0214cc4af1f0b0b690123f1621a6872e2
-updated: 2017-11-21T16:08:46.130883759+01:00
+hash: 859b8fb8fd4eea8c47ea6fafcfaa5c0d8cde727c1680635939706d67980a3714
+updated: 2017-11-23T12:22:36.423508631+01:00
 imports:
 - name: github.com/hashicorp/consul
   version: 9564c2978b59c060aed0657e662a4eb1c6f35356
@@ -15,6 +15,8 @@ imports:
   - coordinate
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/tidwall/gjson
   version: 67e2a63ac70d273b6bc7589f12f07180bc9fc189
 - name: github.com/tidwall/match
