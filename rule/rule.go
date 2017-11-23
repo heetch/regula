@@ -1,3 +1,4 @@
+// Package rule provides primitives for creating and evaluating logical rules.
 package rule
 
 import (
@@ -17,11 +18,11 @@ type Rule struct {
 }
 
 // New rule.
-func New(node Node, res *Result) (*Rule, error) {
+func New(node Node, res *Result) *Rule {
 	return &Rule{
 		Root:   node,
 		Result: res,
-	}, nil
+	}
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

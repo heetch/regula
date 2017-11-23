@@ -6,8 +6,8 @@ import (
 	"strconv"
 )
 
-// Errors
 var (
+	// ErrNoMatch is returned when the rule doesn't match the given context.
 	ErrNoMatch = errors.New("rule doesn't match the given context")
 )
 
@@ -22,6 +22,14 @@ func NewBoolValue(value bool) *Value {
 	return &Value{
 		Type: "bool",
 		Data: strconv.FormatBool(value),
+	}
+}
+
+// NewStringValue creates a string type value.
+func NewStringValue(value string) *Value {
+	return &Value{
+		Type: "string",
+		Data: value,
 	}
 }
 

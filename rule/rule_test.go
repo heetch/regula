@@ -7,6 +7,209 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockNode struct {
+	val       *Value
+	err       error
+	evalFn    func(ctx map[string]string) (*Value, error)
+	evalCount int
+	lastCtx   map[string]string
+}
+
+func (m *mockNode) Eval(ctx map[string]string) (*Value, error) {
+	m.evalCount++
+	m.lastCtx = ctx
+
+	if m.evalFn != nil {
+		return m.evalFn(ctx)
+	}
+
+	return m.val, m.err
+}
+
+func (m *mockNode) MarshalJSON() ([]byte, error) {
+	return []byte(`{"kind": "mock"}`), nil
+}
+
+func TestRuleUnmarshalling(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		var rule Rule
+
+		err := rule.UnmarshalJSON([]byte(`{
+			"result": {
+				"value": "foo"
+			},
+			"root": {
+				"kind": "eq",
+				"operands": [
+					{
+						"kind": "value",
+						"type": "string",
+						"value": "bar"
+					},
+					{
+						"kind": "eq",
+						"operands": [
+							{
+								"kind": "variable",
+								"type": "string",
+								"name": "foo"
+							},
+							{
+								"kind": "value",
+								"type": "string",
+								"value": "bar"
+							}
+						]
+					}
+				]
+			}
+		}`))
+		require.NoError(t, err)
+		require.Equal(t, "foo", rule.Result.Value)
+		require.IsType(t, new(NodeEq), rule.Root)
+		eq := rule.Root.(*NodeEq)
+		require.Len(t, eq.Operands, 2)
+		require.IsType(t, new(NodeValue), eq.Operands[0])
+		require.IsType(t, new(NodeEq), eq.Operands[1])
+	})
+}
+
+func TestEq(t *testing.T) {
+	t.Run("Marshalling", func(t *testing.T) {
+		eq := Eq(new(mockNode), new(mockNode))
+
+		raw, err := json.Marshal(eq)
+		require.NoError(t, err)
+		require.JSONEq(t, `
+			{
+				"kind": "eq",
+				"operands": [
+					{"kind": "mock"},
+					{"kind": "mock"}
+				]
+			}
+		`, string(raw))
+	})
+
+	t.Run("Unmarshalling", func(t *testing.T) {
+		var eq NodeEq
+
+		// enough operands
+		err := eq.UnmarshalJSON([]byte(`
+			{
+				"kind": "eq",
+				"operands": [
+					{"kind": "variable"},
+					{"kind": "value"}
+				]
+			}
+		`))
+		require.NoError(t, err)
+		require.Len(t, eq.Operands, 2)
+
+		err = eq.UnmarshalJSON([]byte(`
+			{
+				"kind": "eq",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`))
+		require.Error(t, err)
+	})
+
+	t.Run("Eval/OK", func(t *testing.T) {
+		m1 := mockNode{val: NewBoolValue(true)}
+		m2 := mockNode{val: NewBoolValue(true)}
+		ctx := map[string]string{"foo": "bar"}
+		eq := Eq(&m1, &m2)
+		val, err := eq.Eval(ctx)
+		require.NoError(t, err)
+		require.Equal(t, NewBoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+		require.Equal(t, ctx, m1.lastCtx)
+		require.Equal(t, ctx, m2.lastCtx)
+	})
+
+	t.Run("Eval/Fail", func(t *testing.T) {
+		m1 := mockNode{val: NewBoolValue(true)}
+		m2 := mockNode{val: NewBoolValue(false)}
+		eq := Eq(&m1, &m2)
+		val, err := eq.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, NewBoolValue(false), val)
+	})
+}
+
+func TestIn(t *testing.T) {
+	t.Run("Marshalling", func(t *testing.T) {
+		eq := In(new(mockNode), new(mockNode))
+
+		raw, err := json.Marshal(eq)
+		require.NoError(t, err)
+		require.JSONEq(t, `
+			{
+				"kind": "in",
+				"operands": [
+					{"kind": "mock"},
+					{"kind": "mock"}
+				]
+			}
+		`, string(raw))
+	})
+
+	t.Run("Unmarshalling", func(t *testing.T) {
+		var in NodeIn
+
+		// enough operands
+		err := in.UnmarshalJSON([]byte(`
+			{
+				"kind": "in",
+				"operands": [
+					{"kind": "variable"},
+					{"kind": "value"}
+				]
+			}
+		`))
+		require.NoError(t, err)
+		require.Len(t, in.Operands, 2)
+
+		err = in.UnmarshalJSON([]byte(`
+			{
+				"kind": "in",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`))
+		require.Error(t, err)
+	})
+
+	t.Run("Eval/OK", func(t *testing.T) {
+		m1 := mockNode{val: NewBoolValue(true)}
+		m2 := mockNode{val: NewBoolValue(true)}
+		ctx := map[string]string{"foo": "bar"}
+		in := In(&m1, &m2)
+		val, err := in.Eval(ctx)
+		require.NoError(t, err)
+		require.Equal(t, NewBoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+		require.Equal(t, ctx, m1.lastCtx)
+		require.Equal(t, ctx, m2.lastCtx)
+	})
+
+	t.Run("Eval/Fail", func(t *testing.T) {
+		m1 := mockNode{val: NewBoolValue(true)}
+		m2 := mockNode{val: NewBoolValue(false)}
+		eq := In(&m1, &m2)
+		val, err := eq.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, NewBoolValue(false), val)
+	})
+}
+
 func TestOperands(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		var ops operands
@@ -66,107 +269,27 @@ func TestParseNode(t *testing.T) {
 	})
 }
 
-func TestRuleUnmarshalling(t *testing.T) {
+func TestVariable(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		var rule Rule
-
-		err := rule.UnmarshalJSON([]byte(`{
-			"result": {
-				"value": "foo"
-			},
-			"root": {
-				"kind": "eq",
-				"operands": [
-					{
-						"kind": "variable",
-						"type": "string",
-						"name": "foo"
-					},
-					{
-						"kind": "value",
-						"type": "string",
-						"value": "bar"
-					},
-					{
-						"kind": "eq",
-						"operands": [
-							{
-								"kind": "variable",
-								"type": "string",
-								"name": "foo"
-							},
-							{
-								"kind": "value",
-								"type": "string",
-								"value": "bar"
-							}
-						]
-					}
-				]
-			}
-		}`))
+		v := VarStr("foo")
+		val, err := v.Eval(map[string]string{
+			"foo": "bar",
+		})
 		require.NoError(t, err)
-		require.Equal(t, "foo", rule.Result.Value)
-		require.IsType(t, new(NodeEq), rule.Root)
-		eq := rule.Root.(*NodeEq)
-		require.Len(t, eq.Operands, 3)
-		require.IsType(t, new(NodeVariable), eq.Operands[0])
-		require.IsType(t, new(NodeValue), eq.Operands[1])
-		require.IsType(t, new(NodeEq), eq.Operands[2])
-	})
-}
-
-func TestRuleMarshalling(t *testing.T) {
-	t.Run("Eq", func(t *testing.T) {
-		r, err := New(
-			Eq(VarStr("foo"), ValStr("bar")),
-			ReturnsStr("value"),
-		)
-		require.NoError(t, err)
-
-		raw, err := json.Marshal(r)
-		require.NoError(t, err)
-		require.JSONEq(t, `
-			{
-				"root": {
-					"kind": "eq",
-					"operands": [
-						{"kind": "variable", "type": "string", "name": "foo"},
-						{"kind": "value", "type": "string", "value": "bar"}
-					]
-				},
-				"result": {
-					"type": "string",
-					"value": "value"
-				}
-			}
-		`, string(raw))
+		require.Equal(t, NewStringValue("bar"), val)
 	})
 
-	t.Run("In", func(t *testing.T) {
-		r, err := New(
-			In(VarStr("foo"), ValStr("bar"), ValStr("foo")),
-			ReturnsStr("value"),
-		)
-		require.NoError(t, err)
+	t.Run("Not found", func(t *testing.T) {
+		v := VarStr("foo")
+		_, err := v.Eval(map[string]string{
+			"boo": "bar",
+		})
+		require.Error(t, err)
+	})
 
-		raw, err := json.Marshal(r)
-		require.NoError(t, err)
-		require.JSONEq(t, `
-			{
-				"root": {
-					"kind": "in",
-					"operands": [
-						{"kind": "variable", "type": "string", "name": "foo"},
-						{"kind": "value", "type": "string", "value": "bar"},
-						{"kind": "value", "type": "string", "value": "foo"}
-					]
-				},
-				"result": {
-					"type": "string",
-					"value": "value"
-				}
-			}
-		`, string(raw))
+	t.Run("Empty context", func(t *testing.T) {
+		v := VarStr("foo")
+		_, err := v.Eval(nil)
+		require.Error(t, err)
 	})
 }
