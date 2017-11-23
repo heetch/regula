@@ -45,28 +45,3 @@ func (v *Value) compare(op token.Token, other *Value) bool {
 func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
-
-// Eval evaluates the rule against the given context.
-// If it matches it returns a result, otherwise it returns ErrNoMatch
-// or any encountered error.
-func (r *Rule) Eval(ctx map[string]string) (*Result, error) {
-	value, err := r.Root.Eval(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if value.Type != "bool" {
-		return nil, errors.New("invalid rule returning non boolean value")
-	}
-
-	ok, err := strconv.ParseBool(value.Data)
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		return nil, ErrNoMatch
-	}
-
-	return r.Result, nil
-}
