@@ -9,9 +9,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// A Ruleset is list of rules.
-type Ruleset []Rule
-
 // Rule represents the AST of a single rule.
 type Rule struct {
 	Root   Node    `json:"root"`
@@ -86,4 +83,20 @@ func ReturnsStr(value string) *Result {
 		Value: value,
 		Type:  "string",
 	}
+}
+
+// A Ruleset is list of rules.
+type Ruleset []*Rule
+
+// Eval evaluates every rule of the ruleset until one matches.
+// It returns rule.ErrNoMatch if no rule matches the given context.
+func (r Ruleset) Eval(ctx map[string]string) (*Result, error) {
+	for _, rl := range r {
+		res, err := rl.Eval(ctx)
+		if err != ErrNoMatch {
+			return res, err
+		}
+	}
+
+	return nil, ErrNoMatch
 }

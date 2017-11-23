@@ -94,3 +94,38 @@ func TestRuleEval(t *testing.T) {
 		}
 	})
 }
+
+func TestRulesetEval(t *testing.T) {
+	t.Run("Match", func(t *testing.T) {
+		r := Ruleset{
+			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
+			New(Eq(ValStr("foo"), ValStr("foo")), ReturnsStr("second")),
+		}
+
+		res, err := r.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, "second", res.Value)
+	})
+
+	t.Run("No match", func(t *testing.T) {
+		r := Ruleset{
+			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
+			New(Eq(ValStr("bar"), ValStr("foo")), ReturnsStr("second")),
+		}
+
+		_, err := r.Eval(nil)
+		require.Equal(t, ErrNoMatch, err)
+	})
+
+	t.Run("Default", func(t *testing.T) {
+		r := Ruleset{
+			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
+			New(Eq(ValStr("bar"), ValStr("foo")), ReturnsStr("second")),
+			New(True(), ReturnsStr("default")),
+		}
+
+		res, err := r.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, "default", res.Value)
+	})
+}
