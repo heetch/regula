@@ -1,8 +1,7 @@
 package mock
 
 import (
-	"errors"
-
+	"github.com/heetch/rules-engine"
 	"github.com/heetch/rules-engine/rule"
 )
 
@@ -24,14 +23,9 @@ func NewStore(namespace string, ruleSets map[string]rule.Ruleset) *Store {
 func (s *Store) Get(key string) (rule.Ruleset, error) {
 	rs, ok := s.ruleSets[key]
 	if !ok {
-		err := errors.New("Key not found")
+		err := rules.ErrRulesetNotFound
 		return nil, err
 	}
 
 	return rs, nil
-}
-
-// FetchAll ...
-func (s *Store) FetchAll() error {
-	return nil
 }

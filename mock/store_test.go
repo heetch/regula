@@ -3,22 +3,17 @@ package mock
 import (
 	"testing"
 
-	rules "github.com/heetch/rules-engine"
+	"github.com/heetch/rules-engine/rule"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockStore(t *testing.T) {
-	rss := map[string]rules.RuleSet{
-		"/a/b/c": rules.RuleSet{
-			rules.Rule{
-				Result: rules.Result{
-					Value: "abc",
-					Type:  "string",
-				},
-				Root: &rules.NodeEq{
-					Kind: "eq",
-				},
-			},
+	rss := map[string]rule.Ruleset{
+		"/a/b/c": rule.Ruleset{
+			rule.New(
+				rule.True(),
+				rule.ReturnsStr("matched"),
+			),
 		},
 	}
 
