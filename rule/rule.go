@@ -9,6 +9,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// Params is passed on rule evaluation.
+type Params map[string]string
+
 // Rule represents the AST of a single rule.
 type Rule struct {
 	Root   Node    `json:"root"`
@@ -49,8 +52,8 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // Eval evaluates the rule against the given context.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(ctx map[string]string) (*Result, error) {
-	value, err := r.Root.Eval(ctx)
+func (r *Rule) Eval(params Params) (*Result, error) {
+	value, err := r.Root.Eval(params)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +93,9 @@ type Ruleset []*Rule
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r Ruleset) Eval(ctx map[string]string) (*Result, error) {
+func (r Ruleset) Eval(params Params) (*Result, error) {
 	for _, rl := range r {
-		res, err := rl.Eval(ctx)
+		res, err := rl.Eval(params)
 		if err != ErrNoMatch {
 			return res, err
 		}

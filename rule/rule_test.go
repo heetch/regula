@@ -53,12 +53,12 @@ func TestRuleUnmarshalling(t *testing.T) {
 func TestRuleEval(t *testing.T) {
 	t.Run("Match", func(t *testing.T) {
 		tests := []struct {
-			node Node
-			ctx  map[string]string
+			node   Node
+			params Params
 		}{
 			{Eq(ValStr("foo"), ValStr("foo")), nil},
-			{Eq(ValStr("foo"), VarStr("bar")), map[string]string{"bar": "foo"}},
-			{In(ValStr("foo"), VarStr("bar")), map[string]string{"bar": "foo"}},
+			{Eq(ValStr("foo"), VarStr("bar")), Params{"bar": "foo"}},
+			{In(ValStr("foo"), VarStr("bar")), Params{"bar": "foo"}},
 			{
 				Eq(
 					Eq(ValStr("bar"), ValStr("bar")),
@@ -71,7 +71,7 @@ func TestRuleEval(t *testing.T) {
 
 		for _, test := range tests {
 			r := New(test.node, ReturnsStr("matched"))
-			res, err := r.Eval(test.ctx)
+			res, err := r.Eval(test.params)
 			require.NoError(t, err)
 			require.Equal(t, "matched", res.Value)
 			require.Equal(t, "string", res.Type)
@@ -80,16 +80,16 @@ func TestRuleEval(t *testing.T) {
 
 	t.Run("Invalid return", func(t *testing.T) {
 		tests := []struct {
-			node Node
-			ctx  map[string]string
+			node   Node
+			params Params
 		}{
 			{ValStr("foo"), nil},
-			{VarStr("bar"), map[string]string{"bar": "foo"}},
+			{VarStr("bar"), Params{"bar": "foo"}},
 		}
 
 		for _, test := range tests {
 			r := New(test.node, ReturnsStr("matched"))
-			_, err := r.Eval(test.ctx)
+			_, err := r.Eval(test.params)
 			require.Error(t, err)
 		}
 	})

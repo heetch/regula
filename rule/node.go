@@ -9,7 +9,7 @@ import (
 
 // Node represents a rule Node.
 type Node interface {
-	Eval(map[string]string) (*Value, error)
+	Eval(Params) (*Value, error)
 }
 
 func parseNode(kind string, data []byte) (Node, error) {
@@ -88,19 +88,19 @@ func Eq(v1, v2 Node, vN ...Node) *NodeEq {
 }
 
 // Eval evaluates into true if all the operands are equal.
-func (n *NodeEq) Eval(ctx map[string]string) (*Value, error) {
+func (n *NodeEq) Eval(params Params) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in eq func")
 	}
 
 	opA := n.Operands[0]
-	vA, err := opA.Eval(ctx)
+	vA, err := opA.Eval(params)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := 1; i < len(n.Operands); i++ {
-		vB, err := n.Operands[i].Eval(ctx)
+		vB, err := n.Operands[i].Eval(params)
 		if err != nil {
 			return nil, err
 		}
@@ -146,19 +146,19 @@ func In(v, e1 Node, eN ...Node) *NodeIn {
 }
 
 // Eval evaluates to true if the first operand is equal to one of the others.
-func (n *NodeIn) Eval(ctx map[string]string) (*Value, error) {
+func (n *NodeIn) Eval(params Params) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in eq func")
 	}
 
 	toFind := n.Operands[0]
-	vA, err := toFind.Eval(ctx)
+	vA, err := toFind.Eval(params)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := 1; i < len(n.Operands); i++ {
-		vB, err := n.Operands[i].Eval(ctx)
+		vB, err := n.Operands[i].Eval(params)
 		if err != nil {
 			return nil, err
 		}
@@ -209,8 +209,8 @@ func VarStr(name string) *NodeVariable {
 
 // Eval evaluates to the value of the variable contained in the given context.
 // If not found it returns an error.
-func (n *NodeVariable) Eval(ctx map[string]string) (*Value, error) {
-	val, ok := ctx[n.Name]
+func (n *NodeVariable) Eval(params Params) (*Value, error) {
+	val, ok := params[n.Name]
 	if !ok {
 		return nil, errors.New("variable not found in given context")
 	}
@@ -238,7 +238,7 @@ func ValStr(value string) *NodeValue {
 }
 
 // Eval evaluates into a value of the same type and value as the NodeValue.
-func (n *NodeValue) Eval(map[string]string) (*Value, error) {
+func (n *NodeValue) Eval(Params) (*Value, error) {
 	return &Value{
 		Type: n.Type,
 		Data: n.Value,
@@ -258,6 +258,6 @@ func True() *NodeTrue {
 }
 
 // Eval always evaluates to true.
-func (v *NodeTrue) Eval(map[string]string) (*Value, error) {
+func (v *NodeTrue) Eval(Params) (*Value, error) {
 	return NewBoolValue(true), nil
 }

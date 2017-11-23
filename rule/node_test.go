@@ -8,19 +8,19 @@ import (
 )
 
 type mockNode struct {
-	val       *Value
-	err       error
-	evalFn    func(ctx map[string]string) (*Value, error)
-	evalCount int
-	lastCtx   map[string]string
+	val        *Value
+	err        error
+	evalFn     func(params Params) (*Value, error)
+	evalCount  int
+	lastParams Params
 }
 
-func (m *mockNode) Eval(ctx map[string]string) (*Value, error) {
+func (m *mockNode) Eval(params Params) (*Value, error) {
 	m.evalCount++
-	m.lastCtx = ctx
+	m.lastParams = params
 
 	if m.evalFn != nil {
-		return m.evalFn(ctx)
+		return m.evalFn(params)
 	}
 
 	return m.val, m.err
@@ -77,15 +77,15 @@ func TestEq(t *testing.T) {
 	t.Run("Eval/OK", func(t *testing.T) {
 		m1 := mockNode{val: NewBoolValue(true)}
 		m2 := mockNode{val: NewBoolValue(true)}
-		ctx := map[string]string{"foo": "bar"}
+		params := Params{"foo": "bar"}
 		eq := Eq(&m1, &m2)
-		val, err := eq.Eval(ctx)
+		val, err := eq.Eval(params)
 		require.NoError(t, err)
 		require.Equal(t, NewBoolValue(true), val)
 		require.Equal(t, 1, m1.evalCount)
 		require.Equal(t, 1, m2.evalCount)
-		require.Equal(t, ctx, m1.lastCtx)
-		require.Equal(t, ctx, m2.lastCtx)
+		require.Equal(t, params, m1.lastParams)
+		require.Equal(t, params, m2.lastParams)
 	})
 
 	t.Run("Eval/Fail", func(t *testing.T) {
@@ -145,15 +145,15 @@ func TestIn(t *testing.T) {
 	t.Run("Eval/OK", func(t *testing.T) {
 		m1 := mockNode{val: NewBoolValue(true)}
 		m2 := mockNode{val: NewBoolValue(true)}
-		ctx := map[string]string{"foo": "bar"}
+		params := Params{"foo": "bar"}
 		in := In(&m1, &m2)
-		val, err := in.Eval(ctx)
+		val, err := in.Eval(params)
 		require.NoError(t, err)
 		require.Equal(t, NewBoolValue(true), val)
 		require.Equal(t, 1, m1.evalCount)
 		require.Equal(t, 1, m2.evalCount)
-		require.Equal(t, ctx, m1.lastCtx)
-		require.Equal(t, ctx, m2.lastCtx)
+		require.Equal(t, params, m1.lastParams)
+		require.Equal(t, params, m2.lastParams)
 	})
 
 	t.Run("Eval/Fail", func(t *testing.T) {
@@ -228,7 +228,7 @@ func TestParseNode(t *testing.T) {
 func TestVariable(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		v := VarStr("foo")
-		val, err := v.Eval(map[string]string{
+		val, err := v.Eval(Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
@@ -237,7 +237,7 @@ func TestVariable(t *testing.T) {
 
 	t.Run("Not found", func(t *testing.T) {
 		v := VarStr("foo")
-		_, err := v.Eval(map[string]string{
+		_, err := v.Eval(Params{
 			"boo": "bar",
 		})
 		require.Error(t, err)
