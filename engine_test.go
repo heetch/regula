@@ -11,10 +11,10 @@ import (
 
 func TestEngine(t *testing.T) {
 	m := mock.NewStore("/rules", map[string]rule.Ruleset{
-		"/a": rule.Ruleset{rule.New(rule.Eq(rule.VarStr("foo"), rule.ValStr("bar")), rule.ReturnsStr("matched a"))},
+		"/a": rule.Ruleset{rule.New(rule.Eq(rule.ParamStr("foo"), rule.ValueStr("bar")), rule.ReturnsStr("matched a"))},
 		"/b": rule.Ruleset{rule.New(rule.True(), rule.ReturnsStr("matched b"))},
 		"/c": rule.Ruleset{rule.New(rule.True(), &rule.Result{Type: "int", Value: "5"})},
-		"/d": rule.Ruleset{rule.New(rule.Eq(rule.ValStr("foo"), rule.ValStr("bar")), rule.ReturnsStr("matched d"))},
+		"/d": rule.Ruleset{rule.New(rule.Eq(rule.ValueStr("foo"), rule.ValueStr("bar")), rule.ReturnsStr("matched d"))},
 	})
 
 	e := rules.NewEngine(m)
