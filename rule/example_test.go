@@ -16,7 +16,7 @@ func Example() {
 		rule.ReturnsStr("matched"),
 	)
 
-	ret, err := r.Eval(map[string]string{
+	ret, err := r.Eval(rule.Params{
 		"bar": "foo",
 	})
 	if err != nil {
