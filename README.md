@@ -17,6 +17,8 @@ import (
   "log"
 
   rules "github.com/heetch/rules-engine"
+  "github.com/heetch/rules-engine/consul"
+  "github.com/heetch/rules-engine/rule"
 )
 
 func main() {
@@ -27,7 +29,9 @@ func main() {
 
   engine := rules.NewEngine(store)
   val, err := engine.GetString("/a/b/c", rule.Params{
-    "foo": "bar",
+    "paramA":     "bar",
+    "paramB":     "bar",
+    "otherParam": "bar",
   })
   switch err {
     case rules.ErrRuleNotFound:
@@ -74,7 +78,7 @@ rDef := rule.New(
 )
 
 // A ruleset is a list of rules
-rs := rule.Ruleset{rA, rB, rDefault}
+rs := rule.Ruleset{rA, rB, rDef}
 
 // Marshal then save to Consul
 raw, _ := json.Marshal(rs)
