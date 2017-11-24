@@ -29,8 +29,8 @@ func parseNode(kind string, data []byte) (Node, error) {
 		var v NodeValue
 		n = &v
 		err = json.Unmarshal(data, &v)
-	case "variable":
-		var v NodeVariable
+	case "param":
+		var v NodeParam
 		n = &v
 		err = json.Unmarshal(data, &v)
 	case "true":
@@ -191,28 +191,28 @@ func (n *NodeIn) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NodeVariable represents the variable node.
-type NodeVariable struct {
+// NodeParam represents a node that describes a param.
+type NodeParam struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// VarStr creates a variable node of type string.
-func VarStr(name string) *NodeVariable {
-	return &NodeVariable{
-		Kind: "variable",
+// ParamStr creates a param node of type string.
+func ParamStr(name string) *NodeParam {
+	return &NodeParam{
+		Kind: "param",
 		Type: "string",
 		Name: name,
 	}
 }
 
-// Eval evaluates to the value of the variable contained in the given context.
+// Eval evaluates to the value of the param contained in the given context.
 // If not found it returns an error.
-func (n *NodeVariable) Eval(params Params) (*Value, error) {
+func (n *NodeParam) Eval(params Params) (*Value, error) {
 	val, ok := params[n.Name]
 	if !ok {
-		return nil, errors.New("variable not found in given context")
+		return nil, errors.New("param not found in given context")
 	}
 
 	return &Value{
@@ -228,8 +228,8 @@ type NodeValue struct {
 	Value string `json:"value"`
 }
 
-// ValStr creates a value node of type string.
-func ValStr(value string) *NodeValue {
+// ValueStr creates a value node of type string.
+func ValueStr(value string) *NodeValue {
 	return &NodeValue{
 		Kind:  "value",
 		Type:  "string",

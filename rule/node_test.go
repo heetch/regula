@@ -55,7 +55,7 @@ func TestEq(t *testing.T) {
 			{
 				"kind": "eq",
 				"operands": [
-					{"kind": "variable"},
+					{"kind": "param"},
 					{"kind": "value"}
 				]
 			}
@@ -123,7 +123,7 @@ func TestIn(t *testing.T) {
 			{
 				"kind": "in",
 				"operands": [
-					{"kind": "variable"},
+					{"kind": "param"},
 					{"kind": "value"}
 				]
 			}
@@ -181,10 +181,10 @@ func TestOperands(t *testing.T) {
 
 		err := ops.UnmarshalJSON([]byte(`[
 			{"kind": "value"},
-			{"kind": "variable"},
+			{"kind": "param"},
 			{"kind": "true"},
-			{"kind": "eq","operands": [{"kind": "value"}, {"kind": "variable"}]},
-			{"kind": "in","operands": [{"kind": "value"}, {"kind": "variable"}]}
+			{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]},
+			{"kind": "in","operands": [{"kind": "value"}, {"kind": "param"}]}
 		]`))
 		require.NoError(t, err)
 		require.Len(t, ops.Ops, 5)
@@ -209,9 +209,9 @@ func TestParseNode(t *testing.T) {
 			data []byte
 			typ  interface{}
 		}{
-			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "variable"}]}`), new(NodeEq)},
-			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "variable"}]}`), new(NodeIn)},
-			{"variable", []byte(`{"kind":"variable"}`), new(NodeVariable)},
+			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeEq)},
+			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeIn)},
+			{"param", []byte(`{"kind":"param"}`), new(NodeParam)},
 			{"value", []byte(`{"kind":"value"}`), new(NodeValue)},
 			{"true", []byte(`{"kind":"true"}`), new(NodeTrue)},
 		}
@@ -227,7 +227,7 @@ func TestParseNode(t *testing.T) {
 
 func TestVariable(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		v := VarStr("foo")
+		v := ParamStr("foo")
 		val, err := v.Eval(Params{
 			"foo": "bar",
 		})
@@ -236,7 +236,7 @@ func TestVariable(t *testing.T) {
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		v := VarStr("foo")
+		v := ParamStr("foo")
 		_, err := v.Eval(Params{
 			"boo": "bar",
 		})
@@ -244,7 +244,7 @@ func TestVariable(t *testing.T) {
 	})
 
 	t.Run("Empty context", func(t *testing.T) {
-		v := VarStr("foo")
+		v := ParamStr("foo")
 		_, err := v.Eval(nil)
 		require.Error(t, err)
 	})

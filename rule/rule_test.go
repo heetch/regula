@@ -26,7 +26,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 						"kind": "eq",
 						"operands": [
 							{
-								"kind": "variable",
+								"kind": "param",
 								"type": "string",
 								"name": "foo"
 							},
@@ -56,13 +56,13 @@ func TestRuleEval(t *testing.T) {
 			node   Node
 			params Params
 		}{
-			{Eq(ValStr("foo"), ValStr("foo")), nil},
-			{Eq(ValStr("foo"), VarStr("bar")), Params{"bar": "foo"}},
-			{In(ValStr("foo"), VarStr("bar")), Params{"bar": "foo"}},
+			{Eq(ValueStr("foo"), ValueStr("foo")), nil},
+			{Eq(ValueStr("foo"), ParamStr("bar")), Params{"bar": "foo"}},
+			{In(ValueStr("foo"), ParamStr("bar")), Params{"bar": "foo"}},
 			{
 				Eq(
-					Eq(ValStr("bar"), ValStr("bar")),
-					Eq(ValStr("foo"), ValStr("foo")),
+					Eq(ValueStr("bar"), ValueStr("bar")),
+					Eq(ValueStr("foo"), ValueStr("foo")),
 				),
 				nil,
 			},
@@ -83,8 +83,8 @@ func TestRuleEval(t *testing.T) {
 			node   Node
 			params Params
 		}{
-			{ValStr("foo"), nil},
-			{VarStr("bar"), Params{"bar": "foo"}},
+			{ValueStr("foo"), nil},
+			{ParamStr("bar"), Params{"bar": "foo"}},
 		}
 
 		for _, test := range tests {
@@ -98,8 +98,8 @@ func TestRuleEval(t *testing.T) {
 func TestRulesetEval(t *testing.T) {
 	t.Run("Match", func(t *testing.T) {
 		r := Ruleset{
-			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
-			New(Eq(ValStr("foo"), ValStr("foo")), ReturnsStr("second")),
+			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
+			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsStr("second")),
 		}
 
 		res, err := r.Eval(nil)
@@ -109,8 +109,8 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("No match", func(t *testing.T) {
 		r := Ruleset{
-			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
-			New(Eq(ValStr("bar"), ValStr("foo")), ReturnsStr("second")),
+			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
+			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
 		}
 
 		_, err := r.Eval(nil)
@@ -119,8 +119,8 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("Default", func(t *testing.T) {
 		r := Ruleset{
-			New(Eq(ValStr("foo"), ValStr("bar")), ReturnsStr("first")),
-			New(Eq(ValStr("bar"), ValStr("foo")), ReturnsStr("second")),
+			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
+			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
 			New(True(), ReturnsStr("default")),
 		}
 
