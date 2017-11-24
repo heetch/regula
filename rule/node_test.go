@@ -74,7 +74,7 @@ func TestEq(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("Eval/OK", func(t *testing.T) {
+	t.Run("Eval/Match", func(t *testing.T) {
 		m1 := mockNode{val: NewBoolValue(true)}
 		m2 := mockNode{val: NewBoolValue(true)}
 		params := Params{"foo": "bar"}
@@ -88,7 +88,7 @@ func TestEq(t *testing.T) {
 		require.Equal(t, params, m2.lastParams)
 	})
 
-	t.Run("Eval/Fail", func(t *testing.T) {
+	t.Run("Eval/NotMatch", func(t *testing.T) {
 		m1 := mockNode{val: NewBoolValue(true)}
 		m2 := mockNode{val: NewBoolValue(false)}
 		eq := Eq(&m1, &m2)
