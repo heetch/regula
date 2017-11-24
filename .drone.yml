@@ -11,3 +11,7 @@ pipeline:
       - go test -v ./...
     when:
       event: push
+
+services:
+  database:
+    image: consul:latest
