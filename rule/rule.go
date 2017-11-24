@@ -1,32 +1,29 @@
+// Package rule provides primitives for creating and evaluating logical rules.
 package rule
 
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 
 	"github.com/tidwall/gjson"
 )
 
-// A Ruleset is list of rules.
-type Ruleset []Rule
+// Params is passed on rule evaluation.
+type Params map[string]string
 
 // Rule represents the AST of a single rule.
 type Rule struct {
-	Root   Operator `json:"root"`
-	Result *Result  `json:"result"`
+	Root   Node    `json:"root"`
+	Result *Result `json:"result"`
 }
 
 // New rule.
-func New(fn func() (Operator, error), res *Result) (*Rule, error) {
-	op, err := fn()
-	if err != nil {
-		return nil, err
-	}
-
+func New(node Node, res *Result) *Rule {
 	return &Rule{
-		Root:   op,
+		Root:   node,
 		Result: res,
-	}, nil
+	}
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
@@ -42,7 +39,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
-	n, err := parseOperator(res.Str, []byte(tree.Root))
+	n, err := parseNode(res.Str, []byte(tree.Root))
 	if err != nil {
 		return err
 	}
@@ -52,210 +49,57 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	return err
 }
 
+// Eval evaluates the rule against the given context.
+// If it matches it returns a result, otherwise it returns ErrNoMatch
+// or any encountered error.
+func (r *Rule) Eval(params Params) (*Result, error) {
+	value, err := r.Root.Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	if value.Type != "bool" {
+		return nil, errors.New("invalid rule returning non boolean value")
+	}
+
+	ok, err := strconv.ParseBool(value.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, ErrNoMatch
+	}
+
+	return r.Result, nil
+}
+
 // Result contains the value to return if the rule is matched.
 type Result struct {
 	Value string `json:"value"`
 	Type  string `json:"type"`
 }
 
-// Returns specifies the result returned by the rule if matched.
-func Returns(value, typ string) *Result {
+// ReturnsStr specifies the result returned by the rule if matched.
+func ReturnsStr(value string) *Result {
 	return &Result{
 		Value: value,
-		Type:  typ,
+		Type:  "string",
 	}
 }
 
-// Operator represents a rule operator.
-type Operator interface {
-}
+// A Ruleset is list of rules.
+type Ruleset []*Rule
 
-// Operand is used by an operator.
-type Operand interface {
-}
-
-func parseOperand(kind string, data []byte) (Operand, error) {
-	var n Operand
-	var err error
-
-	switch kind {
-	case "value":
-		var v OpValue
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "variable":
-		var v OpVariable
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "true":
-		var v OpTrue
-		n = &v
-		err = json.Unmarshal(data, &v)
-	default:
-		err = errors.New("unknown operand kind")
-	}
-
-	return n, err
-}
-
-func parseOperator(kind string, data []byte) (Operator, error) {
-	var n Operator
-	var err error
-
-	switch kind {
-	case "eq":
-		var eq OpEq
-		n = &eq
-		err = eq.UnmarshalJSON(data)
-	case "in":
-		var in OpIn
-		n = &in
-		err = in.UnmarshalJSON(data)
-	default:
-		err = errors.New("unknown operator kind")
-	}
-
-	return n, err
-}
-
-type operands struct {
-	Ops   []json.RawMessage `json:"operands"`
-	Nodes []Operand
-}
-
-func (o *operands) UnmarshalJSON(data []byte) error {
-	err := json.Unmarshal(data, &o.Ops)
-	if err != nil {
-		return err
-	}
-
-	for _, op := range o.Ops {
-		r := gjson.Get(string(op), "kind")
-		n, err := parseOperand(r.Str, []byte(op))
-		if err != nil {
-			return err
+// Eval evaluates every rule of the ruleset until one matches.
+// It returns rule.ErrNoMatch if no rule matches the given context.
+func (r Ruleset) Eval(params Params) (*Result, error) {
+	for _, rl := range r {
+		res, err := rl.Eval(params)
+		if err != ErrNoMatch {
+			return res, err
 		}
-
-		o.Nodes = append(o.Nodes, n)
 	}
 
-	return nil
-}
-
-type nodeOps struct {
-	Kind     string   `json:"kind"`
-	Operands operands `json:"operands"`
-}
-
-// OpEq represents the Eq operator.
-type OpEq struct {
-	Kind     string    `json:"kind"`
-	Operands []Operand `json:"operands"`
-}
-
-// Eq creates an Eq operator.
-func Eq(ops ...Operand) func() (Operator, error) {
-	return func() (Operator, error) {
-		return &OpEq{
-			Kind:     "eq",
-			Operands: ops,
-		}, nil
-	}
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (o *OpEq) UnmarshalJSON(data []byte) error {
-	var node nodeOps
-
-	err := json.Unmarshal(data, &node)
-	if err != nil {
-		return err
-	}
-
-	o.Kind = node.Kind
-	o.Operands = node.Operands.Nodes
-
-	return nil
-}
-
-// OpIn represents the In operator.
-type OpIn struct {
-	Kind     string    `json:"kind"`
-	Operands []Operand `json:"operands"`
-}
-
-// In creates an In operator.
-func In(v *OpVariable, vals ...*OpValue) func() (Operator, error) {
-	ops := make([]Operand, len(vals)+1)
-	ops[0] = v
-	for i := range vals {
-		ops[i+1] = vals[i]
-	}
-
-	return func() (Operator, error) {
-		o := &OpIn{
-			Kind:     "in",
-			Operands: ops,
-		}
-		return o, nil
-	}
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (n *OpIn) UnmarshalJSON(data []byte) error {
-	var node nodeOps
-
-	err := json.Unmarshal(data, &node)
-	if err != nil {
-		return err
-	}
-
-	n.Kind = node.Kind
-	n.Operands = node.Operands.Nodes
-
-	return nil
-}
-
-// Variable creates the variable operand.
-func Variable(name, typ string) *OpVariable {
-	return &OpVariable{
-		Kind: "variable",
-		Type: typ,
-		Name: name,
-	}
-}
-
-// OpVariable represents the variable operand.
-type OpVariable struct {
-	Kind string `json:"kind"`
-	Type string `json:"type"`
-	Name string `json:"name"`
-}
-
-// Value creates the value operand.
-func Value(value, typ string) *OpValue {
-	return &OpValue{
-		Kind:  "value",
-		Type:  typ,
-		Value: value,
-	}
-}
-
-// OpValue represents the value operand.
-type OpValue struct {
-	Kind  string `json:"kind"`
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
-// True creates the true operand.
-func True() *OpTrue {
-	return &OpTrue{
-		Kind: "true",
-	}
-}
-
-// OpTrue represents the true operand.
-type OpTrue struct {
-	Kind string `json:"kind"`
+	return nil, ErrNoMatch
 }
