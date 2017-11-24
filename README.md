@@ -41,3 +41,41 @@ func main() {
   }
 }
 ```
+
+## Creating Rules and Rulesets
+
+```go
+// if paramA == "a value" == paramB -> "matched A"
+rA := rule.New(
+  rule.Eq(
+    rule.ParamStr("paramA"),
+    rule.ValueStr("a value"),
+    rule.ParamStr("paramB"),
+  ),
+  rule.ReturnsStr("matched A"),
+)
+
+// if paramA in ["a", "b", "c", otherParam] -> "matched B"
+rB := rule.New(
+  rule.In(
+    rule.ParamStr("paramA"),
+    rule.ValueStr("a"),
+    rule.ValueStr("b"),
+    rule.ValueStr("c"),
+    rule.ParamStr("otherParam"),
+  ),
+  rule.ReturnsStr("matched B"),
+)
+
+// default rule -> "matched default"
+rDef := rule.New(
+  rule.True(), // always match
+  rule.ReturnsStr("matched default"),
+)
+
+// A ruleset is a list of rules
+rs := rule.Ruleset{rA, rB, rDefault}
+
+// Marshal then save to Consul
+raw, _ := json.Marshal(rs)
+```
