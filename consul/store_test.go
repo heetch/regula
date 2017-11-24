@@ -1,9 +1,12 @@
 package consul
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/heetch/rules-engine/rule"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/require"
@@ -15,11 +18,22 @@ func TestStore(t *testing.T) {
 	defer teardown()
 
 	t.Run("/a/b/c", func(t *testing.T) {
-		insert(
-			"a/b/c",
-			[]byte(
-				`[{"result":{"value":"foo"},"root":{"kind":"eq","operands":[{"kind":"value"},{"kind": "value"}]}},{"result":{"value":"foo"},"root":{"kind":"eq","operands":[{"kind":"value"},{"kind": "value"}]}}]`,
-			))
+		r1 := rule.New(
+			rule.Eq(
+				rule.ValueStr("bar"),
+				rule.ParamStr("foo"),
+			),
+			rule.ReturnsStr("matched r1"),
+		)
+
+		rd := rule.New(
+			rule.True(),
+			rule.ReturnsStr("matched default"),
+		)
+		raw, err := json.Marshal(rule.Ruleset{r1, rd})
+		require.NoError(t, err)
+
+		insert("a/b/c", raw)
 
 		s, err := NewStore("127.0.0.1:8500", keyPrefix)
 		require.NoError(t, err)
@@ -28,6 +42,13 @@ func TestStore(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, rs, 2)
+
+		res, err := rs.Eval(rule.Params{
+			"foo": "bar",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "string", res.Type)
+		require.Equal(t, "matched r1", res.Value)
 	})
 }
 
