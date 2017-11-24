@@ -3,6 +3,7 @@ package consul
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"testing"
 	"time"
 
@@ -17,30 +18,36 @@ func TestStore(t *testing.T) {
 	keyPrefix, insert, teardown := consulHelper(t, consulAddr)
 	defer teardown()
 
-	t.Run("/a/b/c", func(t *testing.T) {
-		r1 := rule.New(
-			rule.Eq(
-				rule.ValueStr("bar"),
-				rule.ParamStr("foo"),
-			),
-			rule.ReturnsStr("matched r1"),
-		)
+	r1 := rule.New(
+		rule.Eq(
+			rule.ValueStr("bar"),
+			rule.ParamStr("foo"),
+		),
+		rule.ReturnsStr("matched r1"),
+	)
 
-		rd := rule.New(
-			rule.True(),
-			rule.ReturnsStr("matched default"),
-		)
-		raw, err := json.Marshal(rule.Ruleset{r1, rd})
+	rd := rule.New(
+		rule.True(),
+		rule.ReturnsStr("matched default"),
+	)
+	raw, err := json.Marshal(rule.Ruleset{r1, rd})
+	require.NoError(t, err)
+
+	insert("a/b/c", raw)
+
+	s, err := NewStore("127.0.0.1:8500", keyPrefix)
+	require.NoError(t, err)
+
+	tests := []string{
+		"/a/b/c",
+		"a/b/c",
+		"a/b/c/",
+		"/a/b/c/",
+	}
+
+	for _, test := range tests {
+		rs, err := s.Get(test)
 		require.NoError(t, err)
-
-		insert("a/b/c", raw)
-
-		s, err := NewStore("127.0.0.1:8500", keyPrefix)
-		require.NoError(t, err)
-
-		rs, err := s.Get("a/b/c")
-		require.NoError(t, err)
-
 		require.Len(t, rs, 2)
 
 		res, err := rs.Eval(rule.Params{
@@ -49,7 +56,7 @@ func TestStore(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "string", res.Type)
 		require.Equal(t, "matched r1", res.Value)
-	})
+	}
 }
 
 func consulHelper(t *testing.T, consulAddr string) (string, func(string, []byte), func()) {
@@ -66,7 +73,7 @@ func consulHelper(t *testing.T, consulAddr string) (string, func(string, []byte)
 	}
 
 	insert := func(key string, value []byte) {
-		_, err := client.KV().Put(&api.KVPair{Key: keyPrefix + key, Value: value}, nil)
+		_, err := client.KV().Put(&api.KVPair{Key: path.Join(keyPrefix, key), Value: value}, nil)
 		require.NoError(t, err)
 		return
 	}

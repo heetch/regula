@@ -2,11 +2,11 @@ package consul
 
 import (
 	"encoding/json"
+	"path"
 	"strings"
 
-	"github.com/heetch/rules-engine"
-
 	"github.com/hashicorp/consul/api"
+	"github.com/heetch/rules-engine"
 	"github.com/heetch/rules-engine/rule"
 )
 
@@ -41,7 +41,7 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 		}
 
 		k := strings.TrimLeft(v.Key, keyPrefix)
-		m["/"+k] = rs
+		m[path.Join("/", k)] = rs
 	}
 
 	return &Store{ruleSets: m}, nil
@@ -49,7 +49,7 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 
 // Get returns a rule-set based on a given key
 func (s *Store) Get(key string) (rule.Ruleset, error) {
-	rs, ok := s.ruleSets["/"+key]
+	rs, ok := s.ruleSets[path.Join("/", key)]
 
 	if !ok {
 		return nil, rules.ErrRulesetNotFound
