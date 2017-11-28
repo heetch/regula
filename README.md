@@ -35,9 +35,11 @@ func main() {
   })
   switch err {
     case rules.ErrRuleNotFound:
-      // when the rule doesn't exist
+      // when the ruleset doesn't exist
     case rules.ErrTypeMismatch:
-      // when the rule returns the bad type
+      // when the ruleset returns the bad type
+    case rule.ErrNoMatch:
+      // when the ruleset doesn't match
     case nil:
       // everything is fine
     default:
@@ -52,9 +54,8 @@ func main() {
 // if paramA == "a value" == paramB -> "matched A"
 rA := rule.New(
   rule.Eq(
-    rule.ParamStr("paramA"),
-    rule.ValueStr("a value"),
-    rule.ParamStr("paramB"),
+    rule.ParamStr("productID"),
+    rule.ValueStr("fr-paris"),
   ),
   rule.ReturnsStr("matched A"),
 )
