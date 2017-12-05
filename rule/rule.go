@@ -88,6 +88,8 @@ func ReturnsStr(value string) *Result {
 	}
 }
 
+// TODO ReturnsBool
+
 // A Ruleset is list of rules.
 type Ruleset []*Rule
 
