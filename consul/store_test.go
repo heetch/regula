@@ -30,7 +30,7 @@ func TestStore(t *testing.T) {
 		rule.True(),
 		rule.ReturnsStr("matched default"),
 	)
-	raw, err := json.Marshal(rule.Ruleset{r1, rd})
+	raw, err := json.Marshal(rule.Ruleset{Type: "string", Rules: []*rule.Rule{r1, rd}})
 	require.NoError(t, err)
 
 	insert("a/b/c", raw)
@@ -48,7 +48,7 @@ func TestStore(t *testing.T) {
 	for _, test := range tests {
 		rs, err := s.Get(test)
 		require.NoError(t, err)
-		require.Len(t, rs, 2)
+		require.Len(t, rs.Rules, 2)
 
 		res, err := rs.Eval(rule.Params{
 			"foo": "bar",

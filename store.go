@@ -12,5 +12,5 @@ var (
 
 // Store manages the storage of rulesets.
 type Store interface {
-	Get(key string) (rule.Ruleset, error)
+	Get(key string) (*rule.Ruleset, error)
 }

@@ -12,7 +12,7 @@ import (
 
 // Store holds a collection of rules by their keys
 type Store struct {
-	ruleSets map[string]rule.Ruleset
+	ruleSets map[string]*rule.Ruleset
 }
 
 // NewStore returns a Consul backed store, scoped on a given `keyPrefix`
@@ -32,7 +32,7 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 		return nil, err
 	}
 
-	m := map[string]rule.Ruleset{}
+	m := map[string]*rule.Ruleset{}
 
 	for _, v := range pairs {
 		rs, err := parseRuleset(v.Value)
@@ -48,7 +48,7 @@ func NewStore(consulAddr string, keyPrefix string) (*Store, error) {
 }
 
 // Get returns a rule-set based on a given key
-func (s *Store) Get(key string) (rule.Ruleset, error) {
+func (s *Store) Get(key string) (*rule.Ruleset, error) {
 	rs, ok := s.ruleSets[path.Join("/", key)]
 
 	if !ok {
@@ -58,11 +58,11 @@ func (s *Store) Get(key string) (rule.Ruleset, error) {
 	return rs, nil
 }
 
-func parseRuleset(b []byte) (rule.Ruleset, error) {
+func parseRuleset(b []byte) (*rule.Ruleset, error) {
 	var rs rule.Ruleset
 	if err := json.Unmarshal(b, &rs); err != nil {
 		return nil, err
 	}
 
-	return rs, nil
+	return &rs, nil
 }

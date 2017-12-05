@@ -4,9 +4,15 @@ package rule
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/tidwall/gjson"
+)
+
+var (
+	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
+	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
 // Params is passed on rule evaluation.
@@ -36,6 +42,10 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &tree)
 	if err != nil {
 		return err
+	}
+
+	if tree.Result.Type == "" {
+		return errors.New("invalid rule result type")
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
@@ -80,7 +90,7 @@ type Result struct {
 	Type  string `json:"type"`
 }
 
-// ReturnsStr specifies the result returned by the rule if matched.
+// ReturnsStr specifies the string result to be returned by the rule if matched.
 func ReturnsStr(value string) *Result {
 	return &Result{
 		Value: value,
@@ -88,15 +98,40 @@ func ReturnsStr(value string) *Result {
 	}
 }
 
-// TODO ReturnsBool
+// ReturnsBool specifies the bool result to be returned by the rule if matched.
+func ReturnsBool(value bool) *Result {
+	return &Result{
+		Value: fmt.Sprintf("%v", value),
+		Type:  "bool",
+	}
+}
 
-// A Ruleset is list of rules.
-type Ruleset []*Rule
+// A Ruleset is list of rules and a type
+type Ruleset struct {
+	Rules []*Rule `json:"rules"`
+	Type  string  `json:"type"`
+}
+
+// NewRuleset creates a ruleset based on given type and rules.
+// All rules must have the same return type as specified, otherwise a
+// ErrRulesetIncoherentType will be returned.
+func NewRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
+	for _, r := range rules {
+		if typ != r.Result.Type {
+			return nil, ErrRulesetIncoherentType
+		}
+	}
+
+	return &Ruleset{
+		Rules: rules,
+		Type:  typ,
+	}, nil
+}
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r Ruleset) Eval(params Params) (*Result, error) {
-	for _, rl := range r {
+func (r *Ruleset) Eval(params Params) (*Result, error) {
+	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != ErrNoMatch {
 			return res, err
@@ -104,4 +139,15 @@ func (r Ruleset) Eval(params Params) (*Result, error) {
 	}
 
 	return nil, ErrNoMatch
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (r *Ruleset) UnmarshalJSON(data []byte) error {
+	type ruleset Ruleset
+	if err := json.Unmarshal(data, (*ruleset)(r)); err != nil {
+		return err
+	}
+
+	_, err := NewRuleset(r.Type, r.Rules...)
+	return err
 }

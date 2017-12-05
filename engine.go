@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"strconv"
+
 	"github.com/heetch/rules-engine/rule"
 	"github.com/pkg/errors"
 )
@@ -23,7 +25,7 @@ func NewEngine(store Store) *Engine {
 }
 
 // Get evaluates the ruleset associated with key and returns the result.
-func (e *Engine) Get(key string, params rule.Params) (*rule.Result, error) {
+func (e *Engine) get(typ, key string, params rule.Params) (*rule.Result, error) {
 	ruleset, err := e.store.Get(key)
 	if err != nil {
 		if err == ErrRulesetNotFound {
@@ -31,6 +33,10 @@ func (e *Engine) Get(key string, params rule.Params) (*rule.Result, error) {
 		}
 
 		return nil, errors.Wrap(err, "failed to get ruleset from the store")
+	}
+
+	if ruleset.Type != typ {
+		return nil, ErrTypeMismatch
 	}
 
 	res, err := ruleset.Eval(params)
@@ -42,19 +48,29 @@ func (e *Engine) Get(key string, params rule.Params) (*rule.Result, error) {
 		return nil, errors.Wrap(err, "failed to evaluate ruleset")
 	}
 
+	if res.Type != typ {
+		return nil, ErrTypeMismatch
+	}
+
 	return res, nil
 }
 
 // GetString evaluates the ruleset associated with key and returns the result as a string.
 func (e *Engine) GetString(key string, params rule.Params) (string, error) {
-	res, err := e.Get(key, params)
+	res, err := e.get("string", key, params)
 	if err != nil {
 		return "", err
 	}
 
-	if res.Type != "string" {
-		return "", ErrTypeMismatch
+	return res.Value, nil
+}
+
+// GetBool evaluates the ruleset associated with key and returns the result as a string.
+func (e *Engine) GetBool(key string, params rule.Params) (bool, error) {
+	res, err := e.get("bool", key, params)
+	if err != nil {
+		return false, err
 	}
 
-	return res.Value, nil
+	return strconv.ParseBool(res.Value)
 }
