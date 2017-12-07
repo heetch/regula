@@ -65,7 +65,7 @@ func (e *Engine) GetString(key string, params rule.Params) (string, error) {
 	return res.Value, nil
 }
 
-// GetBool evaluates the ruleset associated with key and returns the result as a string.
+// GetBool evaluates the ruleset associated with key and returns the result as a bool.
 func (e *Engine) GetBool(key string, params rule.Params) (bool, error) {
 	res, err := e.get("bool", key, params)
 	if err != nil {

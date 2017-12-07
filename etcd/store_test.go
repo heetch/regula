@@ -1,24 +1,29 @@
-package etcd
+package etcd_test
 
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"path"
 	"testing"
 	"time"
 
-	"github.com/heetch/rules-engine"
-
-	"github.com/heetch/rules-engine/rule"
-
 	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/rules-engine"
+	"github.com/heetch/rules-engine/etcd"
+	"github.com/heetch/rules-engine/rule"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	dialTimeout = 5 * time.Second
+	endpoints   = []string{"localhost:2379"}
 )
 
 func etcdHelper(t *testing.T) (*clientv3.Client, func()) {
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{":2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   endpoints,
+		DialTimeout: dialTimeout,
 	})
 	require.NoError(t, err)
 
@@ -55,7 +60,7 @@ func TestEtcdStore(t *testing.T) {
 	_, err = cli.Put(context.Background(), path.Join(prefix, "a/b/c"), string(raw))
 	require.NoError(t, err)
 
-	store, err := NewStore(cli, prefix)
+	store, err := etcd.NewStore(cli, prefix)
 	require.NoError(t, err)
 
 	t.Run("OK", func(t *testing.T) {
@@ -89,4 +94,25 @@ func TestEtcdStore(t *testing.T) {
 		_, err = store.Get("")
 		require.Equal(t, rules.ErrRulesetNotFound, err)
 	})
+}
+
+func Example() {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{":2379"},
+		DialTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cli.Close()
+
+	store, err := etcd.NewStore(cli, "prefix")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = store.Get("some-key")
+	if err != nil {
+		log.Fatal(err)
+	}
 }

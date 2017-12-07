@@ -17,13 +17,18 @@ const (
 	timeout = 5 * time.Second
 )
 
+// Store is an etcd store that holds rulesets in memory.
 type Store struct {
 	rulesets map[string]*rule.Ruleset
 }
 
+// NewStore takes a connected etcd client, fetches all the rulesets under the given prefix and stores them in the returned store.
+// Any leading slash found on keyPrefix is removed and a trailing slash is added automatically before usage.
 func NewStore(client *clientv3.Client, keyPrefix string) (*Store, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	keyPrefix = path.Join(strings.TrimLeft(keyPrefix, "/"), "/")
 
 	resp, err := client.Get(ctx, keyPrefix, clientv3.WithPrefix())
 	if err != nil {
@@ -45,7 +50,8 @@ func NewStore(client *clientv3.Client, keyPrefix string) (*Store, error) {
 	return &Store{rulesets: m}, nil
 }
 
-// Get returns a ruleset based on a given key.
+// Get returns a memory stored ruleset based on a given key.
+// No network round trip is perfomed during this call.
 func (s *Store) Get(key string) (*rule.Ruleset, error) {
 	rs, ok := s.rulesets[path.Join("/", key)]
 	if !ok {
