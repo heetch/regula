@@ -1,10 +1,10 @@
 package: github.com/heetch/rules-engine
 import:
 - package: github.com/tidwall/gjson
-  version: ~1.0.2
-- package: github.com/hashicorp/consul
-  version: ~1.0.1
-  subpackages:
-  - api
+  version: ^1.0.2
 - package: github.com/pkg/errors
   version: ^0.8.0
+- package: github.com/coreos/etcd
+  version: ^3.2.11
+  subpackages:
+  - clientv3
