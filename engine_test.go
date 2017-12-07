@@ -20,7 +20,6 @@ func newMockStore(namespace string, ruleSets map[string]*rule.Ruleset) *mockStor
 	}
 }
 
-// Get ...
 func (s *mockStore) Get(key string) (*rule.Ruleset, error) {
 	rs, ok := s.ruleSets[key]
 	if !ok {
