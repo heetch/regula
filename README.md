@@ -47,8 +47,8 @@ func main() {
   engine := rules.NewEngine(store)
 
   val, err := engine.GetString("/a/b/c", rule.Params{
-    "paramA": "valA",
-    "paramB": "valB",
+    "product-id": "1234",
+    "user-id"   : "5678",
   })
   if err != nil {
     switch err {

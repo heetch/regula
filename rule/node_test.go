@@ -47,7 +47,7 @@ func TestNot(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var not NodeNot
+		var not nodeNot
 
 		// enough operands
 		err := not.UnmarshalJSON([]byte(`
@@ -117,7 +117,7 @@ func TestAnd(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var and NodeAnd
+		var and nodeAnd
 
 		// enough operands
 		err := and.UnmarshalJSON([]byte(`
@@ -203,7 +203,7 @@ func TestOr(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var or NodeOr
+		var or nodeOr
 
 		// enough operands
 		err := or.UnmarshalJSON([]byte(`
@@ -289,7 +289,7 @@ func TestEq(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var eq NodeEq
+		var eq nodeEq
 
 		// enough operands
 		err := eq.UnmarshalJSON([]byte(`
@@ -357,7 +357,7 @@ func TestIn(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var in NodeIn
+		var in nodeIn
 
 		// enough operands
 		err := in.UnmarshalJSON([]byte(`
@@ -450,14 +450,14 @@ func TestParseNode(t *testing.T) {
 			data []byte
 			typ  interface{}
 		}{
-			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeEq)},
-			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeIn)},
-			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeNot)},
-			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeAnd)},
-			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeOr)},
-			{"param", []byte(`{"kind":"param"}`), new(NodeParam)},
-			{"value", []byte(`{"kind":"value"}`), new(NodeValue)},
-			{"true", []byte(`{"kind":"true"}`), new(NodeTrue)},
+			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeEq)},
+			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeIn)},
+			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeNot)},
+			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeAnd)},
+			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeOr)},
+			{"param", []byte(`{"kind":"param"}`), new(nodeParam)},
+			{"value", []byte(`{"kind":"value"}`), new(nodeValue)},
+			{"true", []byte(`{"kind":"true"}`), new(nodeTrue)},
 		}
 
 		for _, test := range tests {

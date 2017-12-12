@@ -44,11 +44,11 @@ func TestRuleUnmarshalling(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "string", rule.Result.Type)
 		require.Equal(t, "foo", rule.Result.Value)
-		require.IsType(t, new(NodeEq), rule.Root)
-		eq := rule.Root.(*NodeEq)
+		require.IsType(t, new(nodeEq), rule.Root)
+		eq := rule.Root.(*nodeEq)
 		require.Len(t, eq.Operands, 2)
-		require.IsType(t, new(NodeValue), eq.Operands[0])
-		require.IsType(t, new(NodeEq), eq.Operands[1])
+		require.IsType(t, new(nodeValue), eq.Operands[0])
+		require.IsType(t, new(nodeEq), eq.Operands[1])
 	})
 
 	t.Run("Missing result type", func(t *testing.T) {
