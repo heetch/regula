@@ -3,8 +3,15 @@ package rule
 import (
 	"encoding/json"
 	"errors"
+	"go/token"
+	"strconv"
 
 	"github.com/tidwall/gjson"
+)
+
+var (
+	// ErrNoMatch is returned when the rule doesn't match the given context.
+	ErrNoMatch = errors.New("rule doesn't match the given context")
 )
 
 // A Node is a piece of the AST that denotes a construct occurring in the rule source code.
@@ -39,15 +46,11 @@ func parseNode(kind string, data []byte) (Node, error) {
 		n = &or
 		err = or.UnmarshalJSON(data)
 	case "value":
-		var v nodeValue
+		var v Value
 		n = &v
 		err = json.Unmarshal(data, &v)
 	case "param":
 		var v nodeParam
-		n = &v
-		err = json.Unmarshal(data, &v)
-	case "true":
-		var v nodeTrue
 		n = &v
 		err = json.Unmarshal(data, &v)
 	default:
@@ -115,11 +118,11 @@ func (n *nodeNot) Eval(params Params) (*Value, error) {
 		return nil, errors.New("invalid operand type for Not func")
 	}
 
-	if v.Equal(NewBoolValue(true)) {
-		return NewBoolValue(false), nil
+	if v.Equal(BoolValue(true)) {
+		return BoolValue(false), nil
 	}
 
-	return NewBoolValue(true), nil
+	return BoolValue(true), nil
 }
 
 func (n *nodeNot) UnmarshalJSON(data []byte) error {
@@ -168,7 +171,7 @@ func (n *nodeOr) Eval(params Params) (*Value, error) {
 		return nil, errors.New("invalid operand type for Or func")
 	}
 
-	if vA.Equal(NewBoolValue(true)) {
+	if vA.Equal(BoolValue(true)) {
 		return vA, nil
 	}
 
@@ -181,12 +184,12 @@ func (n *nodeOr) Eval(params Params) (*Value, error) {
 			return nil, errors.New("invalid operand type for Or func")
 		}
 
-		if vB.Equal(NewBoolValue(true)) {
+		if vB.Equal(BoolValue(true)) {
 			return vB, nil
 		}
 	}
 
-	return NewBoolValue(false), nil
+	return BoolValue(false), nil
 }
 
 func (n *nodeOr) UnmarshalJSON(data []byte) error {
@@ -234,7 +237,7 @@ func (n *nodeAnd) Eval(params Params) (*Value, error) {
 		return nil, errors.New("invalid operand type for Or func")
 	}
 
-	if vA.Equal(NewBoolValue(false)) {
+	if vA.Equal(BoolValue(false)) {
 		return vA, nil
 	}
 
@@ -247,12 +250,12 @@ func (n *nodeAnd) Eval(params Params) (*Value, error) {
 			return nil, errors.New("invalid operand type for Or func")
 		}
 
-		if vB.Equal(NewBoolValue(false)) {
+		if vB.Equal(BoolValue(false)) {
 			return vB, nil
 		}
 	}
 
-	return NewBoolValue(true), nil
+	return BoolValue(true), nil
 }
 
 func (n *nodeAnd) UnmarshalJSON(data []byte) error {
@@ -303,11 +306,11 @@ func (n *nodeEq) Eval(params Params) (*Value, error) {
 		}
 
 		if !vA.Equal(vB) {
-			return NewBoolValue(false), nil
+			return BoolValue(false), nil
 		}
 	}
 
-	return NewBoolValue(true), nil
+	return BoolValue(true), nil
 }
 
 func (n *nodeEq) UnmarshalJSON(data []byte) error {
@@ -358,11 +361,11 @@ func (n *nodeIn) Eval(params Params) (*Value, error) {
 		}
 
 		if vA.Equal(vB) {
-			return NewBoolValue(true), nil
+			return BoolValue(true), nil
 		}
 	}
 
-	return NewBoolValue(false), nil
+	return BoolValue(false), nil
 }
 
 func (n *nodeIn) UnmarshalJSON(data []byte) error {
@@ -390,12 +393,22 @@ type nodeParam struct {
 	Name string `json:"name"`
 }
 
-// ParamStr creates a node that looks up in the set of params passed during evaluation and returns the value of the variable that corresponds to the given name.
+// StringParam creates a node that looks up in the set of params passed during evaluation and returns the value of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
-func ParamStr(name string) Node {
+func StringParam(name string) Node {
 	return &nodeParam{
 		Kind: "param",
 		Type: "string",
+		Name: name,
+	}
+}
+
+// BoolParam creates a node that looks up in the set of params passed during evaluation and returns the value of the variable that corresponds to the given name.
+// The corresponding value must be a bool. If not found it returns an error.
+func BoolParam(name string) Node {
+	return &nodeParam{
+		Kind: "param",
+		Type: "bool",
 		Name: name,
 	}
 }
@@ -406,45 +419,53 @@ func (n *nodeParam) Eval(params Params) (*Value, error) {
 		return nil, errors.New("param not found in given context")
 	}
 
-	return &Value{
-		Type: n.Type,
-		Data: val,
-	}, nil
-}
-
-type nodeValue struct {
-	Kind  string `json:"kind"`
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
-// ValueStr creates a node that evaluates to a constant of type string.
-func ValueStr(value string) Node {
-	return &nodeValue{
-		Kind:  "value",
-		Type:  "string",
-		Value: value,
-	}
-}
-
-func (n *nodeValue) Eval(Params) (*Value, error) {
-	return &Value{
-		Type: n.Type,
-		Data: n.Value,
-	}, nil
-}
-
-type nodeTrue struct {
-	Kind string `json:"kind"`
+	return newValue(n.Type, val), nil
 }
 
 // True creates a node that always evaluates to true.
 func True() Node {
-	return &nodeTrue{
-		Kind: "true",
+	return BoolValue(true)
+}
+
+// A Value is the result of a Node evaluation.
+type Value struct {
+	Kind string `json:"kind"`
+	Type string `json:"type"`
+	Data string `json:"data"`
+}
+
+func newValue(typ, data string) *Value {
+	return &Value{
+		Kind: "value",
+		Type: typ,
+		Data: data,
 	}
 }
 
-func (v *nodeTrue) Eval(Params) (*Value, error) {
-	return NewBoolValue(true), nil
+// BoolValue creates a bool type value.
+func BoolValue(value bool) *Value {
+	return newValue("bool", strconv.FormatBool(value))
+}
+
+// StringValue creates a string type value.
+func StringValue(value string) *Value {
+	return newValue("string", value)
+}
+
+// Eval evaluates the value to itself.
+func (v *Value) Eval(Params) (*Value, error) {
+	return v, nil
+}
+
+func (v *Value) compare(op token.Token, other *Value) bool {
+	if op != token.EQL {
+		return false
+	}
+
+	return *v == *other
+}
+
+// Equal reports whether v and other represent the same value.
+func (v *Value) Equal(other *Value) bool {
+	return v.compare(token.EQL, other)
 }

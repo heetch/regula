@@ -47,7 +47,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 		require.IsType(t, new(nodeEq), rule.Root)
 		eq := rule.Root.(*nodeEq)
 		require.Len(t, eq.Operands, 2)
-		require.IsType(t, new(nodeValue), eq.Operands[0])
+		require.IsType(t, new(Value), eq.Operands[0])
 		require.IsType(t, new(nodeEq), eq.Operands[1])
 	})
 
@@ -80,13 +80,13 @@ func TestRuleEval(t *testing.T) {
 			node   Node
 			params Params
 		}{
-			{Eq(ValueStr("foo"), ValueStr("foo")), nil},
-			{Eq(ValueStr("foo"), ParamStr("bar")), Params{"bar": "foo"}},
-			{In(ValueStr("foo"), ParamStr("bar")), Params{"bar": "foo"}},
+			{Eq(StringValue("foo"), StringValue("foo")), nil},
+			{Eq(StringValue("foo"), StringParam("bar")), Params{"bar": "foo"}},
+			{In(StringValue("foo"), StringParam("bar")), Params{"bar": "foo"}},
 			{
 				Eq(
-					Eq(ValueStr("bar"), ValueStr("bar")),
-					Eq(ValueStr("foo"), ValueStr("foo")),
+					Eq(StringValue("bar"), StringValue("bar")),
+					Eq(StringValue("foo"), StringValue("foo")),
 				),
 				nil,
 			},
@@ -107,8 +107,8 @@ func TestRuleEval(t *testing.T) {
 			node   Node
 			params Params
 		}{
-			{ValueStr("foo"), nil},
-			{ParamStr("bar"), Params{"bar": "foo"}},
+			{StringValue("foo"), nil},
+			{StringParam("bar"), Params{"bar": "foo"}},
 		}
 
 		for _, test := range tests {
@@ -122,8 +122,8 @@ func TestRuleEval(t *testing.T) {
 func TestRulesetEval(t *testing.T) {
 	t.Run("Match string", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
-			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsStr("second")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
+			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsStr("second")),
 		)
 		require.NoError(t, err)
 
@@ -134,8 +134,8 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("Match bool", func(t *testing.T) {
 		r, err := NewBoolRuleset(
-			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsBool(false)),
-			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsBool(true)),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsBool(false)),
+			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsBool(true)),
 		)
 		require.NoError(t, err)
 
@@ -146,16 +146,16 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("Type mismatch", func(t *testing.T) {
 		_, err := NewStringRuleset(
-			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
-			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsBool(true)),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
+			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsBool(true)),
 		)
 		require.Equal(t, ErrRulesetIncoherentType, err)
 	})
 
 	t.Run("No match", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
-			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
+			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsStr("second")),
 		)
 		require.NoError(t, err)
 
@@ -165,8 +165,8 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("Default", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
-			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
+			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsStr("second")),
 			New(True(), ReturnsStr("default")),
 		)
 		require.NoError(t, err)

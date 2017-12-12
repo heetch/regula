@@ -35,7 +35,7 @@ func TestEngine(t *testing.T) {
 		"/match-string-a": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.ParamStr("foo"), rule.ValueStr("bar")), rule.ReturnsStr("matched a")),
+				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsStr("matched a")),
 			},
 		},
 		"/match-string-b": &rule.Ruleset{
@@ -53,7 +53,7 @@ func TestEngine(t *testing.T) {
 		"/no-match": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.ValueStr("foo"), rule.ValueStr("bar")), rule.ReturnsStr("matched d")),
+				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsStr("matched d")),
 			},
 		},
 		"/match-bool": &rule.Ruleset{

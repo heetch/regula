@@ -41,8 +41,8 @@ func TestEtcdStore(t *testing.T) {
 
 	r1 := rule.New(
 		rule.Eq(
-			rule.ValueStr("bar"),
-			rule.ParamStr("foo"),
+			rule.StringValue("bar"),
+			rule.StringParam("foo"),
 		),
 		rule.ReturnsStr("matched r1"),
 	)

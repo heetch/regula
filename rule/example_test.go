@@ -10,8 +10,8 @@ import (
 func Example() {
 	r := rule.New(
 		rule.Eq(
-			rule.ValueStr("foo"),
-			rule.ParamStr("bar"),
+			rule.StringValue("foo"),
+			rule.StringParam("bar"),
 		),
 		rule.ReturnsStr("matched"),
 	)
