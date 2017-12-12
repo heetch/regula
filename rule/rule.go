@@ -15,16 +15,16 @@ var (
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
-// Params is passed on rule evaluation.
+// Params is a set of variables passed on rule evaluation.
 type Params map[string]string
 
-// Rule represents the AST of a single rule.
+// A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
 	Root   Node    `json:"root"`
 	Result *Result `json:"result"`
 }
 
-// New rule.
+// New creates a rule with the given node and that returns the given result on evaluation.
 func New(node Node, res *Result) *Rule {
 	return &Rule{
 		Root:   node,
@@ -59,7 +59,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-// Eval evaluates the rule against the given context.
+// Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
 func (r *Rule) Eval(params Params) (*Result, error) {
@@ -106,16 +106,25 @@ func ReturnsBool(value bool) *Result {
 	}
 }
 
-// A Ruleset is list of rules and a type
+// A Ruleset is list of rules that must return the same type.
 type Ruleset struct {
 	Rules []*Rule `json:"rules"`
 	Type  string  `json:"type"`
 }
 
-// NewRuleset creates a ruleset based on given type and rules.
-// All rules must have the same return type as specified, otherwise a
-// ErrRulesetIncoherentType will be returned.
-func NewRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
+// NewStringRuleset creates a ruleset which rules all return a string otherwise
+// ErrRulesetIncoherentType is returned.
+func NewStringRuleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("string", rules...)
+}
+
+// NewBoolRuleset creates a ruleset which rules all return a bool otherwise
+// ErrRulesetIncoherentType is returned.
+func NewBoolRuleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("bool", rules...)
+}
+
+func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
 	for _, r := range rules {
 		if typ != r.Result.Type {
 			return nil, ErrRulesetIncoherentType
@@ -148,6 +157,10 @@ func (r *Ruleset) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	_, err := NewRuleset(r.Type, r.Rules...)
+	if r.Type != "string" && r.Type != "bool" {
+		return errors.New("unsupported ruleset type")
+	}
+
+	_, err := newRuleset(r.Type, r.Rules...)
 	return err
 }

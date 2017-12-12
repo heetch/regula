@@ -51,7 +51,7 @@ func TestEtcdStore(t *testing.T) {
 		rule.True(),
 		rule.ReturnsStr("matched default"),
 	)
-	rs, err := rule.NewRuleset("string", r1, rd)
+	rs, err := rule.NewStringRuleset(r1, rd)
 	require.NoError(t, err)
 
 	raw, err := json.Marshal(rs)

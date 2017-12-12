@@ -121,8 +121,7 @@ func TestRuleEval(t *testing.T) {
 
 func TestRulesetEval(t *testing.T) {
 	t.Run("Match string", func(t *testing.T) {
-		r, err := NewRuleset(
-			"string",
+		r, err := NewStringRuleset(
 			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
 			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsStr("second")),
 		)
@@ -134,8 +133,7 @@ func TestRulesetEval(t *testing.T) {
 	})
 
 	t.Run("Match bool", func(t *testing.T) {
-		r, err := NewRuleset(
-			"bool",
+		r, err := NewBoolRuleset(
 			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsBool(false)),
 			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsBool(true)),
 		)
@@ -147,8 +145,7 @@ func TestRulesetEval(t *testing.T) {
 	})
 
 	t.Run("Type mismatch", func(t *testing.T) {
-		_, err := NewRuleset(
-			"string",
+		_, err := NewStringRuleset(
 			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
 			New(Eq(ValueStr("foo"), ValueStr("foo")), ReturnsBool(true)),
 		)
@@ -156,8 +153,7 @@ func TestRulesetEval(t *testing.T) {
 	})
 
 	t.Run("No match", func(t *testing.T) {
-		r, err := NewRuleset(
-			"string",
+		r, err := NewStringRuleset(
 			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
 			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
 		)
@@ -168,8 +164,7 @@ func TestRulesetEval(t *testing.T) {
 	})
 
 	t.Run("Default", func(t *testing.T) {
-		r, err := NewRuleset(
-			"string",
+		r, err := NewStringRuleset(
 			New(Eq(ValueStr("foo"), ValueStr("bar")), ReturnsStr("first")),
 			New(Eq(ValueStr("bar"), ValueStr("foo")), ReturnsStr("second")),
 			New(True(), ReturnsStr("default")),
