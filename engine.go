@@ -25,7 +25,7 @@ func NewEngine(store Store) *Engine {
 }
 
 // Get evaluates the ruleset associated with key and returns the result.
-func (e *Engine) get(typ, key string, params rule.Params) (*rule.Result, error) {
+func (e *Engine) get(typ, key string, params rule.Params) (*rule.Value, error) {
 	ruleset, err := e.store.Get(key)
 	if err != nil {
 		if err == ErrRulesetNotFound {
@@ -62,7 +62,7 @@ func (e *Engine) GetString(key string, params rule.Params) (string, error) {
 		return "", err
 	}
 
-	return res.Value, nil
+	return res.Data, nil
 }
 
 // GetBool evaluates the ruleset associated with key and returns the result as a bool.
@@ -72,5 +72,5 @@ func (e *Engine) GetBool(key string, params rule.Params) (bool, error) {
 		return false, err
 	}
 
-	return strconv.ParseBool(res.Value)
+	return strconv.ParseBool(res.Data)
 }

@@ -4,7 +4,6 @@ package rule
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/tidwall/gjson"
@@ -20,15 +19,15 @@ type Params map[string]string
 
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
-	Root   Node    `json:"root"`
-	Result *Result `json:"result"`
+	Root   Node   `json:"root"`
+	Result *Value `json:"result"`
 }
 
 // New creates a rule with the given node and that returns the given result on evaluation.
-func New(node Node, res *Result) *Rule {
+func New(node Node, result *Value) *Rule {
 	return &Rule{
 		Root:   node,
-		Result: res,
+		Result: result,
 	}
 }
 
@@ -36,7 +35,7 @@ func New(node Node, res *Result) *Rule {
 func (r *Rule) UnmarshalJSON(data []byte) error {
 	tree := struct {
 		Root   json.RawMessage `json:"root"`
-		Result *Result         `json:"result"`
+		Result *Value          `json:"result"`
 	}{}
 
 	err := json.Unmarshal(data, &tree)
@@ -62,7 +61,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(params Params) (*Result, error) {
+func (r *Rule) Eval(params Params) (*Value, error) {
 	value, err := r.Root.Eval(params)
 	if err != nil {
 		return nil, err
@@ -84,26 +83,14 @@ func (r *Rule) Eval(params Params) (*Result, error) {
 	return r.Result, nil
 }
 
-// Result contains the value to return if the rule is matched.
-type Result struct {
-	Value string `json:"value"`
-	Type  string `json:"type"`
-}
-
-// ReturnsStr specifies the string result to be returned by the rule if matched.
-func ReturnsStr(value string) *Result {
-	return &Result{
-		Value: value,
-		Type:  "string",
-	}
+// ReturnsString specifies the string result to be returned by the rule if matched.
+func ReturnsString(value string) *Value {
+	return StringValue(value)
 }
 
 // ReturnsBool specifies the bool result to be returned by the rule if matched.
-func ReturnsBool(value bool) *Result {
-	return &Result{
-		Value: fmt.Sprintf("%v", value),
-		Type:  "bool",
-	}
+func ReturnsBool(value bool) *Value {
+	return BoolValue(value)
 }
 
 // A Ruleset is list of rules that must return the same type.
@@ -139,7 +126,7 @@ func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r *Ruleset) Eval(params Params) (*Result, error) {
+func (r *Ruleset) Eval(params Params) (*Value, error) {
 	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != ErrNoMatch {

@@ -35,31 +35,31 @@ func TestEngine(t *testing.T) {
 		"/match-string-a": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsStr("matched a")),
+				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a")),
 			},
 		},
 		"/match-string-b": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsStr("matched b")),
+				rule.New(rule.True(), rule.ReturnsString("matched b")),
 			},
 		},
 		"/type-mismatch": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Result{Type: "int", Value: "5"}),
+				rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 			},
 		},
 		"/no-match": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsStr("matched d")),
+				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
 			},
 		},
 		"/match-bool": &rule.Ruleset{
 			Type: "bool",
 			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Result{Type: "bool", Value: "true"}),
+				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 			},
 		},
 	})
@@ -90,4 +90,28 @@ func TestEngine(t *testing.T) {
 
 	_, err = e.GetString("/not-found", nil)
 	require.Equal(t, rules.ErrRulesetNotFound, err)
+}
+
+var store = new(mockStore)
+
+func ExampleEngine() {
+	engine := rules.NewEngine(store)
+
+	_, err := engine.GetString("/a/b/c", rule.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		switch err {
+		case rules.ErrRulesetNotFound:
+			// when the ruleset doesn't exist
+		case rules.ErrTypeMismatch:
+			// when the ruleset returns the bad type
+		case rule.ErrNoMatch:
+			// when the ruleset doesn't match
+		default:
+			// something unexpected happened
+		}
+	}
 }

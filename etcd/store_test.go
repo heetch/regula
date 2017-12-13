@@ -44,12 +44,12 @@ func TestEtcdStore(t *testing.T) {
 			rule.StringValue("bar"),
 			rule.StringParam("foo"),
 		),
-		rule.ReturnsStr("matched r1"),
+		rule.ReturnsString("matched r1"),
 	)
 
 	rd := rule.New(
 		rule.True(),
-		rule.ReturnsStr("matched default"),
+		rule.ReturnsString("matched default"),
 	)
 	rs, err := rule.NewStringRuleset(r1, rd)
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestEtcdStore(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Equal(t, "string", res.Type)
-				require.Equal(t, "matched r1", res.Value)
+				require.Equal(t, "matched r1", res.Data)
 			})
 		}
 	})

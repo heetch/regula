@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,8 +13,8 @@ func TestRuleUnmarshalling(t *testing.T) {
 
 		err := rule.UnmarshalJSON([]byte(`{
 			"result": {
-				"value": "foo",
-                "type": "string"
+				"data": "foo",
+				"type": "string"
 			},
 			"root": {
 				"kind": "eq",
@@ -21,7 +22,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 					{
 						"kind": "value",
 						"type": "string",
-						"value": "bar"
+						"data": "bar"
 					},
 					{
 						"kind": "eq",
@@ -34,7 +35,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 							{
 								"kind": "value",
 								"type": "string",
-								"value": "bar"
+								"data": "bar"
 							}
 						]
 					}
@@ -43,7 +44,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 		require.Equal(t, "string", rule.Result.Type)
-		require.Equal(t, "foo", rule.Result.Value)
+		require.Equal(t, "foo", rule.Result.Data)
 		require.IsType(t, new(nodeEq), rule.Root)
 		eq := rule.Root.(*nodeEq)
 		require.Len(t, eq.Operands, 2)
@@ -64,7 +65,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 					{
 						"kind": "value",
 						"type": "bool",
-						"value": "true"
+						"data": "true"
 					}
 				]
 			}
@@ -94,10 +95,10 @@ func TestRuleEval(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			r := New(test.node, ReturnsStr("matched"))
+			r := New(test.node, ReturnsString("matched"))
 			res, err := r.Eval(test.params)
 			require.NoError(t, err)
-			require.Equal(t, "matched", res.Value)
+			require.Equal(t, "matched", res.Data)
 			require.Equal(t, "string", res.Type)
 		}
 	})
@@ -112,7 +113,7 @@ func TestRuleEval(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			r := New(test.node, ReturnsStr("matched"))
+			r := New(test.node, ReturnsString("matched"))
 			_, err := r.Eval(test.params)
 			require.Error(t, err)
 		}
@@ -122,14 +123,14 @@ func TestRuleEval(t *testing.T) {
 func TestRulesetEval(t *testing.T) {
 	t.Run("Match string", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
-			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsStr("second")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
+			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsString("second")),
 		)
 		require.NoError(t, err)
 
 		res, err := r.Eval(nil)
 		require.NoError(t, err)
-		require.Equal(t, "second", res.Value)
+		require.Equal(t, "second", res.Data)
 	})
 
 	t.Run("Match bool", func(t *testing.T) {
@@ -141,12 +142,12 @@ func TestRulesetEval(t *testing.T) {
 
 		res, err := r.Eval(nil)
 		require.NoError(t, err)
-		require.Equal(t, "true", res.Value)
+		require.Equal(t, "true", res.Data)
 	})
 
 	t.Run("Type mismatch", func(t *testing.T) {
 		_, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
 			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsBool(true)),
 		)
 		require.Equal(t, ErrRulesetIncoherentType, err)
@@ -154,8 +155,8 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("No match", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
-			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsStr("second")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
+			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsString("second")),
 		)
 		require.NoError(t, err)
 
@@ -165,14 +166,32 @@ func TestRulesetEval(t *testing.T) {
 
 	t.Run("Default", func(t *testing.T) {
 		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsStr("first")),
-			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsStr("second")),
-			New(True(), ReturnsStr("default")),
+			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
+			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsString("second")),
+			New(True(), ReturnsString("default")),
 		)
 		require.NoError(t, err)
 
 		res, err := r.Eval(nil)
 		require.NoError(t, err)
-		require.Equal(t, "default", res.Value)
+		require.Equal(t, "default", res.Data)
 	})
+}
+
+func TestRulesetEncDec(t *testing.T) {
+	r1, err := NewStringRuleset(
+		New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
+		New(Eq(StringValue("bar"), StringParam("foo")), ReturnsString("second")),
+		New(True(), ReturnsString("default")),
+	)
+	require.NoError(t, err)
+
+	raw, err := json.Marshal(r1)
+	require.NoError(t, err)
+
+	var r2 Ruleset
+	err = json.Unmarshal(raw, &r2)
+	require.NoError(t, err)
+
+	require.Equal(t, r1, &r2)
 }

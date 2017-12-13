@@ -403,16 +403,6 @@ func StringParam(name string) Node {
 	}
 }
 
-// BoolParam creates a node that looks up in the set of params passed during evaluation and returns the value of the variable that corresponds to the given name.
-// The corresponding value must be a bool. If not found it returns an error.
-func BoolParam(name string) Node {
-	return &nodeParam{
-		Kind: "param",
-		Type: "bool",
-		Name: name,
-	}
-}
-
 func (n *nodeParam) Eval(params Params) (*Value, error) {
 	val, ok := params[n.Name]
 	if !ok {
