@@ -9,20 +9,25 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// Params is passed on rule evaluation.
+var (
+	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
+	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
+)
+
+// Params is a set of variables passed on rule evaluation.
 type Params map[string]string
 
-// Rule represents the AST of a single rule.
+// A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
-	Root   Node    `json:"root"`
-	Result *Result `json:"result"`
+	Root   Node   `json:"root"`
+	Result *Value `json:"result"`
 }
 
-// New rule.
-func New(node Node, res *Result) *Rule {
+// New creates a rule with the given node and that returns the given result on evaluation.
+func New(node Node, result *Value) *Rule {
 	return &Rule{
 		Root:   node,
-		Result: res,
+		Result: result,
 	}
 }
 
@@ -30,12 +35,16 @@ func New(node Node, res *Result) *Rule {
 func (r *Rule) UnmarshalJSON(data []byte) error {
 	tree := struct {
 		Root   json.RawMessage `json:"root"`
-		Result *Result         `json:"result"`
+		Result *Value          `json:"result"`
 	}{}
 
 	err := json.Unmarshal(data, &tree)
 	if err != nil {
 		return err
+	}
+
+	if tree.Result.Type == "" {
+		return errors.New("invalid rule result type")
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
@@ -49,10 +58,10 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-// Eval evaluates the rule against the given context.
+// Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(params Params) (*Result, error) {
+func (r *Rule) Eval(params Params) (*Value, error) {
 	value, err := r.Root.Eval(params)
 	if err != nil {
 		return nil, err
@@ -74,27 +83,51 @@ func (r *Rule) Eval(params Params) (*Result, error) {
 	return r.Result, nil
 }
 
-// Result contains the value to return if the rule is matched.
-type Result struct {
-	Value string `json:"value"`
-	Type  string `json:"type"`
+// ReturnsString specifies the string result to be returned by the rule if matched.
+func ReturnsString(value string) *Value {
+	return StringValue(value)
 }
 
-// ReturnsStr specifies the result returned by the rule if matched.
-func ReturnsStr(value string) *Result {
-	return &Result{
-		Value: value,
-		Type:  "string",
+// ReturnsBool specifies the bool result to be returned by the rule if matched.
+func ReturnsBool(value bool) *Value {
+	return BoolValue(value)
+}
+
+// A Ruleset is list of rules that must return the same type.
+type Ruleset struct {
+	Rules []*Rule `json:"rules"`
+	Type  string  `json:"type"`
+}
+
+// NewStringRuleset creates a ruleset which rules all return a string otherwise
+// ErrRulesetIncoherentType is returned.
+func NewStringRuleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("string", rules...)
+}
+
+// NewBoolRuleset creates a ruleset which rules all return a bool otherwise
+// ErrRulesetIncoherentType is returned.
+func NewBoolRuleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("bool", rules...)
+}
+
+func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
+	for _, r := range rules {
+		if typ != r.Result.Type {
+			return nil, ErrRulesetIncoherentType
+		}
 	}
-}
 
-// A Ruleset is list of rules.
-type Ruleset []*Rule
+	return &Ruleset{
+		Rules: rules,
+		Type:  typ,
+	}, nil
+}
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r Ruleset) Eval(params Params) (*Result, error) {
-	for _, rl := range r {
+func (r *Ruleset) Eval(params Params) (*Value, error) {
+	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != ErrNoMatch {
 			return res, err
@@ -102,4 +135,19 @@ func (r Ruleset) Eval(params Params) (*Result, error) {
 	}
 
 	return nil, ErrNoMatch
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (r *Ruleset) UnmarshalJSON(data []byte) error {
+	type ruleset Ruleset
+	if err := json.Unmarshal(data, (*ruleset)(r)); err != nil {
+		return err
+	}
+
+	if r.Type != "string" && r.Type != "bool" {
+		return errors.New("unsupported ruleset type")
+	}
+
+	_, err := newRuleset(r.Type, r.Rules...)
+	return err
 }

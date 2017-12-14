@@ -1,12 +1,18 @@
 # rules-engine
 
 [![Build Status](https://drone.heetch.net/api/badges/heetch/rules-engine/status.svg)](https://drone.heetch.net/heetch/rules-engine)
+[![Godoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.dev.heetch.internal/pkg/github.com/heetch/rules-engine/)
 
 ## Install
 
 ```sh
 go get github.com/heetch/rules-engine
 ```
+
+## Documentation
+
+For detailed documentation and basic usage examples, please see the package
+documentation at <http://godoc.dev.heetch.internal/pkg/github.com/heetch/rules-engine>.
 
 ## Usage
 
@@ -15,72 +21,46 @@ package main
 
 import (
   "log"
+  "time"
 
+  "github.com/coreos/etcd/clientv3"
   rules "github.com/heetch/rules-engine"
-  "github.com/heetch/rules-engine/consul"
+  "github.com/heetch/rules-engine/etcd"
   "github.com/heetch/rules-engine/rule"
 )
 
 func main() {
-  store, err := consul.NewStore("127.0.0.1:8500", "/rules")
+  cli, err := clientv3.New(clientv3.Config{
+    Endpoints:   []string{":2379"},
+    DialTimeout: 5 * time.Second,
+  })
+  if err != nil {
+    log.Fatal(err)
+  }
+  defer cli.Close()
+
+  store, err := etcd.NewStore(cli, "prefix")
   if err != nil {
     log.Fatal(err)
   }
 
   engine := rules.NewEngine(store)
+
   val, err := engine.GetString("/a/b/c", rule.Params{
-    "paramA":     "bar",
-    "paramB":     "bar",
-    "otherParam": "bar",
+    "product-id": "1234",
+    "user-id"   : "5678",
   })
-  switch err {
-    case rules.ErrRuleNotFound:
+  if err != nil {
+    switch err {
+    case rules.ErrRulesetNotFound:
       // when the ruleset doesn't exist
     case rules.ErrTypeMismatch:
       // when the ruleset returns the bad type
     case rule.ErrNoMatch:
       // when the ruleset doesn't match
-    case nil:
-      // everything is fine
     default:
       // something unexpected happened
+    }
   }
 }
-```
-
-## Creating Rules and Rulesets
-
-```go
-// if paramA == "a value" == paramB -> "matched A"
-rA := rule.New(
-  rule.Eq(
-    rule.ParamStr("productID"),
-    rule.ValueStr("fr-paris"),
-  ),
-  rule.ReturnsStr("matched A"),
-)
-
-// if paramA in ["a", "b", "c", otherParam] -> "matched B"
-rB := rule.New(
-  rule.In(
-    rule.ParamStr("paramA"),
-    rule.ValueStr("a"),
-    rule.ValueStr("b"),
-    rule.ValueStr("c"),
-    rule.ParamStr("otherParam"),
-  ),
-  rule.ReturnsStr("matched B"),
-)
-
-// default rule -> "matched default"
-rDef := rule.New(
-  rule.True(), // always match
-  rule.ReturnsStr("matched default"),
-)
-
-// A ruleset is a list of rules
-rs := rule.Ruleset{rA, rB, rDef}
-
-// Marshal then save to Consul
-raw, _ := json.Marshal(rs)
 ```

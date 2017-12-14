@@ -30,6 +30,247 @@ func (m *mockNode) MarshalJSON() ([]byte, error) {
 	return []byte(`{"kind": "mock"}`), nil
 }
 
+func TestNot(t *testing.T) {
+	t.Run("Marshalling", func(t *testing.T) {
+		not := Not(new(mockNode))
+
+		raw, err := json.Marshal(not)
+		require.NoError(t, err)
+		require.JSONEq(t, `
+			{
+				"kind": "not",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`, string(raw))
+	})
+
+	t.Run("Unmarshalling", func(t *testing.T) {
+		var not nodeNot
+
+		// enough operands
+		err := not.UnmarshalJSON([]byte(`
+			{
+				"kind": "not",
+				"operands": [
+					{"kind": "value"}
+				]
+			}
+		`))
+		require.NoError(t, err)
+		require.Len(t, not.Operands, 1)
+
+		err = not.UnmarshalJSON([]byte(`
+			{
+				"kind": "not",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`))
+		require.Error(t, err)
+	})
+
+	t.Run("Eval/true", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(true)}
+		not := Not(&m1)
+		val, err := not.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(false), val)
+		require.Equal(t, 1, m1.evalCount)
+	})
+
+	t.Run("Eval/false", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(false)}
+		not := Not(&m1)
+		val, err := not.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+	})
+
+	t.Run("Eval/error", func(t *testing.T) {
+		m1 := mockNode{val: StringValue("foobar")}
+		not := Not(&m1)
+		_, err := not.Eval(nil)
+		require.Error(t, err)
+		require.Equal(t, 1, m1.evalCount)
+	})
+}
+
+func TestAnd(t *testing.T) {
+	t.Run("Marshalling", func(t *testing.T) {
+		and := Or(new(mockNode), new(mockNode))
+
+		raw, err := json.Marshal(and)
+		require.NoError(t, err)
+		require.JSONEq(t, `
+			{
+				"kind": "or",
+				"operands": [
+					{"kind": "mock"},
+					{"kind": "mock"}
+				]
+			}
+		`, string(raw))
+	})
+
+	t.Run("Unmarshalling", func(t *testing.T) {
+		var and nodeAnd
+
+		// enough operands
+		err := and.UnmarshalJSON([]byte(`
+			{
+				"kind": "and",
+				"operands": [
+					{"kind": "param"},
+					{"kind": "value"}
+				]
+			}
+		`))
+		require.NoError(t, err)
+		require.Len(t, and.Operands, 2)
+
+		err = and.UnmarshalJSON([]byte(`
+			{
+				"kind": "and",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`))
+		require.Error(t, err)
+	})
+
+	t.Run("Eval/true", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(true)}
+		and := And(&m1, &m2)
+		val, err := and.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+	})
+
+	t.Run("Eval/short-circuit", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(false)}
+		m2 := mockNode{val: BoolValue(true)}
+		and := And(&m1, &m2)
+		val, err := and.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(false), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 0, m2.evalCount)
+	})
+
+	t.Run("Eval/false", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(false)}
+		and := And(&m1, &m2)
+		val, err := and.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(false), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+	})
+
+	t.Run("Eval/error", func(t *testing.T) {
+		m1 := mockNode{val: StringValue("foobar")}
+		m2 := mockNode{val: BoolValue(true)}
+		and := And(&m1, &m2)
+		_, err := and.Eval(nil)
+		require.Error(t, err)
+	})
+}
+
+func TestOr(t *testing.T) {
+	t.Run("Marshalling", func(t *testing.T) {
+		or := Or(new(mockNode), new(mockNode))
+
+		raw, err := json.Marshal(or)
+		require.NoError(t, err)
+		require.JSONEq(t, `
+			{
+				"kind": "or",
+				"operands": [
+					{"kind": "mock"},
+					{"kind": "mock"}
+				]
+			}
+		`, string(raw))
+	})
+
+	t.Run("Unmarshalling", func(t *testing.T) {
+		var or nodeOr
+
+		// enough operands
+		err := or.UnmarshalJSON([]byte(`
+			{
+				"kind": "or",
+				"operands": [
+					{"kind": "param"},
+					{"kind": "value"}
+				]
+			}
+		`))
+		require.NoError(t, err)
+		require.Len(t, or.Operands, 2)
+
+		err = or.UnmarshalJSON([]byte(`
+			{
+				"kind": "or",
+				"operands": [
+					{"kind": "mock"}
+				]
+			}
+		`))
+		require.Error(t, err)
+	})
+
+	t.Run("Eval/true", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(true)}
+		or := Or(&m1, &m2)
+		val, err := or.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 0, m2.evalCount)
+	})
+
+	t.Run("Eval/short-circuit", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(false)}
+		m2 := mockNode{val: BoolValue(true)}
+		or := Or(&m1, &m2)
+		val, err := or.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(true), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+	})
+
+	t.Run("Eval/false", func(t *testing.T) {
+		m1 := mockNode{val: BoolValue(false)}
+		m2 := mockNode{val: BoolValue(false)}
+		or := Or(&m1, &m2)
+		val, err := or.Eval(nil)
+		require.NoError(t, err)
+		require.Equal(t, BoolValue(false), val)
+		require.Equal(t, 1, m1.evalCount)
+		require.Equal(t, 1, m2.evalCount)
+	})
+
+	t.Run("Eval/error", func(t *testing.T) {
+		m1 := mockNode{val: StringValue("foobar")}
+		m2 := mockNode{val: BoolValue(true)}
+		or := Or(&m1, &m2)
+		_, err := or.Eval(nil)
+		require.Error(t, err)
+	})
+}
+
 func TestEq(t *testing.T) {
 	t.Run("Marshalling", func(t *testing.T) {
 		eq := Eq(new(mockNode), new(mockNode))
@@ -48,7 +289,7 @@ func TestEq(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var eq NodeEq
+		var eq nodeEq
 
 		// enough operands
 		err := eq.UnmarshalJSON([]byte(`
@@ -75,13 +316,13 @@ func TestEq(t *testing.T) {
 	})
 
 	t.Run("Eval/Match", func(t *testing.T) {
-		m1 := mockNode{val: NewBoolValue(true)}
-		m2 := mockNode{val: NewBoolValue(true)}
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(true)}
 		params := Params{"foo": "bar"}
 		eq := Eq(&m1, &m2)
 		val, err := eq.Eval(params)
 		require.NoError(t, err)
-		require.Equal(t, NewBoolValue(true), val)
+		require.Equal(t, BoolValue(true), val)
 		require.Equal(t, 1, m1.evalCount)
 		require.Equal(t, 1, m2.evalCount)
 		require.Equal(t, params, m1.lastParams)
@@ -89,12 +330,12 @@ func TestEq(t *testing.T) {
 	})
 
 	t.Run("Eval/NoMatch", func(t *testing.T) {
-		m1 := mockNode{val: NewBoolValue(true)}
-		m2 := mockNode{val: NewBoolValue(false)}
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(false)}
 		eq := Eq(&m1, &m2)
 		val, err := eq.Eval(nil)
 		require.NoError(t, err)
-		require.Equal(t, NewBoolValue(false), val)
+		require.Equal(t, BoolValue(false), val)
 	})
 }
 
@@ -116,7 +357,7 @@ func TestIn(t *testing.T) {
 	})
 
 	t.Run("Unmarshalling", func(t *testing.T) {
-		var in NodeIn
+		var in nodeIn
 
 		// enough operands
 		err := in.UnmarshalJSON([]byte(`
@@ -143,13 +384,13 @@ func TestIn(t *testing.T) {
 	})
 
 	t.Run("Eval/OK", func(t *testing.T) {
-		m1 := mockNode{val: NewBoolValue(true)}
-		m2 := mockNode{val: NewBoolValue(true)}
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(true)}
 		params := Params{"foo": "bar"}
 		in := In(&m1, &m2)
 		val, err := in.Eval(params)
 		require.NoError(t, err)
-		require.Equal(t, NewBoolValue(true), val)
+		require.Equal(t, BoolValue(true), val)
 		require.Equal(t, 1, m1.evalCount)
 		require.Equal(t, 1, m2.evalCount)
 		require.Equal(t, params, m1.lastParams)
@@ -157,12 +398,12 @@ func TestIn(t *testing.T) {
 	})
 
 	t.Run("Eval/Fail", func(t *testing.T) {
-		m1 := mockNode{val: NewBoolValue(true)}
-		m2 := mockNode{val: NewBoolValue(false)}
+		m1 := mockNode{val: BoolValue(true)}
+		m2 := mockNode{val: BoolValue(false)}
 		eq := In(&m1, &m2)
 		val, err := eq.Eval(nil)
 		require.NoError(t, err)
-		require.Equal(t, NewBoolValue(false), val)
+		require.Equal(t, BoolValue(false), val)
 	})
 }
 
@@ -182,13 +423,12 @@ func TestOperands(t *testing.T) {
 		err := ops.UnmarshalJSON([]byte(`[
 			{"kind": "value"},
 			{"kind": "param"},
-			{"kind": "true"},
 			{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]},
 			{"kind": "in","operands": [{"kind": "value"}, {"kind": "param"}]}
 		]`))
 		require.NoError(t, err)
-		require.Len(t, ops.Ops, 5)
-		require.Len(t, ops.Nodes, 5)
+		require.Len(t, ops.Ops, 4)
+		require.Len(t, ops.Nodes, 4)
 	})
 }
 
@@ -209,11 +449,13 @@ func TestParseNode(t *testing.T) {
 			data []byte
 			typ  interface{}
 		}{
-			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeEq)},
-			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(NodeIn)},
-			{"param", []byte(`{"kind":"param"}`), new(NodeParam)},
-			{"value", []byte(`{"kind":"value"}`), new(NodeValue)},
-			{"true", []byte(`{"kind":"true"}`), new(NodeTrue)},
+			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeEq)},
+			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeIn)},
+			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeNot)},
+			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeAnd)},
+			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(nodeOr)},
+			{"param", []byte(`{"kind":"param"}`), new(nodeParam)},
+			{"value", []byte(`{"kind":"value"}`), new(Value)},
 		}
 
 		for _, test := range tests {
@@ -225,18 +467,18 @@ func TestParseNode(t *testing.T) {
 	})
 }
 
-func TestVariable(t *testing.T) {
+func TestParam(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		v := ParamStr("foo")
+		v := StringParam("foo")
 		val, err := v.Eval(Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
-		require.Equal(t, NewStringValue("bar"), val)
+		require.Equal(t, StringValue("bar"), val)
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		v := ParamStr("foo")
+		v := StringParam("foo")
 		_, err := v.Eval(Params{
 			"boo": "bar",
 		})
@@ -244,8 +486,16 @@ func TestVariable(t *testing.T) {
 	})
 
 	t.Run("Empty context", func(t *testing.T) {
-		v := ParamStr("foo")
+		v := StringParam("foo")
 		_, err := v.Eval(nil)
 		require.Error(t, err)
 	})
+}
+
+func TestValue(t *testing.T) {
+	v1 := BoolValue(true)
+	require.True(t, v1.Equal(v1))
+	require.True(t, v1.Equal(BoolValue(true)))
+	require.False(t, v1.Equal(BoolValue(false)))
+	require.False(t, v1.Equal(StringValue("true")))
 }

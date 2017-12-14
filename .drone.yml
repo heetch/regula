@@ -13,5 +13,7 @@ pipeline:
       event: push
 
 services:
-  database:
-    image: consul:latest
+  etcd:
+    image: quay.io/coreos/etcd:latest
+    ports:
+      - "2379:2379"
