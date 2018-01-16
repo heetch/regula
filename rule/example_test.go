@@ -31,18 +31,20 @@ func Example() {
 func ExampleAnd() {
 	tree := rule.And(
 		rule.Eq(
-			rule.StringValue("bar"),
-			rule.StringParam("foo"),
+			rule.Int64Value(10),
+			rule.Int64Param("foo"),
 		),
-		rule.True(),
-		rule.BoolValue(true),
 		rule.Not(
-			rule.BoolValue(false),
+			rule.Eq(
+				rule.Float64Value(1.5),
+				rule.Float64Param("bar"),
+			),
 		),
 	)
 
 	val, err := tree.Eval(rule.Params{
-		"foo": "bar",
+		"foo": 10,
+		"bar": 1.6,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -54,18 +56,18 @@ func ExampleAnd() {
 
 func ExampleOr() {
 	tree := rule.Or(
-		rule.BoolValue(false),
 		rule.Eq(
-			rule.StringValue("bar"),
-			rule.StringParam("foo"),
+			rule.Float64Value(1.2),
+			rule.Float64Param("foo"),
 		),
-		rule.Not(
-			rule.BoolValue(false),
+		rule.Eq(
+			rule.Float64Value(3.14),
+			rule.Float64Param("foo"),
 		),
 	)
 
 	val, err := tree.Eval(rule.Params{
-		"foo": "zaz",
+		"foo": 3.14,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -105,6 +107,40 @@ func ExampleEq_bool() {
 
 	val, err := tree.Eval(rule.Params{
 		"foo": "bar",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(val.Data)
+	// Output: true
+}
+
+func ExampleEq_int64() {
+	tree := rule.Eq(
+		rule.Int64Value(10),
+		rule.Int64Param("foo"),
+	)
+
+	val, err := tree.Eval(rule.Params{
+		"foo": 10,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(val.Data)
+	// Output: true
+}
+
+func ExampleEq_float64() {
+	tree := rule.Eq(
+		rule.Float64Value(3.14),
+		rule.Float64Param("foo"),
+	)
+
+	val, err := tree.Eval(rule.Params{
+		"foo": 3.14,
 	})
 	if err != nil {
 		log.Fatal(err)

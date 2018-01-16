@@ -101,13 +101,13 @@ func TestNot(t *testing.T) {
 
 func TestAnd(t *testing.T) {
 	t.Run("Marshalling", func(t *testing.T) {
-		and := Or(new(mockNode), new(mockNode))
+		and := And(new(mockNode), new(mockNode))
 
 		raw, err := json.Marshal(and)
 		require.NoError(t, err)
 		require.JSONEq(t, `
 			{
-				"kind": "or",
+				"kind": "and",
 				"operands": [
 					{"kind": "mock"},
 					{"kind": "mock"}
