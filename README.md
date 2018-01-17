@@ -39,10 +39,14 @@ func main() {
   }
   defer cli.Close()
 
-  store, err := etcd.NewStore(cli, "prefix")
+  store, err := etcd.NewStore(cli, etcd.Options{
+    Prefix: "prefix",
+    Logger: log.New(os.Stdout, "[etcd] ", log.LstdFlags),
+  })
   if err != nil {
     log.Fatal(err)
   }
+  defer store.Close()
 
   engine := rules.NewEngine(store)
 

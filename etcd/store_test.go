@@ -172,7 +172,7 @@ func Example() {
 
 	store, err := etcd.NewStore(cli, etcd.Options{
 		Prefix: "prefix",
-		Logger: log.New(os.Stdout, "[etcd]", log.LstdFlags),
+		Logger: log.New(os.Stdout, "[etcd] ", log.LstdFlags),
 	})
 	if err != nil {
 		log.Fatal(err)
