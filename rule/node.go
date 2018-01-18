@@ -393,12 +393,46 @@ type nodeParam struct {
 	Name string `json:"name"`
 }
 
-// StringParam creates a node that looks up in the set of params passed during evaluation and returns the value of the variable that corresponds to the given name.
+// StringParam creates a node that looks up in the set of params passed during evaluation and returns the value
+// of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
 func StringParam(name string) Node {
 	return &nodeParam{
 		Kind: "param",
 		Type: "string",
+		Name: name,
+	}
+}
+
+// BoolParam creates a node that looks up in the set of params passed during evaluation and returns the value
+// of the variable that corresponds to the given name.
+// The corresponding value must be a boolean. If not found it returns an error.
+func BoolParam(name string) Node {
+	return &nodeParam{
+		Kind: "param",
+		Type: "bool",
+		Name: name,
+	}
+}
+
+// Int64Param creates a node that looks up in the set of params passed during evaluation and returns the value
+// of the variable that corresponds to the given name.
+// The corresponding value must be an int64. If not found it returns an error.
+func Int64Param(name string) Node {
+	return &nodeParam{
+		Kind: "param",
+		Type: "int64",
+		Name: name,
+	}
+}
+
+// Float64Param creates a node that looks up in the set of params passed during evaluation and returns the value
+// of the variable that corresponds to the given name.
+// The corresponding value must be a float64. If not found it returns an error.
+func Float64Param(name string) Node {
+	return &nodeParam{
+		Kind: "param",
+		Type: "float64",
 		Name: name,
 	}
 }
@@ -409,7 +443,20 @@ func (n *nodeParam) Eval(params Params) (*Value, error) {
 		return nil, errors.New("param not found in given context")
 	}
 
-	return newValue(n.Type, val), nil
+	switch v := val.(type) {
+	case string:
+		return StringValue(v), nil
+	case bool:
+		return BoolValue(v), nil
+	case int64:
+		return Int64Value(v), nil
+	case int:
+		return Int64Value(int64(v)), nil
+	case float64:
+		return Float64Value(v), nil
+	}
+
+	return nil, errors.New("unsupported param type")
 }
 
 // True creates a node that always evaluates to true.
@@ -440,6 +487,16 @@ func BoolValue(value bool) *Value {
 // StringValue creates a string type value.
 func StringValue(value string) *Value {
 	return newValue("string", value)
+}
+
+// Int64Value creates an int64 type value.
+func Int64Value(value int64) *Value {
+	return newValue("int64", strconv.FormatInt(value, 10))
+}
+
+// Float64Value creates a float64 type value.
+func Float64Value(value float64) *Value {
+	return newValue("float64", strconv.FormatFloat(value, 'f', 6, 64))
 }
 
 // Eval evaluates the value to itself.

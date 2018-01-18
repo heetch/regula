@@ -74,3 +74,23 @@ func (e *Engine) GetBool(key string, params rule.Params) (bool, error) {
 
 	return strconv.ParseBool(res.Data)
 }
+
+// GetInt64 evaluates the ruleset associated with key and returns the result as an int64.
+func (e *Engine) GetInt64(key string, params rule.Params) (int64, error) {
+	res, err := e.get("int64", key, params)
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.ParseInt(res.Data, 10, 64)
+}
+
+// GetFloat64 evaluates the ruleset associated with key and returns the result as a float64.
+func (e *Engine) GetFloat64(key string, params rule.Params) (float64, error) {
+	res, err := e.get("float64", key, params)
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.ParseFloat(res.Data, 64)
+}

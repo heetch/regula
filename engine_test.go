@@ -62,6 +62,18 @@ func TestEngine(t *testing.T) {
 				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 			},
 		},
+		"/match-int64": &rule.Ruleset{
+			Type: "int64",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
+			},
+		},
+		"/match-float64": &rule.Ruleset{
+			Type: "float64",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
+			},
+		},
 	})
 
 	e := rules.NewEngine(m)
@@ -78,6 +90,14 @@ func TestEngine(t *testing.T) {
 	b, err := e.GetBool("/match-bool", nil)
 	require.NoError(t, err)
 	require.True(t, b)
+
+	i, err := e.GetInt64("/match-int64", nil)
+	require.NoError(t, err)
+	require.Equal(t, int64(-10), i)
+
+	f, err := e.GetFloat64("/match-float64", nil)
+	require.NoError(t, err)
+	require.Equal(t, -3.14, f)
 
 	_, err = e.GetString("/match-bool", nil)
 	require.Equal(t, rules.ErrTypeMismatch, err)

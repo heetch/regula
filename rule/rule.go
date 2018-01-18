@@ -15,7 +15,7 @@ var (
 )
 
 // Params is a set of variables passed on rule evaluation.
-type Params map[string]string
+type Params map[string]interface{}
 
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
@@ -93,6 +93,16 @@ func ReturnsBool(value bool) *Value {
 	return BoolValue(value)
 }
 
+// ReturnsInt64 specifies the int64 result to be returned by the rule if matched.
+func ReturnsInt64(value int64) *Value {
+	return Int64Value(value)
+}
+
+// ReturnsFloat64 specifies the float64 result to be returned by the rule if matched.
+func ReturnsFloat64(value float64) *Value {
+	return Float64Value(value)
+}
+
 // A Ruleset is list of rules that must return the same type.
 type Ruleset struct {
 	Rules []*Rule `json:"rules"`
@@ -109,6 +119,18 @@ func NewStringRuleset(rules ...*Rule) (*Ruleset, error) {
 // ErrRulesetIncoherentType is returned.
 func NewBoolRuleset(rules ...*Rule) (*Ruleset, error) {
 	return newRuleset("bool", rules...)
+}
+
+// NewInt64Ruleset creates a ruleset which rules all return an int64 otherwise
+// ErrRulesetIncoherentType is returned.
+func NewInt64Ruleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("int64", rules...)
+}
+
+// NewFloat64Ruleset creates a ruleset which rules all return an float64 otherwise
+// ErrRulesetIncoherentType is returned.
+func NewFloat64Ruleset(rules ...*Rule) (*Ruleset, error) {
+	return newRuleset("float64", rules...)
 }
 
 func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
@@ -144,7 +166,7 @@ func (r *Ruleset) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if r.Type != "string" && r.Type != "bool" {
+	if r.Type != "string" && r.Type != "bool" && r.Type != "int64" && r.Type != "float64" {
 		return errors.New("unsupported ruleset type")
 	}
 
