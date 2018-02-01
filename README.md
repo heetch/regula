@@ -1,18 +1,18 @@
 # rules-engine
 
 [![Build Status](https://drone.heetch.net/api/badges/heetch/rules-engine/status.svg)](https://drone.heetch.net/heetch/rules-engine)
-[![Godoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.dev.heetch.internal/pkg/github.com/heetch/rules-engine/)
+[![Godoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.dev.heetch.internal/github.com/heetch/rules-engine/)
 
 ## Install
 
 ```sh
-go get github.com/heetch/rules-engine
+glide get github.com/heetch/rules-engine
 ```
 
 ## Documentation
 
 For detailed documentation and basic usage examples, please see the package
-documentation at <http://godoc.dev.heetch.internal/pkg/github.com/heetch/rules-engine>.
+documentation at <http://godoc.dev.heetch.internal/github.com/heetch/rules-engine>.
 
 ## Usage
 
