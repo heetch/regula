@@ -18,7 +18,7 @@ import (
 
 var (
 	dialTimeout = 5 * time.Second
-	endpoints   = []string{"localhost:2379"}
+	endpoints   = []string{"localhost:2379", "etcd:2379"}
 )
 
 func etcdHelper(t *testing.T) (*clientv3.Client, string, func()) {
