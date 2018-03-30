@@ -15,6 +15,13 @@ import (
 )
 
 // CREATE YOUR RULESET IN THIS FUNCTION BODY
+//
+// Warning: removing a rule from this function body *won't* drop it from the ruleset in the store.
+// This function is only appending rulesets.
+//
+// If you really want to drop a rule, for now, all you can do is to drop it directly
+// in the store. It'd be best to drop the ruleset and recreate it from here rather than directly
+// editing it to remote the rule.
 func getRuleset() (*rule.Ruleset, error) {
 	// EXAMPLE:
 	return rule.NewStringRuleset(
