@@ -7,6 +7,7 @@ import (
 
 	rules "github.com/heetch/rules-engine"
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +26,7 @@ func newMockStore(namespace string, ruleSets map[string]*rule.Ruleset) *mockStor
 func (s *mockStore) Get(key string) (*rule.Ruleset, error) {
 	rs, ok := s.ruleSets[key]
 	if !ok {
-		err := rules.ErrRulesetNotFound
+		err := store.ErrRulesetNotFound
 		return nil, err
 	}
 
@@ -111,13 +112,13 @@ func TestEngine(t *testing.T) {
 	require.Equal(t, rule.ErrNoMatch, err)
 
 	_, err = e.GetString("/not-found", nil)
-	require.Equal(t, rules.ErrRulesetNotFound, err)
+	require.Equal(t, store.ErrRulesetNotFound, err)
 }
 
-var store rules.Store
+var st store.Store
 
 func init() {
-	store = newMockStore("/", map[string]*rule.Ruleset{
+	st = newMockStore("/", map[string]*rule.Ruleset{
 		"/path/to/string/key": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
@@ -149,7 +150,7 @@ func init() {
 }
 
 func ExampleEngine() {
-	engine := rules.NewEngine(store)
+	engine := rules.NewEngine(st)
 
 	_, err := engine.GetString("/a/b/c", rule.Params{
 		"product-id": "1234",
@@ -158,7 +159,7 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
-		case rules.ErrRulesetNotFound:
+		case store.ErrRulesetNotFound:
 			// when the ruleset doesn't exist
 		case rules.ErrTypeMismatch:
 			// when the ruleset returns the bad type
@@ -171,7 +172,7 @@ func ExampleEngine() {
 }
 
 func ExampleEngine_GetBool() {
-	engine := rules.NewEngine(store)
+	engine := rules.NewEngine(st)
 
 	b, err := engine.GetBool("/path/to/bool/key", rule.Params{
 		"product-id": "1234",
@@ -187,7 +188,7 @@ func ExampleEngine_GetBool() {
 }
 
 func ExampleEngine_GetString() {
-	engine := rules.NewEngine(store)
+	engine := rules.NewEngine(st)
 
 	s, err := engine.GetString("/path/to/string/key", rule.Params{
 		"product-id": "1234",
@@ -203,7 +204,7 @@ func ExampleEngine_GetString() {
 }
 
 func ExampleEngine_GetInt64() {
-	engine := rules.NewEngine(store)
+	engine := rules.NewEngine(st)
 
 	s, err := engine.GetInt64("/path/to/int64/key", rule.Params{
 		"product-id": "1234",
@@ -219,7 +220,7 @@ func ExampleEngine_GetInt64() {
 }
 
 func ExampleEngine_GetFloat64() {
-	engine := rules.NewEngine(store)
+	engine := rules.NewEngine(st)
 
 	f, err := engine.GetFloat64("/path/to/float64/key", rule.Params{
 		"product-id": "1234",

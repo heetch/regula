@@ -1,5 +1,5 @@
-hash: 05d2aa2c382072b067a8989e8467c944f5b028999bccb9ec12d04b1e689a5627
-updated: 2018-03-29T11:37:48.795198304+02:00
+hash: 54d437a194a46d45fbc1f87afce6f889ae6dda9df51660deb351d5a874fbe2f3
+updated: 2018-04-10T12:05:40.366189507+02:00
 imports:
 - name: github.com/coreos/etcd
   version: e348b1aedd9167360c466ae98f7343d3e22281f8
@@ -25,6 +25,11 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
+- name: github.com/heetch/confita
+  version: 0da276b702a62056befbed8f65dc5a1edfeb82c7
+  subpackages:
+  - backend
+  - backend/env
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/tidwall/gjson
@@ -83,7 +88,7 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
+  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
   subpackages:
   - assert
   - require

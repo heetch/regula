@@ -12,8 +12,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
-	rules "github.com/heetch/rules-engine"
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 	"github.com/pkg/errors"
 )
 
@@ -90,7 +90,7 @@ func (s *Store) Get(key string) (*rule.Ruleset, error) {
 
 	rs, ok := s.rulesets[path.Join("/", key)]
 	if !ok {
-		return nil, rules.ErrRulesetNotFound
+		return nil, store.ErrRulesetNotFound
 	}
 
 	return rs, nil

@@ -1,4 +1,4 @@
-package rules
+package store
 
 import (
 	"github.com/heetch/rules-engine/rule"

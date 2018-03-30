@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/etcd"
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
+	"github.com/heetch/rules-engine/store/etcd"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,9 +40,9 @@ func TestEtcdStore(t *testing.T) {
 
 	createRuleset(t, cli, prefix, "a/b/c")
 
-	store, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
 	require.NoError(t, err)
-	defer store.Close()
+	defer st.Close()
 
 	t.Run("OK", func(t *testing.T) {
 		tests := []string{
@@ -54,7 +54,7 @@ func TestEtcdStore(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test, func(t *testing.T) {
-				rs, err := store.Get(test)
+				rs, err := st.Get(test)
 				require.NoError(t, err)
 				require.Len(t, rs.Rules, 2)
 
@@ -69,11 +69,11 @@ func TestEtcdStore(t *testing.T) {
 	})
 
 	t.Run("Ruleset not found", func(t *testing.T) {
-		_, err := store.Get("unknown")
-		require.Equal(t, rules.ErrRulesetNotFound, err)
+		_, err := st.Get("unknown")
+		require.Equal(t, store.ErrRulesetNotFound, err)
 
-		_, err = store.Get("")
-		require.Equal(t, rules.ErrRulesetNotFound, err)
+		_, err = st.Get("")
+		require.Equal(t, store.ErrRulesetNotFound, err)
 	})
 }
 
@@ -83,22 +83,22 @@ func TestEtcdStoreWatcher(t *testing.T) {
 
 	createRuleset(t, cli, prefix, "a")
 
-	store, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
 	require.NoError(t, err)
-	defer store.Close()
+	defer st.Close()
 
 	createRuleset(t, cli, prefix, "b")
 
 	var found bool
 	for i := 0; i < 50; i++ {
-		r, err := store.Get("b")
+		r, err := st.Get("b")
 		if err == nil {
 			found = true
 			require.NotEmpty(t, r)
 			break
 		}
 
-		if err != rules.ErrRulesetNotFound {
+		if err != store.ErrRulesetNotFound {
 			t.Fatal(err)
 		}
 
@@ -113,8 +113,8 @@ func TestEtcdStoreWatcher(t *testing.T) {
 
 	var deleted bool
 	for i := 0; i < 50; i++ {
-		_, err := store.Get("b")
-		if err == rules.ErrRulesetNotFound {
+		_, err := st.Get("b")
+		if err == store.ErrRulesetNotFound {
 			deleted = true
 			break
 		}
@@ -170,16 +170,16 @@ func Example() {
 	}
 	defer cli.Close()
 
-	store, err := etcd.NewStore(cli, etcd.Options{
+	st, err := etcd.NewStore(cli, etcd.Options{
 		Prefix: "prefix",
 		Logger: log.New(os.Stdout, "[etcd] ", log.LstdFlags),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer store.Close()
+	defer st.Close()
 
-	_, err = store.Get("some-key")
+	_, err = st.Get("some-key")
 	if err != nil {
 		log.Fatal(err)
 	}

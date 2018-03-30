@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 	"github.com/pkg/errors"
 )
 
@@ -14,11 +15,11 @@ var (
 
 // Engine fetches the rules from the store and executes the selected ruleset.
 type Engine struct {
-	store Store
+	store store.Store
 }
 
 // NewEngine creates an Engine using the given store.
-func NewEngine(store Store) *Engine {
+func NewEngine(store store.Store) *Engine {
 	return &Engine{
 		store: store,
 	}
@@ -28,7 +29,7 @@ func NewEngine(store Store) *Engine {
 func (e *Engine) get(typ, key string, params rule.Params) (*rule.Value, error) {
 	ruleset, err := e.store.Get(key)
 	if err != nil {
-		if err == ErrRulesetNotFound {
+		if err == store.ErrRulesetNotFound {
 			return nil, err
 		}
 
