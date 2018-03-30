@@ -71,4 +71,4 @@ func main() {
 
 ## Tools
 
-The [tools](tools/etcd-ruleset-creator/README.md) directory contains a tool to easily create rulesets on etcd.
+The [etcd-ruleset-creator](store/etcd/etcd-ruleset-creator/README.md) directory contains a tool to easily create rulesets on etcd.
