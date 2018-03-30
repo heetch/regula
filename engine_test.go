@@ -1,6 +1,8 @@
 package rules_test
 
 import (
+	"fmt"
+	"log"
 	"testing"
 
 	rules "github.com/heetch/rules-engine"
@@ -112,7 +114,39 @@ func TestEngine(t *testing.T) {
 	require.Equal(t, rules.ErrRulesetNotFound, err)
 }
 
-var store = new(mockStore)
+var store rules.Store
+
+func init() {
+	store = newMockStore("/", map[string]*rule.Ruleset{
+		"/path/to/string/key": &rule.Ruleset{
+			Type: "string",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), rule.ReturnsString("some-string")),
+			},
+		},
+
+		"/path/to/int64/key": &rule.Ruleset{
+			Type: "int64",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), rule.ReturnsInt64(10)),
+			},
+		},
+
+		"/path/to/float64/key": &rule.Ruleset{
+			Type: "float64",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), rule.ReturnsFloat64(3.14)),
+			},
+		},
+
+		"/path/to/bool/key": &rule.Ruleset{
+			Type: "bool",
+			Rules: []*rule.Rule{
+				rule.New(rule.True(), rule.ReturnsBool(true)),
+			},
+		},
+	})
+}
 
 func ExampleEngine() {
 	engine := rules.NewEngine(store)
@@ -134,4 +168,68 @@ func ExampleEngine() {
 			// something unexpected happened
 		}
 	}
+}
+
+func ExampleEngine_GetBool() {
+	engine := rules.NewEngine(store)
+
+	b, err := engine.GetBool("/path/to/bool/key", rule.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(b)
+	// Output: true
+}
+
+func ExampleEngine_GetString() {
+	engine := rules.NewEngine(store)
+
+	s, err := engine.GetString("/path/to/string/key", rule.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(s)
+	// Output: some-string
+}
+
+func ExampleEngine_GetInt64() {
+	engine := rules.NewEngine(store)
+
+	s, err := engine.GetInt64("/path/to/int64/key", rule.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(s)
+	// Output: 10
+}
+
+func ExampleEngine_GetFloat64() {
+	engine := rules.NewEngine(store)
+
+	f, err := engine.GetFloat64("/path/to/float64/key", rule.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(f)
+	// Output: 3.14
 }
