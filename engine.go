@@ -1,8 +1,11 @@
 package rules
 
 import (
+	"context"
 	"strconv"
 
+	"github.com/heetch/confita"
+	"github.com/heetch/confita/backend"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/heetch/rules-engine/store"
 	"github.com/pkg/errors"
@@ -94,4 +97,31 @@ func (e *Engine) GetFloat64(key string, params rule.Params) (float64, error) {
 	}
 
 	return strconv.ParseFloat(res.Data, 64)
+}
+
+// LoadStruct takes a pointer to struct and params and loads rulesets into fields
+// tagged with the "ruleset" struct tag.
+func (e *Engine) LoadStruct(to interface{}, params rule.Params) error {
+	b := backend.Func("rules-engine", func(ctx context.Context, key string) ([]byte, error) {
+		ruleset, err := e.store.Get(key)
+		if err != nil {
+			if err == store.ErrRulesetNotFound {
+				return nil, err
+			}
+
+			return nil, errors.Wrap(err, "failed to get ruleset from the store")
+		}
+
+		val, err := ruleset.Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		return []byte(val.Data), nil
+	})
+
+	l := confita.NewLoader(b)
+	l.Tag = "ruleset"
+
+	return l.Load(context.Background(), to)
 }
