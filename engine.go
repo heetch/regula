@@ -106,7 +106,7 @@ func (e *Engine) LoadStruct(to interface{}, params rule.Params) error {
 		ruleset, err := e.store.Get(key)
 		if err != nil {
 			if err == store.ErrRulesetNotFound {
-				return nil, err
+				return nil, backend.ErrNotFound
 			}
 
 			return nil, errors.Wrap(err, "failed to get ruleset from the store")

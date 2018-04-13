@@ -150,15 +150,15 @@ func TestEngine(t *testing.T) {
 
 	t.Run("StructLoadingWrongKey", func(t *testing.T) {
 		to := struct {
-			StringA string `ruleset:"match-string-a"`
-			Wrong   string `ruleset:"no-exists"`
+			StringA string `ruleset:"match-string-a,required"`
+			Wrong   string `ruleset:"no-exists,required"`
 		}{}
 
 		err := e.LoadStruct(&to, rule.Params{
 			"foo": "bar",
 		})
 
-		require.Equal(t, store.ErrRulesetNotFound, err)
+		require.Error(t, err)
 	})
 
 	t.Run("StructLoadingMissingParam", func(t *testing.T) {
