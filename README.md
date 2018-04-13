@@ -1,7 +1,7 @@
 # rules-engine
 
 [![Build Status](https://drone.heetch.net/api/badges/heetch/rules-engine/status.svg)](https://drone.heetch.net/heetch/rules-engine)
-[![Godoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.dev.heetch.internal/github.com/heetch/rules-engine/)
+[![Godoc](https://img.shields.io/badge/doc-latest-blue.svg)](http://godoc.dev.heetch.internal/github.com/heetch/rules-engine/)
 
 ## Install
 
