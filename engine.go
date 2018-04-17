@@ -8,7 +8,6 @@ import (
 	"github.com/heetch/confita/backend"
 	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/rule"
-	"github.com/heetch/rules-engine/store"
 	"github.com/pkg/errors"
 )
 
@@ -33,7 +32,7 @@ func NewEngine(client client.Client) *Engine {
 func (e *Engine) get(ctx context.Context, typ, key string, params rule.Params) (*rule.Value, error) {
 	ruleset, err := e.client.Get(ctx, key)
 	if err != nil {
-		if err == store.ErrRulesetNotFound {
+		if err == client.ErrRulesetNotFound {
 			return nil, err
 		}
 
@@ -106,7 +105,7 @@ func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Par
 	b := backend.Func("rules-engine", func(ctx context.Context, key string) ([]byte, error) {
 		ruleset, err := e.client.Get(ctx, key)
 		if err != nil {
-			if err == store.ErrRulesetNotFound {
+			if err == client.ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
 			}
 
