@@ -14,6 +14,6 @@ type Store interface {
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Name    string
-	Ruleset *rule.Ruleset
+	Name    string        `json:"name"`
+	Ruleset *rule.Ruleset `json:"ruleset"`
 }
