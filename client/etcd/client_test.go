@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/rules-engine/client"
+	"github.com/heetch/rules-engine/client/etcd"
 	"github.com/heetch/rules-engine/rule"
-	"github.com/heetch/rules-engine/store"
-	"github.com/heetch/rules-engine/store/etcd"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,13 +34,13 @@ func etcdHelper(t *testing.T) (*clientv3.Client, string, func()) {
 	}
 }
 
-func TestEtcdStore(t *testing.T) {
+func TestEtcdClientGet(t *testing.T) {
 	cli, prefix, cleanup := etcdHelper(t)
 	defer cleanup()
 
 	createRuleset(t, cli, prefix, "a/b/c")
 
-	st, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewClient(cli, etcd.Options{Prefix: prefix})
 	require.NoError(t, err)
 	defer st.Close()
 
@@ -54,7 +54,7 @@ func TestEtcdStore(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test, func(t *testing.T) {
-				rs, err := st.Get(test)
+				rs, err := st.Get(context.Background(), test)
 				require.NoError(t, err)
 				require.Len(t, rs.Rules, 2)
 
@@ -69,21 +69,21 @@ func TestEtcdStore(t *testing.T) {
 	})
 
 	t.Run("Ruleset not found", func(t *testing.T) {
-		_, err := st.Get("unknown")
-		require.Equal(t, store.ErrRulesetNotFound, err)
+		_, err := st.Get(context.Background(), "unknown")
+		require.Equal(t, client.ErrRulesetNotFound, err)
 
-		_, err = st.Get("")
-		require.Equal(t, store.ErrRulesetNotFound, err)
+		_, err = st.Get(context.Background(), "")
+		require.Equal(t, client.ErrRulesetNotFound, err)
 	})
 }
 
-func TestEtcdStoreWatcher(t *testing.T) {
+func TestEtcdClientWatcher(t *testing.T) {
 	cli, prefix, cleanup := etcdHelper(t)
 	defer cleanup()
 
 	createRuleset(t, cli, prefix, "a")
 
-	st, err := etcd.NewStore(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewClient(cli, etcd.Options{Prefix: prefix})
 	require.NoError(t, err)
 	defer st.Close()
 
@@ -91,14 +91,14 @@ func TestEtcdStoreWatcher(t *testing.T) {
 
 	var found bool
 	for i := 0; i < 50; i++ {
-		r, err := st.Get("b")
+		r, err := st.Get(context.Background(), "b")
 		if err == nil {
 			found = true
 			require.NotEmpty(t, r)
 			break
 		}
 
-		if err != store.ErrRulesetNotFound {
+		if err != client.ErrRulesetNotFound {
 			t.Fatal(err)
 		}
 
@@ -113,8 +113,8 @@ func TestEtcdStoreWatcher(t *testing.T) {
 
 	var deleted bool
 	for i := 0; i < 50; i++ {
-		_, err := st.Get("b")
-		if err == store.ErrRulesetNotFound {
+		_, err := st.Get(context.Background(), "b")
+		if err == client.ErrRulesetNotFound {
 			deleted = true
 			break
 		}
@@ -170,7 +170,7 @@ func Example() {
 	}
 	defer cli.Close()
 
-	st, err := etcd.NewStore(cli, etcd.Options{
+	st, err := etcd.NewClient(cli, etcd.Options{
 		Prefix: "prefix",
 		Logger: log.New(os.Stdout, "[etcd] ", log.LstdFlags),
 	})
@@ -179,7 +179,7 @@ func Example() {
 	}
 	defer st.Close()
 
-	_, err = st.Get("some-key")
+	_, err = st.Get(context.Background(), "some-key")
 	if err != nil {
 		log.Fatal(err)
 	}
