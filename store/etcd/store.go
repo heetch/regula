@@ -3,19 +3,16 @@ package etcd
 import (
 	"context"
 	"encoding/json"
-	"log"
-
-	"github.com/heetch/rules-engine/store"
-	"github.com/pkg/errors"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/rules-engine/store"
+	"github.com/pkg/errors"
 )
 
 var _ store.Store = new(Store)
 
 // Store manages the storage of rulesets in etcd.
 type Store struct {
-	Logger    *log.Logger
 	Client    *clientv3.Client
 	Namespace string
 }

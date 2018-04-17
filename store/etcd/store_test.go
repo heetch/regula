@@ -3,15 +3,12 @@ package etcd_test
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
-	"log"
 	"path"
 	"testing"
 	"time"
 
-	"github.com/heetch/rules-engine/store"
-
 	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/rules-engine/store"
 	"github.com/heetch/rules-engine/store/etcd"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +28,6 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	require.NoError(t, err)
 
 	s := etcd.Store{
-		Logger:    log.New(ioutil.Discard, "", 0),
 		Client:    cli,
 		Namespace: "rules-engine-store-tests",
 	}

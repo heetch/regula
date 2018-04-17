@@ -15,8 +15,8 @@ const (
 	timeout = 5 * time.Second
 )
 
-// NewServer creates an http server to serve the rules engine API.
-func NewServer(store store.Store, logger zerolog.Logger) *http.Server {
+// New creates an http server to serve the rules engine API.
+func New(store store.Store, logger zerolog.Logger) *http.Server {
 	return &http.Server{
 		Handler: newHandler(store, logger),
 	}
