@@ -59,6 +59,12 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
+  version = "v0.0.3"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -71,11 +77,19 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/rs/xid"
+  packages = ["."]
+  revision = "02dd45c33376f85d1064355dc790dcc4850596b1"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/rs/zerolog"
   packages = [
     ".",
+    "hlog",
     "internal/cbor",
-    "internal/json"
+    "internal/json",
+    "log"
   ]
   revision = "05eafee0eb17d0150591a8f30f0fa592cc9b7471"
   version = "v1.6.0"
@@ -102,6 +116,12 @@
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
 
 [[projects]]
+  name = "github.com/zenazn/goji"
+  packages = ["web/mutil"]
+  revision = "64eb34159fe53473206c2b3e70fe396a639452f2"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
@@ -115,6 +135,12 @@
     "trace"
   ]
   revision = "8d16fa6dc9a85c1cd3ed24ad08ff21cf94f10888"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "b126b21c05a91c856b027c16779c12e3bf236954"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -177,6 +203,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c49b34fe8738d839f8143a422b9c41f7d5e0c5537edbff7d253877f307d8ca01"
+  inputs-digest = "b4390f9b7475d1e1e811deafad4be1fb3ffa32e91e92fc25e226fea419396dd0"
   solver-name = "gps-cdcl"
   solver-version = 1

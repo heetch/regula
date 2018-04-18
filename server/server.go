@@ -9,6 +9,7 @@ import (
 	"github.com/heetch/rules-engine/store"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
 )
 
 const (
@@ -33,14 +34,41 @@ func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
 		logger: logger,
 	}
 
+	// router
 	mux := httprouter.New()
 	mux.HandlerFunc("GET", "/rulesets", h.allRulesets)
 
+	// middlewares
+	chain := []func(http.Handler) http.Handler{
+		hlog.NewHandler(h.logger),
+		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+			hlog.FromRequest(r).Info().
+				Str("method", r.Method).
+				Str("url", r.URL.String()).
+				Int("status", status).
+				Int("size", size).
+				Dur("duration", duration).
+				Msg("")
+		}),
+		hlog.RemoteAddrHandler("ip"),
+		func(http.Handler) http.Handler {
+			return mux
+		},
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// setting request timeout
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		mux.ServeHTTP(w, r.WithContext(ctx))
+		// playing the middleware chain
+		var cur http.Handler
+		for i := len(chain) - 1; i >= 0; i-- {
+			cur = chain[i](cur)
+		}
+
+		// serving the request
+		cur.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -52,14 +80,4 @@ func (h *handler) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		h.writeError(w, err, http.StatusInternalServerError)
 	}
-}
-
-func (h *handler) allRulesets(w http.ResponseWriter, r *http.Request) {
-	l, err := h.store.All(r.Context())
-	if err != nil {
-		h.writeError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	h.encodeJSON(w, l, http.StatusOK)
 }

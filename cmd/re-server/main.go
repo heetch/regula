@@ -15,6 +15,7 @@ import (
 	"github.com/heetch/confita"
 	"github.com/heetch/rules-engine/server"
 	"github.com/heetch/rules-engine/store/etcd"
+	isatty "github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 )
 
@@ -62,11 +63,17 @@ func loadConfig() *config {
 func createLogger(level string) zerolog.Logger {
 	logger := zerolog.New(os.Stdout)
 
+	// zerolog has currently no support for string to level conversion
 	levels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
 	for i, lvl := range levels {
 		if lvl == level {
 			logger = logger.Level(zerolog.Level(i))
 		}
+	}
+
+	// pretty print during development
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
 	// replace standard logger with zerolog
