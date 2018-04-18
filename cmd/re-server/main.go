@@ -43,7 +43,7 @@ func main() {
 
 	srv := server.New(&store, logger)
 
-	runServer(srv, cfg.Server.Address)
+	runServer(srv, cfg.Server.Address, logger)
 }
 
 func loadConfig() *config {
@@ -95,13 +95,14 @@ func etcdClient(endpoints string) *clientv3.Client {
 	return cli
 }
 
-func runServer(srv *http.Server, addr string) {
+func runServer(srv *http.Server, addr string, logger zerolog.Logger) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	go func() {
+		logger.Info().Msg("Listening on " + l.Addr().String())
 		err := srv.Serve(l)
 		if err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
