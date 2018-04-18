@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -29,24 +28,19 @@ func New(store store.Store, logger zerolog.Logger) *http.Server {
 	}
 }
 
-type handler struct {
-	logger zerolog.Logger
-	store  store.Store
-}
-
 func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
-	h := handler{
+	a := api{
 		store:  store,
 		logger: logger,
 	}
 
 	// router
 	mux := httprouter.New()
-	mux.HandlerFunc("GET", "/rulesets", h.allRulesets)
+	mux.HandlerFunc("GET", "/rulesets", a.allRulesets)
 
 	// middlewares
 	chain := []func(http.Handler) http.Handler{
-		hlog.NewHandler(h.logger),
+		hlog.NewHandler(a.logger),
 		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
 			hlog.FromRequest(r).Info().
 				Str("method", r.Method).
@@ -76,30 +70,4 @@ func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
 		// serving the request
 		cur.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-// encodeJSON encodes v to w in JSON format.
-func (h *handler) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		h.logger.Error().Err(err).Interface("value", v).Msg("failed to encode value to http response")
-	}
-}
-
-func (h *handler) writeError(w http.ResponseWriter, err error, code int) {
-	// Log error.
-	h.logger.Debug().Err(err).Int("code", code).Msg("http error")
-
-	// Hide error from client if it's internal.
-	if code == http.StatusInternalServerError {
-		err = errInternal
-	}
-
-	h.encodeJSON(w, &httpError{Err: err.Error()}, code)
-}
-
-type httpError struct {
-	Err string `json:"error"`
 }
