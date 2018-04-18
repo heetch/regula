@@ -13,6 +13,7 @@ import (
 	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/client/etcd"
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -147,7 +148,12 @@ func createRuleset(t *testing.T, client *clientv3.Client, prefix, name string) {
 	rs, err := rule.NewStringRuleset(r1, rd)
 	require.NoError(t, err)
 
-	raw, err := json.Marshal(rs)
+	re := store.RulesetEntry{
+		Name:    name,
+		Ruleset: rs,
+	}
+
+	raw, err := json.Marshal(re)
 	require.NoError(t, err)
 
 	_, err = client.Put(context.Background(), path.Join(prefix, name), string(raw))

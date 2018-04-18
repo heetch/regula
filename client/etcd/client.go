@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 	"github.com/pkg/errors"
 )
 
@@ -26,6 +27,8 @@ var (
 )
 
 // Client queries etcd for rulesets, holds them in memory and keeps them synchronized with the remote store.
+// This client is temporary and will be replaced by a version using the API server instead of directly talking
+// to the database.
 type Client struct {
 	sync.RWMutex
 
@@ -125,13 +128,13 @@ func (c *Client) storeRuleset(key string, value []byte) error {
 	c.Lock()
 	defer c.Unlock()
 
-	var rs rule.Ruleset
-	if err := json.Unmarshal(value, &rs); err != nil {
+	var re store.RulesetEntry
+	if err := json.Unmarshal(value, &re); err != nil {
 		return err
 	}
 
 	k := strings.TrimLeft(key, c.keyPrefix)
-	c.rulesets[path.Join("/", k)] = &rs
+	c.rulesets[path.Join("/", k)] = re.Ruleset
 	return nil
 }
 
