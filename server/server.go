@@ -8,12 +8,18 @@ import (
 
 	"github.com/heetch/rules-engine/store"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 )
 
 const (
 	timeout = 5 * time.Second
+)
+
+// HTTP errors
+var (
+	errInternal = errors.New("internal_error")
 )
 
 // New creates an http server to serve the rules engine API.
@@ -78,6 +84,22 @@ func (h *handler) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		h.writeError(w, err, http.StatusInternalServerError)
+		h.logger.Error().Err(err).Interface("value", v).Msg("failed to encode value to http response")
 	}
+}
+
+func (h *handler) writeError(w http.ResponseWriter, err error, code int) {
+	// Log error.
+	h.logger.Debug().Err(err).Int("code", code).Msg("http error")
+
+	// Hide error from client if it's internal.
+	if code == http.StatusInternalServerError {
+		err = errInternal
+	}
+
+	h.encodeJSON(w, &httpError{Err: err.Error()}, code)
+}
+
+type httpError struct {
+	Err string `json:"error"`
 }
