@@ -30,8 +30,8 @@
   version = "3.0.0"
 
 [[constraint]]
-  branch = "custom-tag"
   name = "github.com/heetch/confita"
+  version = "0.4.0"
 
 [[constraint]]
   name = "github.com/julienschmidt/httprouter"

@@ -43,14 +43,14 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "custom-tag"
   name = "github.com/heetch/confita"
   packages = [
     ".",
     "backend",
     "backend/env"
   ]
-  revision = "0da276b702a62056befbed8f65dc5a1edfeb82c7"
+  revision = "f6a82362a2c55ae056cbb0ea681360d8d934289d"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/julienschmidt/httprouter"
@@ -134,13 +134,13 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "8d16fa6dc9a85c1cd3ed24ad08ff21cf94f10888"
+  revision = "d41e8174641f662c5a2d1c7a5f9e828788eb8706"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "b126b21c05a91c856b027c16779c12e3bf236954"
+  revision = "a2a45943ae67364d56c5d7d62dee78cff16c8dc8"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -203,6 +203,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b4390f9b7475d1e1e811deafad4be1fb3ffa32e91e92fc25e226fea419396dd0"
+  inputs-digest = "e1ae457c071d9a48d2753b3f12c0691e74df4273152b437f61ae592808718596"
   solver-name = "gps-cdcl"
   solver-version = 1

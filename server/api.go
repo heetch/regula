@@ -23,7 +23,7 @@ func (a *api) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
 	}
 }
 
-// writeError write an error to the http response in JSON format.
+// writeError writes an error to the http response in JSON format.
 func (a *api) writeError(w http.ResponseWriter, err error, code int) {
 	// Log error.
 	a.logger.Debug().Err(err).Int("code", code).Msg("http error")
