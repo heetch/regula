@@ -22,26 +22,27 @@ var (
 	endpoints   = []string{"localhost:2379", "etcd:2379"}
 )
 
-func etcdHelper(t *testing.T) (*clientv3.Client, string, func()) {
+func etcdHelper(t *testing.T, namespace string) (*clientv3.Client, func()) {
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
 	})
 	require.NoError(t, err)
 
-	return cli, "rules-engine-tests", func() {
-		cli.Delete(context.Background(), "rules-engine-tests", clientv3.WithPrefix())
+	return cli, func() {
+		cli.Delete(context.Background(), namespace, clientv3.WithPrefix())
 		cli.Close()
 	}
 }
 
 func TestEtcdClientGet(t *testing.T) {
-	cli, prefix, cleanup := etcdHelper(t)
+	ns := "rules-engine-tests"
+	cli, cleanup := etcdHelper(t, ns)
 	defer cleanup()
 
-	createRuleset(t, cli, prefix, "a/b/c")
+	createRuleset(t, cli, ns, "a/b/c")
 
-	st, err := etcd.NewClient(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewClient(cli, etcd.Options{Namespace: ns})
 	require.NoError(t, err)
 	defer st.Close()
 
@@ -78,17 +79,37 @@ func TestEtcdClientGet(t *testing.T) {
 	})
 }
 
-func TestEtcdClientWatcher(t *testing.T) {
-	cli, prefix, cleanup := etcdHelper(t)
+func TestEtcdNamespacing(t *testing.T) {
+	ns := "ns1"
+	cli, cleanup := etcdHelper(t, ns)
 	defer cleanup()
 
-	createRuleset(t, cli, prefix, "a")
+	createRuleset(t, cli, ns, "a")
+	createRuleset(t, cli, ns+"2", "a")
 
-	st, err := etcd.NewClient(cli, etcd.Options{Prefix: prefix})
+	st, err := etcd.NewClient(cli, etcd.Options{Namespace: ns})
 	require.NoError(t, err)
 	defer st.Close()
 
-	createRuleset(t, cli, prefix, "b")
+	_, err = st.Get(context.Background(), "a")
+	require.NoError(t, err)
+
+	_, err = st.Get(context.Background(), "2/a")
+	require.Equal(t, err, client.ErrRulesetNotFound)
+}
+
+func TestEtcdClientWatcher(t *testing.T) {
+	ns := "rules-engine-tests"
+	cli, cleanup := etcdHelper(t, ns)
+	defer cleanup()
+
+	createRuleset(t, cli, ns, "a")
+
+	st, err := etcd.NewClient(cli, etcd.Options{Namespace: ns})
+	require.NoError(t, err)
+	defer st.Close()
+
+	createRuleset(t, cli, ns, "b")
 
 	var found bool
 	for i := 0; i < 50; i++ {
@@ -110,7 +131,7 @@ func TestEtcdClientWatcher(t *testing.T) {
 		t.Fatal("watcher not working properly, PUT not catched")
 	}
 
-	deleteRuleset(t, cli, prefix, "b")
+	deleteRuleset(t, cli, ns, "b")
 
 	var deleted bool
 	for i := 0; i < 50; i++ {
@@ -132,7 +153,7 @@ func TestEtcdClientWatcher(t *testing.T) {
 	}
 }
 
-func createRuleset(t *testing.T, client *clientv3.Client, prefix, name string) {
+func createRuleset(t *testing.T, client *clientv3.Client, namespace, name string) {
 	r1 := rule.New(
 		rule.Eq(
 			rule.StringValue("bar"),
@@ -156,12 +177,12 @@ func createRuleset(t *testing.T, client *clientv3.Client, prefix, name string) {
 	raw, err := json.Marshal(re)
 	require.NoError(t, err)
 
-	_, err = client.Put(context.Background(), path.Join(prefix, name), string(raw))
+	_, err = client.Put(context.Background(), path.Join(namespace, name), string(raw))
 	require.NoError(t, err)
 }
 
-func deleteRuleset(t *testing.T, client *clientv3.Client, prefix, name string) {
-	resp, err := client.Delete(context.Background(), path.Join(prefix, name))
+func deleteRuleset(t *testing.T, client *clientv3.Client, namespace, name string) {
+	resp, err := client.Delete(context.Background(), path.Join(namespace, name))
 	require.NoError(t, err)
 	require.EqualValues(t, 1, resp.Deleted)
 }
@@ -177,8 +198,8 @@ func Example() {
 	defer cli.Close()
 
 	st, err := etcd.NewClient(cli, etcd.Options{
-		Prefix: "prefix",
-		Logger: log.New(os.Stdout, "[etcd] ", log.LstdFlags),
+		Namespace: "namespace",
+		Logger:    log.New(os.Stdout, "[etcd] ", log.LstdFlags),
 	})
 	if err != nil {
 		log.Fatal(err)

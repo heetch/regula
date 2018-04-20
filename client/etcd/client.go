@@ -33,7 +33,7 @@ type Client struct {
 	sync.RWMutex
 
 	logger    *log.Logger
-	keyPrefix string
+	namespace string
 	rulesets  map[string]*rule.Ruleset
 	wcancel   func()
 	wg        sync.WaitGroup
@@ -41,19 +41,19 @@ type Client struct {
 
 // Options to customize the Client.
 type Options struct {
-	Prefix string
-	Logger *log.Logger
+	Namespace string
+	Logger    *log.Logger
 }
 
-// NewClient takes a connected etcd client, fetches all the rulesets under the given prefix and stores them in the returned client.
+// NewClient takes a connected etcd client, fetches all the rulesets under the given namespace and stores them in the returned client.
 // It runs a watcher that keeps the in memory rulesets synchronized with changes on etcd.
-// Any leading slash found on keyPrefix is removed and a trailing slash is added automatically before usage.
+// Any leading or trailing slash found on the namespace option is removed and a trailing slash is added automatically before usage.
 func NewClient(cli *clientv3.Client, opts Options) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	client := Client{
-		keyPrefix: path.Join(strings.TrimLeft(opts.Prefix, "/"), "/"),
+		namespace: strings.Trim(opts.Namespace, "/") + "/",
 		rulesets:  make(map[string]*rule.Ruleset),
 		logger:    opts.Logger,
 	}
@@ -62,9 +62,9 @@ func NewClient(cli *clientv3.Client, opts Options) (*Client, error) {
 		client.logger = log.New(ioutil.Discard, "", 0)
 	}
 
-	resp, err := cli.Get(ctx, client.keyPrefix, clientv3.WithPrefix())
+	resp, err := cli.Get(ctx, client.namespace, clientv3.WithPrefix())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve keys under the given keyPrefix")
+		return nil, errors.Wrap(err, "failed to retrieve keys under the given namespace")
 	}
 
 	for _, kv := range resp.Kvs {
@@ -75,7 +75,7 @@ func NewClient(cli *clientv3.Client, opts Options) (*Client, error) {
 	}
 
 	wctx, wcancel := context.WithCancel(context.Background())
-	wch := clientv3.NewWatcher(cli).Watch(wctx, client.keyPrefix, clientv3.WithPrefix())
+	wch := clientv3.NewWatcher(cli).Watch(wctx, client.namespace, clientv3.WithPrefix())
 
 	client.wcancel = wcancel
 
@@ -133,14 +133,14 @@ func (c *Client) storeRuleset(key string, value []byte) error {
 		return err
 	}
 
-	k := strings.TrimLeft(key, c.keyPrefix)
+	k := strings.TrimLeft(key, c.namespace)
 	c.rulesets[path.Join("/", k)] = re.Ruleset
 	return nil
 }
 
 func (c *Client) deleteRuleset(key string) {
 	c.Lock()
-	k := strings.TrimLeft(key, c.keyPrefix)
+	k := strings.TrimLeft(key, c.namespace)
 	delete(c.rulesets, path.Join("/", k))
 	c.Unlock()
 }

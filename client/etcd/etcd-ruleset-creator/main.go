@@ -66,13 +66,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	keyPrefix := path.Join(strings.TrimLeft(*namespace, "/"), "/")
+	ns := strings.Trim(*namespace, "/") + "/"
 	rsName := strings.Trim(*name, "/")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = client.Put(ctx, path.Join(keyPrefix, rsName), string(raw))
+	_, err = client.Put(ctx, path.Join(ns, rsName), string(raw))
 	if err != nil {
 		log.Fatal(err)
 	}
