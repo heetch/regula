@@ -3,6 +3,7 @@ package client_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func Example() {
+	c, err := client.NewClient("http://127.0.0.1:5331")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list, err := c.ListRulesets(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range list {
+		e.Ruleset.Eval(nil)
+	}
+}
 
 func TestClient(t *testing.T) {
 	t.Run("Error", func(t *testing.T) {
