@@ -1,18 +1,19 @@
 package store
 
 import (
-	"github.com/heetch/rules-engine/rule"
-	"github.com/pkg/errors"
-)
+	"context"
 
-var (
-	// ErrRulesetNotFound must be returned when no ruleset is found in the store for a given key.
-	ErrRulesetNotFound = errors.New("ruleset not found")
+	"github.com/heetch/rules-engine/rule"
 )
 
 // Store manages the storage of rulesets.
 type Store interface {
-	// Get returns the ruleset associated with the given key.
-	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.
-	Get(key string) (*rule.Ruleset, error)
+	// All returns all the rulesets entries from the store.
+	All(context.Context) ([]RulesetEntry, error)
+}
+
+// RulesetEntry holds a ruleset and its metadata.
+type RulesetEntry struct {
+	Name    string        `json:"name"`
+	Ruleset *rule.Ruleset `json:"ruleset"`
 }
