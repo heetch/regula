@@ -11,7 +11,18 @@ pipeline:
       - dep ensure
       - make test
     when:
-      event: push
+      event: [ push, tag ]
+
+  docker:
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/heetch/rules-engine
+    secrets: [ plugin_username, plugin_password ]
+    tags:
+      - latest
+      - ${DRONE_TAG##v}
+    when:
+      event: tag
 
 services:
   etcd:
