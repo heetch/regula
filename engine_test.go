@@ -9,29 +9,28 @@ import (
 	"time"
 
 	rules "github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/stretchr/testify/require"
 )
 
-type mockClient struct {
+type mockGetter struct {
 	namespace string
 	ruleSets  map[string]*rule.Ruleset
 }
 
-func newMockClient(namespace string, ruleSets map[string]*rule.Ruleset) *mockClient {
-	return &mockClient{
+func newMockGetter(namespace string, ruleSets map[string]*rule.Ruleset) *mockGetter {
+	return &mockGetter{
 		namespace: namespace,
 		ruleSets:  ruleSets,
 	}
 }
 
-func (s *mockClient) Get(ctx context.Context, key string) (*rule.Ruleset, error) {
+func (s *mockGetter) Get(ctx context.Context, key string) (*rule.Ruleset, error) {
 	key = path.Join("/", key)
 
 	rs, ok := s.ruleSets[key]
 	if !ok {
-		err := client.ErrRulesetNotFound
+		err := rules.ErrRulesetNotFound
 		return nil, err
 	}
 
@@ -41,7 +40,7 @@ func (s *mockClient) Get(ctx context.Context, key string) (*rule.Ruleset, error)
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	m := newMockClient("/rules", map[string]*rule.Ruleset{
+	m := newMockGetter("/rules", map[string]*rule.Ruleset{
 		"/match-string-a": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
@@ -127,7 +126,7 @@ func TestEngine(t *testing.T) {
 		require.Equal(t, rule.ErrNoMatch, err)
 
 		_, err = e.GetString(ctx, "/not-found", nil)
-		require.Equal(t, client.ErrRulesetNotFound, err)
+		require.Equal(t, rules.ErrRulesetNotFound, err)
 	})
 
 	t.Run("StructLoading", func(t *testing.T) {
@@ -175,10 +174,10 @@ func TestEngine(t *testing.T) {
 	})
 }
 
-var cli client.Client
+var gt rules.Getter
 
 func init() {
-	cli = newMockClient("/", map[string]*rule.Ruleset{
+	gt = newMockGetter("/", map[string]*rule.Ruleset{
 		"/path/to/string/key": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
@@ -217,7 +216,7 @@ func init() {
 }
 
 func ExampleEngine() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	_, err := engine.GetString(context.Background(), "/a/b/c", rule.Params{
 		"product-id": "1234",
@@ -226,7 +225,7 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
-		case client.ErrRulesetNotFound:
+		case rules.ErrRulesetNotFound:
 			// when the ruleset doesn't exist
 		case rules.ErrTypeMismatch:
 			// when the ruleset returns the bad type
@@ -239,7 +238,7 @@ func ExampleEngine() {
 }
 
 func ExampleEngine_GetBool() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", rule.Params{
 		"product-id": "1234",
@@ -255,7 +254,7 @@ func ExampleEngine_GetBool() {
 }
 
 func ExampleEngine_GetString() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	s, err := engine.GetString(context.Background(), "/path/to/string/key", rule.Params{
 		"product-id": "1234",
@@ -271,7 +270,7 @@ func ExampleEngine_GetString() {
 }
 
 func ExampleEngine_GetInt64() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", rule.Params{
 		"product-id": "1234",
@@ -287,7 +286,7 @@ func ExampleEngine_GetInt64() {
 }
 
 func ExampleEngine_GetFloat64() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", rule.Params{
 		"product-id": "1234",
@@ -311,7 +310,7 @@ func ExampleEngine_LoadStruct() {
 
 	var v Values
 
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	err := engine.LoadStruct(context.Background(), &v, rule.Params{
 		"product-id": "1234",

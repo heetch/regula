@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/rules-engine/client"
-	"github.com/heetch/rules-engine/client/etcd"
+	rules "github.com/heetch/rules-engine"
+	"github.com/heetch/rules-engine/etcd"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/heetch/rules-engine/store"
 	"github.com/stretchr/testify/require"
@@ -72,10 +72,10 @@ func TestEtcdClientGet(t *testing.T) {
 
 	t.Run("Ruleset not found", func(t *testing.T) {
 		_, err := st.Get(context.Background(), "unknown")
-		require.Equal(t, client.ErrRulesetNotFound, err)
+		require.Equal(t, rules.ErrRulesetNotFound, err)
 
 		_, err = st.Get(context.Background(), "")
-		require.Equal(t, client.ErrRulesetNotFound, err)
+		require.Equal(t, rules.ErrRulesetNotFound, err)
 	})
 }
 
@@ -95,7 +95,7 @@ func TestEtcdNamespacing(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = st.Get(context.Background(), "2/a")
-	require.Equal(t, err, client.ErrRulesetNotFound)
+	require.Equal(t, err, rules.ErrRulesetNotFound)
 }
 
 func TestEtcdClientWatcher(t *testing.T) {
@@ -120,7 +120,7 @@ func TestEtcdClientWatcher(t *testing.T) {
 			break
 		}
 
-		if err != client.ErrRulesetNotFound {
+		if err != rules.ErrRulesetNotFound {
 			t.Fatal(err)
 		}
 
@@ -136,7 +136,7 @@ func TestEtcdClientWatcher(t *testing.T) {
 	var deleted bool
 	for i := 0; i < 50; i++ {
 		_, err := st.Get(context.Background(), "b")
-		if err == client.ErrRulesetNotFound {
+		if err == rules.ErrRulesetNotFound {
 			deleted = true
 			break
 		}
