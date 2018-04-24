@@ -7,13 +7,13 @@ A Ruleset can be represented as a list of rules that can be evaluated against a 
 Each rule is evaluated in order and if one matches with the given parameters it returns a result and the evaluation stops.
 All the rules of a ruleset always return the same type.
 
-A Store is capable of serving rulesets on demand to the Engine which evaluates them to return a result.
+A Getter is capable of serving rulesets on demand to the Engine which evaluates them to return a result.
 
-While the Store is stateful and can hold rulesets in-memory, fetch them over the network or read them from a file,
-the Engine is stateless and simply queries the Store for rulesets. The rulesets are then evaluated to a type safe result and
+While the Getter is stateful and can hold rulesets in-memory, fetch them over the network or read them from a file,
+the Engine is stateless and simply queries the Getter for rulesets. The rulesets are then evaluated to a type safe result and
 returned to the caller.
 
-	engine := NewEngine(store)
+	engine := NewEngine(getter)
 
 	s := engine.GetString("path/to/string/ruleset/key", rule.Params{
 		"user-id": 123,
