@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path"
 	"testing"
 	"time"
 
@@ -13,119 +12,95 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockGetter struct {
-	namespace string
-	ruleSets  map[string]*rule.Ruleset
-}
-
-func newMockGetter(namespace string, ruleSets map[string]*rule.Ruleset) *mockGetter {
-	return &mockGetter{
-		namespace: namespace,
-		ruleSets:  ruleSets,
-	}
-}
-
-func (s *mockGetter) Get(ctx context.Context, key string) (*rule.Ruleset, error) {
-	key = path.Join("/", key)
-
-	rs, ok := s.ruleSets[key]
-	if !ok {
-		err := rules.ErrRulesetNotFound
-		return nil, err
-	}
-
-	return rs, nil
-}
-
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	m := newMockGetter("/rules", map[string]*rule.Ruleset{
-		"/match-string-a": &rule.Ruleset{
+	m := rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
+		"match-string-a": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a")),
 			},
 		},
-		"/match-string-b": &rule.Ruleset{
+		"match-string-b": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("matched b")),
 			},
 		},
-		"/type-mismatch": &rule.Ruleset{
+		"type-mismatch": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 			},
 		},
-		"/no-match": &rule.Ruleset{
+		"no-match": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
 			},
 		},
-		"/match-bool": &rule.Ruleset{
+		"match-bool": &rule.Ruleset{
 			Type: "bool",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 			},
 		},
-		"/match-int64": &rule.Ruleset{
+		"match-int64": &rule.Ruleset{
 			Type: "int64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 			},
 		},
-		"/match-float64": &rule.Ruleset{
+		"match-float64": &rule.Ruleset{
 			Type: "float64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 			},
 		},
-		"/match-duration": &rule.Ruleset{
+		"match-duration": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("3s")),
 			},
 		},
-	})
+	}}
 
-	e := rules.NewEngine(m)
+	e := rules.NewEngine(&m)
 
 	t.Run("LowLevel", func(t *testing.T) {
-		str, err := e.GetString(ctx, "/match-string-a", rule.Params{
+		str, err := e.GetString(ctx, "match-string-a", rule.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
 		require.Equal(t, "matched a", str)
 
-		str, err = e.GetString(ctx, "/match-string-b", nil)
+		str, err = e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
 		require.Equal(t, "matched b", str)
 
-		b, err := e.GetBool(ctx, "/match-bool", nil)
+		b, err := e.GetBool(ctx, "match-bool", nil)
 		require.NoError(t, err)
 		require.True(t, b)
 
-		i, err := e.GetInt64(ctx, "/match-int64", nil)
+		i, err := e.GetInt64(ctx, "match-int64", nil)
 		require.NoError(t, err)
 		require.Equal(t, int64(-10), i)
 
-		f, err := e.GetFloat64(ctx, "/match-float64", nil)
+		f, err := e.GetFloat64(ctx, "match-float64", nil)
 		require.NoError(t, err)
 		require.Equal(t, -3.14, f)
 
-		_, err = e.GetString(ctx, "/match-bool", nil)
+		_, err = e.GetString(ctx, "match-bool", nil)
 		require.Equal(t, rules.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "/type-mismatch", nil)
+		_, err = e.GetString(ctx, "type-mismatch", nil)
 		require.Equal(t, rules.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "/no-match", nil)
+		_, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, rule.ErrNoMatch, err)
 
-		_, err = e.GetString(ctx, "/not-found", nil)
+		_, err = e.GetString(ctx, "not-found", nil)
 		require.Equal(t, rules.ErrRulesetNotFound, err)
 	})
 
@@ -177,7 +152,7 @@ func TestEngine(t *testing.T) {
 var gt rules.Getter
 
 func init() {
-	gt = newMockGetter("/", map[string]*rule.Ruleset{
+	gt = &rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
 		"/path/to/string/key": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
@@ -212,7 +187,7 @@ func init() {
 				rule.New(rule.True(), rule.ReturnsString("3s")),
 			},
 		},
-	})
+	}}
 }
 
 func ExampleEngine() {

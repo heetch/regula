@@ -133,3 +133,18 @@ type Getter interface {
 	// If no ruleset is found for a given key, the implementation must return store.ErrRulesetNotFound.
 	Get(ctx context.Context, key string) (*rule.Ruleset, error)
 }
+
+// MemoryGetter is an in-memory getter which stores rulesets in a map.
+type MemoryGetter struct {
+	Rulesets map[string]*rule.Ruleset
+}
+
+// Get returns the selected ruleset from memory or returns ErrRulesetNotFound.
+func (g *MemoryGetter) Get(_ context.Context, key string) (*rule.Ruleset, error) {
+	r, ok := g.Rulesets[key]
+	if !ok {
+		return nil, ErrRulesetNotFound
+	}
+
+	return r, nil
+}

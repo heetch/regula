@@ -11,6 +11,7 @@ import (
 
 	"github.com/heetch/rules-engine"
 	"github.com/heetch/rules-engine/api"
+	"github.com/heetch/rules-engine/rule"
 	"golang.org/x/net/context/ctxhttp"
 )
 
@@ -137,4 +138,24 @@ func UserAgent(userAgent string) Option {
 		c.userAgent = userAgent
 		return nil
 	}
+}
+
+// NewGetter uses the given client to fetch all the rulesets from the server
+// and returns a Getter that holds the results in memory.
+// No subsequent round trips are performed after this function returns.
+func NewGetter(ctx context.Context, client *Client) (*rules.MemoryGetter, error) {
+	ls, err := client.ListRulesets(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	g := rules.MemoryGetter{
+		Rulesets: make(map[string]*rule.Ruleset),
+	}
+
+	for _, re := range ls {
+		g.Rulesets[re.Name] = re.Ruleset
+	}
+
+	return &g, nil
 }
