@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	userAgent = "go-rules-engine/" + rules.Version
+	userAgent = "RulesEngine/" + rules.Version + " Go"
 	timeout   = 5 * time.Second
 )
 
