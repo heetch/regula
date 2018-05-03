@@ -6,33 +6,34 @@ import (
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend"
-	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/pkg/errors"
 )
 
 var (
+	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
+	ErrRulesetNotFound = errors.New("ruleset not found")
 	// ErrTypeMismatch is returned when the evaluated rule doesn't return the expected result type.
 	ErrTypeMismatch = errors.New("type returned by rule doesn't match")
 )
 
 // Engine fetches the rules from the store and executes the selected ruleset.
 type Engine struct {
-	client client.Client
+	getter Getter
 }
 
-// NewEngine creates an Engine using the given client.
-func NewEngine(client client.Client) *Engine {
+// NewEngine creates an Engine using the given getter.
+func NewEngine(getter Getter) *Engine {
 	return &Engine{
-		client: client,
+		getter: getter,
 	}
 }
 
 // Get evaluates the ruleset associated with key and returns the result.
 func (e *Engine) get(ctx context.Context, typ, key string, params rule.Params) (*rule.Value, error) {
-	ruleset, err := e.client.Get(ctx, key)
+	ruleset, err := e.getter.Get(ctx, key)
 	if err != nil {
-		if err == client.ErrRulesetNotFound {
+		if err == ErrRulesetNotFound {
 			return nil, err
 		}
 
@@ -103,9 +104,9 @@ func (e *Engine) GetFloat64(ctx context.Context, key string, params rule.Params)
 // tagged with the "ruleset" struct tag.
 func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Params) error {
 	b := backend.Func("rules-engine", func(ctx context.Context, key string) ([]byte, error) {
-		ruleset, err := e.client.Get(ctx, key)
+		ruleset, err := e.getter.Get(ctx, key)
 		if err != nil {
-			if err == client.ErrRulesetNotFound {
+			if err == ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
 			}
 
@@ -124,4 +125,26 @@ func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Par
 	l.Tag = "ruleset"
 
 	return l.Load(ctx, to)
+}
+
+// A Getter allows a ruleset to be retrieved.
+type Getter interface {
+	// Get returns the ruleset associated with the given key.
+	// If no ruleset is found for a given key, the implementation must return store.ErrRulesetNotFound.
+	Get(ctx context.Context, key string) (*rule.Ruleset, error)
+}
+
+// MemoryGetter is an in-memory getter which stores rulesets in a map.
+type MemoryGetter struct {
+	Rulesets map[string]*rule.Ruleset
+}
+
+// Get returns the selected ruleset from memory or returns ErrRulesetNotFound.
+func (g *MemoryGetter) Get(_ context.Context, key string) (*rule.Ruleset, error) {
+	r, ok := g.Rulesets[key]
+	if !ok {
+		return nil, ErrRulesetNotFound
+	}
+
+	return r, nil
 }

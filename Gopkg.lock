@@ -126,6 +126,7 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "context/ctxhttp",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -134,13 +135,13 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "d41e8174641f662c5a2d1c7a5f9e828788eb8706"
+  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "a2a45943ae67364d56c5d7d62dee78cff16c8dc8"
+  revision = "79b0c6888797020a994db17c8510466c72fe75d9"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -203,6 +204,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e1ae457c071d9a48d2753b3f12c0691e74df4273152b437f61ae592808718596"
+  inputs-digest = "8f6ca3c76f8f85c9e053b7b0ee8969d5ecd7e4f16405a7c29bfe2404f334fd97"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -4,130 +4,104 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path"
 	"testing"
 	"time"
 
 	rules "github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/client"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/stretchr/testify/require"
 )
 
-type mockClient struct {
-	namespace string
-	ruleSets  map[string]*rule.Ruleset
-}
-
-func newMockClient(namespace string, ruleSets map[string]*rule.Ruleset) *mockClient {
-	return &mockClient{
-		namespace: namespace,
-		ruleSets:  ruleSets,
-	}
-}
-
-func (s *mockClient) Get(ctx context.Context, key string) (*rule.Ruleset, error) {
-	key = path.Join("/", key)
-
-	rs, ok := s.ruleSets[key]
-	if !ok {
-		err := client.ErrRulesetNotFound
-		return nil, err
-	}
-
-	return rs, nil
-}
-
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	m := newMockClient("/rules", map[string]*rule.Ruleset{
-		"/match-string-a": &rule.Ruleset{
+	m := rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
+		"match-string-a": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a")),
 			},
 		},
-		"/match-string-b": &rule.Ruleset{
+		"match-string-b": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("matched b")),
 			},
 		},
-		"/type-mismatch": &rule.Ruleset{
+		"type-mismatch": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 			},
 		},
-		"/no-match": &rule.Ruleset{
+		"no-match": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
 			},
 		},
-		"/match-bool": &rule.Ruleset{
+		"match-bool": &rule.Ruleset{
 			Type: "bool",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 			},
 		},
-		"/match-int64": &rule.Ruleset{
+		"match-int64": &rule.Ruleset{
 			Type: "int64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 			},
 		},
-		"/match-float64": &rule.Ruleset{
+		"match-float64": &rule.Ruleset{
 			Type: "float64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 			},
 		},
-		"/match-duration": &rule.Ruleset{
+		"match-duration": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("3s")),
 			},
 		},
-	})
+	}}
 
-	e := rules.NewEngine(m)
+	e := rules.NewEngine(&m)
 
 	t.Run("LowLevel", func(t *testing.T) {
-		str, err := e.GetString(ctx, "/match-string-a", rule.Params{
+		str, err := e.GetString(ctx, "match-string-a", rule.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
 		require.Equal(t, "matched a", str)
 
-		str, err = e.GetString(ctx, "/match-string-b", nil)
+		str, err = e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
 		require.Equal(t, "matched b", str)
 
-		b, err := e.GetBool(ctx, "/match-bool", nil)
+		b, err := e.GetBool(ctx, "match-bool", nil)
 		require.NoError(t, err)
 		require.True(t, b)
 
-		i, err := e.GetInt64(ctx, "/match-int64", nil)
+		i, err := e.GetInt64(ctx, "match-int64", nil)
 		require.NoError(t, err)
 		require.Equal(t, int64(-10), i)
 
-		f, err := e.GetFloat64(ctx, "/match-float64", nil)
+		f, err := e.GetFloat64(ctx, "match-float64", nil)
 		require.NoError(t, err)
 		require.Equal(t, -3.14, f)
 
-		_, err = e.GetString(ctx, "/match-bool", nil)
+		_, err = e.GetString(ctx, "match-bool", nil)
 		require.Equal(t, rules.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "/type-mismatch", nil)
+		_, err = e.GetString(ctx, "type-mismatch", nil)
 		require.Equal(t, rules.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "/no-match", nil)
+		_, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, rule.ErrNoMatch, err)
 
-		_, err = e.GetString(ctx, "/not-found", nil)
-		require.Equal(t, client.ErrRulesetNotFound, err)
+		_, err = e.GetString(ctx, "not-found", nil)
+		require.Equal(t, rules.ErrRulesetNotFound, err)
 	})
 
 	t.Run("StructLoading", func(t *testing.T) {
@@ -175,10 +149,10 @@ func TestEngine(t *testing.T) {
 	})
 }
 
-var cli client.Client
+var gt rules.Getter
 
 func init() {
-	cli = newMockClient("/", map[string]*rule.Ruleset{
+	gt = &rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
 		"/path/to/string/key": &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
@@ -213,11 +187,11 @@ func init() {
 				rule.New(rule.True(), rule.ReturnsString("3s")),
 			},
 		},
-	})
+	}}
 }
 
 func ExampleEngine() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	_, err := engine.GetString(context.Background(), "/a/b/c", rule.Params{
 		"product-id": "1234",
@@ -226,7 +200,7 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
-		case client.ErrRulesetNotFound:
+		case rules.ErrRulesetNotFound:
 			// when the ruleset doesn't exist
 		case rules.ErrTypeMismatch:
 			// when the ruleset returns the bad type
@@ -239,7 +213,7 @@ func ExampleEngine() {
 }
 
 func ExampleEngine_GetBool() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", rule.Params{
 		"product-id": "1234",
@@ -255,7 +229,7 @@ func ExampleEngine_GetBool() {
 }
 
 func ExampleEngine_GetString() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	s, err := engine.GetString(context.Background(), "/path/to/string/key", rule.Params{
 		"product-id": "1234",
@@ -271,7 +245,7 @@ func ExampleEngine_GetString() {
 }
 
 func ExampleEngine_GetInt64() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", rule.Params{
 		"product-id": "1234",
@@ -287,7 +261,7 @@ func ExampleEngine_GetInt64() {
 }
 
 func ExampleEngine_GetFloat64() {
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", rule.Params{
 		"product-id": "1234",
@@ -311,7 +285,7 @@ func ExampleEngine_LoadStruct() {
 
 	var v Values
 
-	engine := rules.NewEngine(cli)
+	engine := rules.NewEngine(gt)
 
 	err := engine.LoadStruct(context.Background(), &v, rule.Params{
 		"product-id": "1234",

@@ -13,7 +13,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/confita"
-	"github.com/heetch/rules-engine/server"
+	"github.com/heetch/rules-engine/api/server"
 	"github.com/heetch/rules-engine/store/etcd"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
