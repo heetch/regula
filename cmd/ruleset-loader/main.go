@@ -25,6 +25,11 @@ var (
 func main() {
 	flag.Parse()
 
+	if *file == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	f, err := os.Open(*file)
 	if err != nil {
 		log.Fatal(err)
