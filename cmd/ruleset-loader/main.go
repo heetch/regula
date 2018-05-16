@@ -1,3 +1,4 @@
+// The ruleset-loader reads a json file containing a list of rulesets and sends them to etcd.
 package main
 
 import (
@@ -19,7 +20,7 @@ import (
 
 var (
 	file = flag.String("f", "", "path to file containing rulesets informations")
-	addr = flag.String("addr", "127.0.0.1:2379", "coma separated list of the etcd endpoint addresses.")
+	addr = flag.String("addr", "127.0.0.1:2379,etcd:2379", "coma separated list of the etcd endpoint addresses.")
 )
 
 func main() {
