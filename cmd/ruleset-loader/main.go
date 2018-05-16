@@ -61,7 +61,6 @@ func loadSnapshot(r io.Reader) error {
 	defer client.Close()
 
 	for key, rs := range snapshot {
-
 		key = strings.TrimSpace(key)
 		if key == "" {
 			return errors.New("empty key")
