@@ -4,13 +4,25 @@ workspace:
 
 pipeline:
   build:
-    image: golang:1.9-alpine
+    image: golang:1.10-alpine
     commands:
-      - apk --update add git glide
-      - glide --quiet install
-      - go test -v ./...
+      - echo http://dl-cdn.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories
+      - apk --update add git dep make
+      - dep ensure
+      - make test
     when:
-      event: push
+      event: [ push, tag ]
+
+  docker:
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/heetch/rules-engine
+    secrets: [ plugin_username, plugin_password ]
+    tags:
+      - latest
+      - ${DRONE_TAG##v}
+    when:
+      event: tag
 
 services:
   etcd:
