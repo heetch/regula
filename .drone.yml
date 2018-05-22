@@ -12,6 +12,28 @@ pipeline:
       - make test
     when:
       event: [ push, tag ]
+    
+  doc:
+    image: golang:1.10
+    commands:
+      - apt-get update && apt-get upgrade -y && apt-get install git
+      - go get github.com/cornelk/goscrape
+      - go install github.com/cornelk/goscrape
+      - .ci/doc.sh ${DRONE_TAG}
+    when:
+      event: [ tag ]
+
+  do2s3:
+    image: plugins/s3
+    acl: authenticated-read
+    region: "eu-west-1"
+    bucket: "heetch-semidocs"
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    source: doc/**/*
+    strip_prefix: doc/
+    target: /heetch-semidocs/go/heetch/rules-engine/tag/
+    when:
+     event: [ tag ]
 
   docker:
     image: plugins/docker
