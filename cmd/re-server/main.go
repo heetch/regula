@@ -48,7 +48,7 @@ func main() {
 
 func loadConfig() *config {
 	var cfg config
-	cfg.LogLevel = "DEBUG"
+	cfg.LogLevel = zerolog.DebugLevel.String()
 	cfg.Etcd.Endpoints = "127.0.0.1:2379"
 	cfg.Server.Address = "0.0.0.0:5331"
 
@@ -61,15 +61,14 @@ func loadConfig() *config {
 }
 
 func createLogger(level string) zerolog.Logger {
-	logger := zerolog.New(os.Stdout)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
-	// zerolog has currently no support for string to level conversion
-	levels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
-	for i, lvl := range levels {
-		if lvl == level {
-			logger = logger.Level(zerolog.Level(i))
-		}
+	lvl, err := zerolog.ParseLevel(level)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	logger = logger.Level(lvl)
 
 	// pretty print during development
 	if isatty.IsTerminal(os.Stdout.Fd()) {
