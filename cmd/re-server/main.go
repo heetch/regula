@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -41,7 +42,8 @@ func main() {
 		Namespace: cfg.Etcd.Namespace,
 	}
 
-	srv := server.New(&store, logger)
+	srv, mux := server.New(&store, logger)
+	mux.Handle("/health", healthCheckHandler(cli, cfg.Etcd.Namespace, logger))
 
 	runServer(srv, cfg.Server.Address, logger)
 }
@@ -92,6 +94,24 @@ func etcdClient(endpoints string) *clientv3.Client {
 	}
 
 	return cli
+}
+
+func healthCheckHandler(cli *clientv3.Client, namespace string, logger zerolog.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		_, err := cli.KV.Get(ctx, namespace, clientv3.WithKeysOnly())
+		if err != nil {
+			logger.Debug().Str("health", "error").Int("status", http.StatusInternalServerError).Msg("health check request")
+			logger.Error().Err(err).Msg("health check error")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		logger.Debug().Str("health", "ok").Int("status", http.StatusOK).Msg("health check request")
+		fmt.Fprintf(w, "OK")
+	})
 }
 
 func runServer(srv *http.Server, addr string, logger zerolog.Logger) {

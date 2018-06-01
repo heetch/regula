@@ -24,10 +24,13 @@ var (
 )
 
 // New creates an http server to serve the rules engine API.
-func New(store store.Store, logger zerolog.Logger) *http.Server {
+func New(store store.Store, logger zerolog.Logger) (*http.Server, *http.ServeMux) {
+	mux := http.NewServeMux()
+	mux.Handle("/", newHandler(store, logger))
+
 	return &http.Server{
-		Handler: newHandler(store, logger),
-	}
+		Handler: mux,
+	}, mux
 }
 
 func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
