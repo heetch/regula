@@ -15,12 +15,12 @@ returned to the caller.
 
 	engine := NewEngine(getter)
 
-	s := engine.GetString("path/to/string/ruleset/key", rule.Params{
+	s, err := engine.GetString("path/to/string/ruleset/key", rule.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})
 
-	i := engine.GetInt64("path/to/int/ruleset/key", rule.Params{
+	i, err := engine.GetInt64("path/to/int/ruleset/key", rule.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})
