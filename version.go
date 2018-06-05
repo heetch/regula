@@ -1,4 +1,4 @@
 package rules
 
 // Version of the rules engine.
-const Version = "v0.4.1-DEV"
+const Version = "v0.4.1"
