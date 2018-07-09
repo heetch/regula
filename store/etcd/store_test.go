@@ -84,3 +84,38 @@ func TestList(t *testing.T) {
 		}
 	})
 }
+
+func TestOne(t *testing.T) {
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
+	createEntry(t, s, "b", &store.RulesetEntry{Path: "b"})
+	createEntry(t, s, "c", &store.RulesetEntry{Path: "c"})
+	createEntry(t, s, "abc", &store.RulesetEntry{Path: "abc"})
+	createEntry(t, s, "abcd", &store.RulesetEntry{Path: "abcd"})
+
+	t.Run("OK", func(t *testing.T) {
+		path := "a"
+
+		entry, err := s.One(context.Background(), path)
+		require.NoError(t, err)
+		require.Equal(t, path, entry.Path)
+	})
+
+	t.Run("NOK - path doesn't exist", func(t *testing.T) {
+		path := "aa"
+
+		_, err := s.One(context.Background(), path)
+		require.Error(t, err)
+		require.EqualError(t, err, store.ErrNotFound.Error())
+	})
+
+	t.Run("NOK - path exists but it's not a leaf", func(t *testing.T) {
+		path := "ab"
+
+		_, err := s.One(context.Background(), path)
+		require.Error(t, err)
+		require.EqualError(t, err, store.ErrNotFound.Error())
+	})
+}
