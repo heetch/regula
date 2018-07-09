@@ -26,10 +26,10 @@ func TestAPI(t *testing.T) {
 		return l, nil
 	}
 
-	h := newHandler(s, zerolog.Nop())
+	h := NewHandler(s, zerolog.Nop())
 
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/rulesets", nil)
+	r := httptest.NewRequest("GET", "/rulesets?list", nil)
 	h.ServeHTTP(w, r)
 
 	require.Equal(t, http.StatusOK, w.Code)
