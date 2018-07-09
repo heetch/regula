@@ -3,7 +3,7 @@ package etcd_test
 import (
 	"context"
 	"encoding/json"
-	"path"
+	ppath "path"
 	"testing"
 	"time"
 
@@ -38,30 +38,49 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createEntry(t *testing.T, s *etcd.Store, key string, e *store.RulesetEntry) string {
+func createEntry(t *testing.T, s *etcd.Store, path string, e *store.RulesetEntry) string {
 	v, err := json.Marshal(e)
 	require.NoError(t, err)
 
-	_, err = s.Client.KV.Put(context.Background(), path.Join(s.Namespace, key), string(v))
+	_, err = s.Client.KV.Put(context.Background(), ppath.Join(s.Namespace, path), string(v))
 	require.NoError(t, err)
 
-	return key
+	return path
 }
 
-func TestAll(t *testing.T) {
+func TestList(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	createEntry(t, s, "a", &store.RulesetEntry{Name: "a"})
-	createEntry(t, s, "b", &store.RulesetEntry{Name: "b"})
-	createEntry(t, s, "c", &store.RulesetEntry{Name: "c"})
+	t.Run("Root", func(t *testing.T) {
+		createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
+		createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
+		createEntry(t, s, "b", &store.RulesetEntry{Path: "b"})
+		createEntry(t, s, "c", &store.RulesetEntry{Path: "c"})
 
-	keys := []string{"a", "b", "c"}
+		paths := []string{"a", "b", "c"}
 
-	entries, err := s.All(context.Background())
-	require.NoError(t, err)
-	require.Len(t, entries, len(keys))
-	for _, e := range entries {
-		require.Contains(t, keys, e.Name)
-	}
+		entries, err := s.List(context.Background(), "")
+		require.NoError(t, err)
+		require.Len(t, entries, len(paths))
+		for _, e := range entries {
+			require.Contains(t, paths, e.Path)
+		}
+	})
+
+	t.Run("Prefix", func(t *testing.T) {
+		createEntry(t, s, "x", &store.RulesetEntry{Path: "x"})
+		createEntry(t, s, "xx", &store.RulesetEntry{Path: "xx"})
+		createEntry(t, s, "x/1", &store.RulesetEntry{Path: "x/1"})
+		createEntry(t, s, "x/2", &store.RulesetEntry{Path: "x/2"})
+
+		paths := []string{"x", "xx", "x/1", "x/2"}
+
+		entries, err := s.List(context.Background(), "x")
+		require.NoError(t, err)
+		require.Len(t, entries, len(paths))
+		for _, e := range entries {
+			require.Contains(t, paths, e.Path)
+		}
+	})
 }

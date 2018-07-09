@@ -41,12 +41,12 @@ func TestLoadSnapshot(t *testing.T) {
 		Namespace: "snapshot-tests",
 	}
 
-	entries, err := store.All(context.Background())
+	entries, err := store.List(context.Background(), "")
 	require.NoError(t, err)
 
 	require.Len(t, entries, 4)
-	require.Equal(t, "snapshot-tests/a", entries[0].Name)
-	require.Equal(t, "snapshot-tests/b", entries[1].Name)
-	require.Equal(t, "snapshot-tests/c", entries[2].Name)
-	require.Equal(t, "snapshot-tests/d", entries[3].Name)
+	require.Equal(t, "snapshot-tests/a", entries[0].Path)
+	require.Equal(t, "snapshot-tests/b", entries[1].Path)
+	require.Equal(t, "snapshot-tests/c", entries[2].Path)
+	require.Equal(t, "snapshot-tests/d", entries[3].Path)
 }

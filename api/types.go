@@ -15,6 +15,6 @@ func (e Error) Error() string {
 
 // Ruleset holds a ruleset and its metadata.
 type Ruleset struct {
-	Name    string        `json:"name"`
+	Path    string        `json:"path"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }

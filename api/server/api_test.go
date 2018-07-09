@@ -18,11 +18,11 @@ func TestAPI(t *testing.T) {
 	r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 	r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 	l := []store.RulesetEntry{
-		{Name: "a", Ruleset: r1},
-		{Name: "b", Ruleset: r2},
+		{Path: "a", Ruleset: r1},
+		{Path: "b", Ruleset: r2},
 	}
 
-	s.AllFn = func(context.Context) ([]store.RulesetEntry, error) {
+	s.ListFn = func(context.Context, string) ([]store.RulesetEntry, error) {
 		return l, nil
 	}
 

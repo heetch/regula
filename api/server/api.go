@@ -24,8 +24,8 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // list fetches all the rulesets from the store and writes them to the http response.
-func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, path string) {
-	l, err := s.store.All(r.Context())
+func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
+	l, err := s.store.List(r.Context(), prefix)
 	if err != nil {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
