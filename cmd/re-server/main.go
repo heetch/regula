@@ -14,6 +14,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/confita"
+	"github.com/heetch/confita/backend/env"
+	"github.com/heetch/confita/backend/flags"
 	"github.com/heetch/rules-engine/api/server"
 	"github.com/heetch/rules-engine/store/etcd"
 	isatty "github.com/mattn/go-isatty"
@@ -53,7 +55,7 @@ func loadConfig() *config {
 	cfg.Etcd.Endpoints = "127.0.0.1:2379"
 	cfg.Server.Address = "0.0.0.0:5331"
 
-	err := confita.NewLoader().Load(context.Background(), &cfg)
+	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

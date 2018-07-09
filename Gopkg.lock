@@ -47,10 +47,11 @@
   packages = [
     ".",
     "backend",
-    "backend/env"
+    "backend/env",
+    "backend/flags"
   ]
-  revision = "f6a82362a2c55ae056cbb0ea681360d8d934289d"
-  version = "v0.4.0"
+  revision = "b2c3464fd4b6a7fa45af979ece87092d86ddd69f"
+  version = "v0.5.0"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -202,6 +203,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a953ddfdf8aa9779c90662d220d627e0cdd6c41525f52c22af7cd2ddfda0c364"
+  inputs-digest = "9213278f43f0293d4e6a6051e440c6187426f7a25947ea3e8df9a4721bb08ab8"
   solver-name = "gps-cdcl"
   solver-version = 1

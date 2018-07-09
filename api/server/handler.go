@@ -33,7 +33,7 @@ func NewHandler(store store.Store, logger zerolog.Logger) http.Handler {
 
 	// router
 	mux := http.NewServeMux()
-	mux.Handle("/rulesets", &rs)
+	mux.Handle("/rulesets/", &rs)
 
 	// middlewares
 	chain := []func(http.Handler) http.Handler{
