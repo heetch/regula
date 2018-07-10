@@ -31,11 +31,7 @@
 
 [[constraint]]
   name = "github.com/heetch/confita"
-  version = "0.4.0"
-
-[[constraint]]
-  name = "github.com/julienschmidt/httprouter"
-  version = "1.1.0"
+  version = "0.5.0"
 
 [[constraint]]
   name = "github.com/pkg/errors"

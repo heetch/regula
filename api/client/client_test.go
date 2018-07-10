@@ -19,7 +19,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	list, err := c.ListRulesets(context.Background())
+	list, err := c.ListRulesets(context.Background(), "prefix")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestClient(t *testing.T) {
 		cli, err := client.NewClient(ts.URL)
 		require.NoError(t, err)
 
-		_, err = cli.ListRulesets(context.Background())
+		_, err = cli.ListRulesets(context.Background(), "")
 		require.EqualError(t, err, "some err")
 	})
 
@@ -48,14 +48,16 @@ func TestClient(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.NotEmpty(t, r.Header.Get("User-Agent"))
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
-			fmt.Fprintf(w, `[{"name": "a"}]`)
+			assert.Contains(t, r.URL.Query(), "list")
+			assert.Equal(t, "/rulesets/prefix", r.URL.Path)
+			fmt.Fprintf(w, `[{"path": "a"}]`)
 		}))
 		defer ts.Close()
 
 		cli, err := client.NewClient(ts.URL)
 		require.NoError(t, err)
 
-		rs, err := cli.ListRulesets(context.Background())
+		rs, err := cli.ListRulesets(context.Background(), "prefix")
 		require.NoError(t, err)
 		require.Len(t, rs, 1)
 	})

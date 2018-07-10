@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	ppath "path"
 	"time"
 
 	"github.com/heetch/rules-engine"
@@ -55,11 +56,15 @@ func NewClient(baseURL string, opts ...Option) (*Client, error) {
 }
 
 // ListRulesets fetches all the rulesets.
-func (c *Client) ListRulesets(ctx context.Context) ([]api.Ruleset, error) {
-	req, err := c.newRequest("GET", "/rulesets", nil)
+func (c *Client) ListRulesets(ctx context.Context, prefix string) ([]api.Ruleset, error) {
+	req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	q := req.URL.Query()
+	q.Add("list", "")
+	req.URL.RawQuery = q.Encode()
 
 	var rl []api.Ruleset
 
@@ -143,8 +148,8 @@ func UserAgent(userAgent string) Option {
 // NewGetter uses the given client to fetch all the rulesets from the server
 // and returns a Getter that holds the results in memory.
 // No subsequent round trips are performed after this function returns.
-func NewGetter(ctx context.Context, client *Client) (*rules.MemoryGetter, error) {
-	ls, err := client.ListRulesets(ctx)
+func NewGetter(ctx context.Context, client *Client, prefix string) (*rules.MemoryGetter, error) {
+	ls, err := client.ListRulesets(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +159,7 @@ func NewGetter(ctx context.Context, client *Client) (*rules.MemoryGetter, error)
 	}
 
 	for _, re := range ls {
-		g.Rulesets[re.Name] = re.Ruleset
+		g.Rulesets[re.Path] = re.Ruleset
 	}
 
 	return &g, nil

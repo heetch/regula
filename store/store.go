@@ -8,12 +8,12 @@ import (
 
 // Store manages the storage of rulesets.
 type Store interface {
-	// All returns all the rulesets entries from the store.
-	All(context.Context) ([]RulesetEntry, error)
+	// List returns all the rulesets entries under the given prefix.
+	List(ctx context.Context, prefix string) ([]RulesetEntry, error)
 }
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Name    string        `json:"name"`
+	Path    string        `json:"path"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }

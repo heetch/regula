@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"encoding/json"
+	"path"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/rules-engine/store"
@@ -17,9 +18,9 @@ type Store struct {
 	Namespace string
 }
 
-// All returns all the rulesets entries from the store.
-func (s *Store) All(ctx context.Context) ([]store.RulesetEntry, error) {
-	resp, err := s.Client.KV.Get(ctx, s.Namespace, clientv3.WithPrefix())
+// List returns all the rulesets entries under the given path.
+func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
+	resp, err := s.Client.KV.Get(ctx, path.Join(s.Namespace, prefix), clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}

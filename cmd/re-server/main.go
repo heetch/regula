@@ -14,6 +14,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/confita"
+	"github.com/heetch/confita/backend/env"
+	"github.com/heetch/confita/backend/flags"
 	"github.com/heetch/rules-engine/api/server"
 	"github.com/heetch/rules-engine/store/etcd"
 	isatty "github.com/mattn/go-isatty"
@@ -42,8 +44,7 @@ func main() {
 		Namespace: cfg.Etcd.Namespace,
 	}
 
-	srv, mux := server.New(&store, logger)
-	mux.Handle("/health", healthCheckHandler(cli, cfg.Etcd.Namespace, logger))
+	srv := createServer(cli, cfg.Etcd.Namespace, &store, logger)
 
 	runServer(srv, cfg.Server.Address, logger)
 }
@@ -54,7 +55,7 @@ func loadConfig() *config {
 	cfg.Etcd.Endpoints = "127.0.0.1:2379"
 	cfg.Server.Address = "0.0.0.0:5331"
 
-	err := confita.NewLoader().Load(context.Background(), &cfg)
+	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,6 +95,15 @@ func etcdClient(endpoints string) *clientv3.Client {
 	}
 
 	return cli
+}
+
+func createServer(cli *clientv3.Client, namespace string, store *etcd.Store, logger zerolog.Logger) *http.Server {
+	mux := http.NewServeMux()
+	mux.Handle("/health", healthCheckHandler(cli, namespace, logger))
+	mux.Handle("/", server.NewHandler(store, logger))
+	return &http.Server{
+		Handler: mux,
+	}
 }
 
 func healthCheckHandler(cli *clientv3.Client, namespace string, logger zerolog.Logger) http.Handler {

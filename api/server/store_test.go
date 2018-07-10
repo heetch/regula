@@ -9,15 +9,15 @@ import (
 var _ store.Store = new(mockStore)
 
 type mockStore struct {
-	AllCount int
-	AllFn    func(context.Context) ([]store.RulesetEntry, error)
+	ListCount int
+	ListFn    func(context.Context, string) ([]store.RulesetEntry, error)
 }
 
-func (s *mockStore) All(ctx context.Context) ([]store.RulesetEntry, error) {
-	s.AllCount++
+func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
+	s.ListCount++
 
-	if s.AllFn != nil {
-		return s.AllFn(ctx)
+	if s.ListFn != nil {
+		return s.ListFn(ctx, prefix)
 	}
 
 	return nil, nil

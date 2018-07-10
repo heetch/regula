@@ -61,16 +61,16 @@ func loadSnapshot(r io.Reader) error {
 	}
 	defer client.Close()
 
-	for key, rs := range snapshot {
-		key = strings.TrimSpace(key)
-		if key == "" {
-			return errors.New("empty key")
+	for path, rs := range snapshot {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			return errors.New("empty path")
 		}
 
-		key = strings.Trim(key, "/")
+		path = strings.Trim(path, "/")
 
 		raw, err := json.Marshal(&store.RulesetEntry{
-			Name:    key,
+			Path:    path,
 			Ruleset: rs,
 		})
 		if err != nil {
@@ -80,12 +80,12 @@ func loadSnapshot(r io.Reader) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err = client.Put(ctx, key, string(raw))
+		_, err = client.Put(ctx, path, string(raw))
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Ruleset \"%s\" successfully saved.\n", key)
+		fmt.Printf("Ruleset \"%s\" successfully saved.\n", path)
 	}
 
 	return nil

@@ -8,7 +8,6 @@ import (
 
 	"github.com/heetch/rules-engine/api"
 	"github.com/heetch/rules-engine/store"
-	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
@@ -23,17 +22,8 @@ var (
 	errInternal = errors.New("internal_error")
 )
 
-// New creates an http server to serve the rules engine API.
-func New(store store.Store, logger zerolog.Logger) (*http.Server, *http.ServeMux) {
-	mux := http.NewServeMux()
-	mux.Handle("/", newHandler(store, logger))
-
-	return &http.Server{
-		Handler: mux,
-	}, mux
-}
-
-func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
+// NewHandler creates an http handler to serve the rules engine API.
+func NewHandler(store store.Store, logger zerolog.Logger) http.Handler {
 	s := service{
 		store:  store,
 		logger: logger,
@@ -42,8 +32,8 @@ func newHandler(store store.Store, logger zerolog.Logger) http.Handler {
 	rs := rulesetService{&s}
 
 	// router
-	mux := httprouter.New()
-	mux.HandlerFunc("GET", "/rulesets", rs.list)
+	mux := http.NewServeMux()
+	mux.Handle("/rulesets/", &rs)
 
 	// middlewares
 	chain := []func(http.Handler) http.Handler{
