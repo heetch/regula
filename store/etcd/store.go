@@ -37,14 +37,14 @@ func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, 
 }
 
 // One returns the ruleset entry which corresponds to the given path.
-// It returns store.ErrNotFound if the path doesn't exist or if it's not a leaf.
+// It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
 func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, error) {
 	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, path))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
 
-	// Count will be 0 if the path doesn't exist or if it's not a leaf.
+	// Count will be 0 if the path doesn't exist or if it's not a ruleset.
 	if resp.Count == 0 {
 		return nil, store.ErrNotFound
 	}

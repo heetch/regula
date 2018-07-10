@@ -111,7 +111,7 @@ func TestOne(t *testing.T) {
 		require.EqualError(t, err, store.ErrNotFound.Error())
 	})
 
-	t.Run("NOK - path exists but it's not a leaf", func(t *testing.T) {
+	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
 		path := "ab"
 
 		_, err := s.One(context.Background(), path)
