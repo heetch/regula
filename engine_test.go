@@ -15,50 +15,50 @@ import (
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	m := rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
-		"match-string-a": &rule.Ruleset{
+	m := rules.MemoryGetter{Rulesets: map[rules.MemoryGetterKey]*rule.Ruleset{
+		rules.MemoryGetterKey{"match-string-a", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a")),
 			},
 		},
-		"match-string-b": &rule.Ruleset{
+		rules.MemoryGetterKey{"match-string-b", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("matched b")),
 			},
 		},
-		"type-mismatch": &rule.Ruleset{
+		rules.MemoryGetterKey{"type-mismatch", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 			},
 		},
-		"no-match": &rule.Ruleset{
+		rules.MemoryGetterKey{"no-match", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
 			},
 		},
-		"match-bool": &rule.Ruleset{
+		rules.MemoryGetterKey{"match-bool", "latest"}: &rule.Ruleset{
 			Type: "bool",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 			},
 		},
-		"match-int64": &rule.Ruleset{
+		rules.MemoryGetterKey{"match-int64", "latest"}: &rule.Ruleset{
 			Type: "int64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 			},
 		},
-		"match-float64": &rule.Ruleset{
+		rules.MemoryGetterKey{"match-float64", "latest"}: &rule.Ruleset{
 			Type: "float64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 			},
 		},
-		"match-duration": &rule.Ruleset{
+		rules.MemoryGetterKey{"match-duration", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("3s")),
@@ -152,36 +152,36 @@ func TestEngine(t *testing.T) {
 var gt rules.Getter
 
 func init() {
-	gt = &rules.MemoryGetter{Rulesets: map[string]*rule.Ruleset{
-		"/path/to/string/key": &rule.Ruleset{
+	gt = &rules.MemoryGetter{Rulesets: map[rules.MemoryGetterKey]*rule.Ruleset{
+		rules.MemoryGetterKey{"/path/to/string/key", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("some-string")),
 			},
 		},
 
-		"/path/to/int64/key": &rule.Ruleset{
+		rules.MemoryGetterKey{"/path/to/int64/key", "latest"}: &rule.Ruleset{
 			Type: "int64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsInt64(10)),
 			},
 		},
 
-		"/path/to/float64/key": &rule.Ruleset{
+		rules.MemoryGetterKey{"/path/to/float64/key", "latest"}: &rule.Ruleset{
 			Type: "float64",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsFloat64(3.14)),
 			},
 		},
 
-		"/path/to/bool/key": &rule.Ruleset{
+		rules.MemoryGetterKey{"/path/to/bool/key", "latest"}: &rule.Ruleset{
 			Type: "bool",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsBool(true)),
 			},
 		},
 
-		"/path/to/duration/key": &rule.Ruleset{
+		rules.MemoryGetterKey{"/path/to/duration/key", "latest"}: &rule.Ruleset{
 			Type: "string",
 			Rules: []*rule.Rule{
 				rule.New(rule.True(), rule.ReturnsString("3s")),

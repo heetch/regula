@@ -130,18 +130,34 @@ func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Par
 // A Getter allows a ruleset to be retrieved.
 type Getter interface {
 	// Get returns the ruleset associated with the given key.
-	// If no ruleset is found for a given key, the implementation must return store.ErrRulesetNotFound.
+	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.
 	Get(ctx context.Context, key string) (*rule.Ruleset, error)
+	// GetVersion returns the ruleset associated with the given key and version.
+	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.
+	GetVersion(ctx context.Context, key string, version string) (*rule.Ruleset, error)
 }
 
 // MemoryGetter is an in-memory getter which stores rulesets in a map.
 type MemoryGetter struct {
-	Rulesets map[string]*rule.Ruleset
+	Rulesets map[MemoryGetterKey]*rule.Ruleset
+}
+
+// MemoryGetterKey is used by MemoryGetter to identify a ruleset and its version within a map.
+type MemoryGetterKey struct {
+	Path, Version string
 }
 
 // Get returns the selected ruleset from memory or returns ErrRulesetNotFound.
-func (g *MemoryGetter) Get(_ context.Context, key string) (*rule.Ruleset, error) {
-	r, ok := g.Rulesets[key]
+func (g *MemoryGetter) Get(ctx context.Context, path string) (*rule.Ruleset, error) {
+	return g.GetVersion(ctx, path, "latest")
+}
+
+// GetVersion returns the selected ruleset from memory using the given path and version or returns ErrRulesetNotFound.
+func (g *MemoryGetter) GetVersion(_ context.Context, path, version string) (*rule.Ruleset, error) {
+	r, ok := g.Rulesets[MemoryGetterKey{
+		Version: version,
+		Path:    path,
+	}]
 	if !ok {
 		return nil, ErrRulesetNotFound
 	}
