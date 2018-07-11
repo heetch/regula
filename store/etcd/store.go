@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	ppath "path"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 )
@@ -18,7 +20,7 @@ type Store struct {
 	Namespace string
 }
 
-// List returns all the rulesets entries under the given path.
+// List returns all the rulesets entries under the given prefix.
 func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
 	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, prefix), clientv3.WithPrefix())
 	if err != nil {
@@ -56,4 +58,36 @@ func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, erro
 	}
 
 	return &entry, nil
+}
+
+// Watch the given prefix for anything new.
+func (s *Store) Watch(ctx context.Context, prefix string) ([]store.Event, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	wc := s.Client.Watch(ctx, ppath.Join(s.Namespace, prefix), clientv3.WithPrefix())
+	select {
+	case wresp := <-wc:
+		events := make([]store.Event, len(wresp.Events))
+		for i, ev := range wresp.Events {
+			switch ev.Type {
+			case mvccpb.PUT:
+				events[i].Type = store.PutEvent
+			case mvccpb.DELETE:
+				events[i].Type = store.DeleteEvent
+			}
+
+			events[i].Path = strings.TrimPrefix(s.Namespace, string(ev.Kv.Key))
+			var e store.RulesetEntry
+			err := json.Unmarshal(ev.Kv.Value, &e)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal entry")
+			}
+			events[i].Ruleset = e.Ruleset
+		}
+
+		return events, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }

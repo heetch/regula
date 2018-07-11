@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	ppath "path"
+	"sync"
 	"testing"
 	"time"
 
@@ -117,5 +118,30 @@ func TestOne(t *testing.T) {
 		_, err := s.One(context.Background(), path)
 		require.Error(t, err)
 		require.EqualError(t, err, store.ErrNotFound.Error())
+	})
+}
+func TestWatch(t *testing.T) {
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	t.Run("Prefix", func(t *testing.T) {
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			events, err := s.Watch(ctx, "a")
+			require.NoError(t, err)
+			require.Len(t, events, 1)
+			require.Equal(t, store.PutEvent, events[0].Type)
+		}()
+
+		time.Sleep(1 * time.Second)
+		createEntry(t, s, "aa", &store.RulesetEntry{Path: "aa"})
+		wg.Wait()
 	})
 }
