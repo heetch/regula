@@ -24,3 +24,16 @@ type Ruleset struct {
 	Path    string        `json:"path"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }
+
+// List of possible events executed against a ruleset.
+const (
+	PutEvent    = "PUT"
+	DeleteEvent = "DELETE"
+)
+
+// Event describes an event occured on a ruleset.
+type Event struct {
+	Type    string        `json:"type"`
+	Path    string        `json:"path"`
+	Ruleset *rule.Ruleset `json:"ruleset"`
+}

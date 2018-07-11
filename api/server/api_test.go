@@ -6,17 +6,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAPI(t *testing.T) {
 	s := new(mockStore)
-	h := NewHandler(s, zerolog.Nop())
+	h := NewHandler(s, Config{
+		WatchTimeout: 1 * time.Second,
+	})
 
 	t.Run("Root", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -76,7 +78,6 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-
 		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Value) {
 			t.Helper()
 
@@ -246,6 +247,54 @@ func TestAPI(t *testing.T) {
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&bar=true", http.StatusBadRequest, &rse, nil)
+		})
+	})
+
+	t.Run("Watch", func(t *testing.T) {
+		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
+		r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
+		l := []store.Event{
+			{Type: store.PutEvent, Path: "a", Ruleset: r1},
+			{Type: store.PutEvent, Path: "b", Ruleset: r2},
+			{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+		}
+
+		call := func(t *testing.T, url string, code int, l []store.Event, after time.Duration) {
+			t.Helper()
+
+			s.WatchFn = func(context.Context, string) ([]store.Event, error) {
+				time.Sleep(after)
+				return l, nil
+			}
+			defer func() { s.WatchFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", url, nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var res []store.Event
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				require.Equal(t, len(l), len(res))
+				for i := range l {
+					require.Equal(t, l[i], res[i])
+				}
+			}
+		}
+
+		t.Run("Root", func(t *testing.T) {
+			call(t, "/rulesets/?watch", http.StatusOK, l, 0)
+		})
+
+		t.Run("WithPrefix", func(t *testing.T) {
+			call(t, "/rulesets/a?watch", http.StatusOK, l[:1], 0)
+		})
+
+		t.Run("Timeout", func(t *testing.T) {
+			call(t, "/rulesets/?watch", http.StatusRequestTimeout, nil, 2*time.Second)
 		})
 	})
 }

@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
@@ -12,6 +14,8 @@ import (
 
 type rulesetService struct {
 	*service
+
+	watchTimeout time.Duration
 }
 
 func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -24,9 +28,12 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.list(w, r, path)
 			return
 		}
-
 		if _, ok := r.URL.Query()["eval"]; ok {
 			s.eval(w, r, path)
+			return
+		}
+		if _, ok := r.URL.Query()["watch"]; ok {
+			s.watch(w, r, path)
 			return
 		}
 	}
@@ -89,4 +96,32 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 	}
 
 	s.encodeJSON(w, resp, http.StatusOK)
+}
+
+// watch watches a prefix for change and returns anything newer.
+func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.watchTimeout)
+	defer cancel()
+
+	l, err := s.store.Watch(ctx, prefix)
+	if err != nil {
+		switch err {
+		case context.DeadlineExceeded:
+			w.WriteHeader(http.StatusRequestTimeout)
+			return
+		case store.ErrNotFound:
+			w.WriteHeader(http.StatusNotFound)
+			return
+		default:
+			s.writeError(w, err, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	el := make([]api.Event, len(l))
+	for i := range l {
+		el[i] = api.Event(l[i])
+	}
+
+	s.encodeJSON(w, el, http.StatusOK)
 }

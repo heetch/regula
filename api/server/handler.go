@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/heetch/regula/api"
@@ -22,14 +23,28 @@ var (
 	errInternal = errors.New("internal_error")
 )
 
+// Config contains the API configuration.
+type Config struct {
+	Logger       *zerolog.Logger
+	WatchTimeout time.Duration
+}
+
 // NewHandler creates an http handler to serve the rules engine API.
-func NewHandler(store store.Store, logger zerolog.Logger) http.Handler {
+func NewHandler(store store.Store, cfg Config) http.Handler {
 	s := service{
-		store:  store,
-		logger: logger,
+		store: store,
 	}
 
-	rs := rulesetService{&s}
+	if cfg.Logger != nil {
+		s.logger = *cfg.Logger
+	} else {
+		s.logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	}
+
+	rs := rulesetService{
+		service:      &s,
+		watchTimeout: 60 * time.Second,
+	}
 
 	// router
 	mux := http.NewServeMux()
@@ -55,6 +70,7 @@ func NewHandler(store store.Store, logger zerolog.Logger) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// setting request timeout
+		// handlers are responsible for using or ignoring it.
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 

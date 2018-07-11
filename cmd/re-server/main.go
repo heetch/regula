@@ -100,7 +100,9 @@ func etcdClient(endpoints string) *clientv3.Client {
 func createServer(cli *clientv3.Client, namespace string, store *etcd.Store, logger zerolog.Logger) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthCheckHandler(cli, namespace, logger))
-	mux.Handle("/", server.NewHandler(store, logger))
+	mux.Handle("/", server.NewHandler(store, server.Config{
+		Logger: &logger,
+	}))
 	return &http.Server{
 		Handler: mux,
 	}
