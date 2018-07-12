@@ -8,12 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/heetch/rules-engine/api"
 	"github.com/heetch/rules-engine/api/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Example() {
+func ExampleListRulesets() {
 	c, err := client.NewClient("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
@@ -27,6 +28,26 @@ func Example() {
 	for _, e := range list {
 		e.Ruleset.Eval(nil)
 	}
+}
+
+func ExampleEvalRuleset() {
+	c, err := client.NewClient("http://127.0.0.1:5331")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	p := map[string]string{
+		"foo": "bar",
+		"baz": "42",
+	}
+
+	resp, err := c.EvalRuleset(context.Background(), "path/to/ruleset", p)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resp.Data)
+	fmt.Println(resp.Type)
 }
 
 func TestClient(t *testing.T) {
@@ -60,6 +81,34 @@ func TestClient(t *testing.T) {
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
 		require.NoError(t, err)
 		require.Len(t, rs, 1)
+	})
+
+	t.Run("EvalRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Contains(t, r.URL.Query(), "eval")
+			assert.Contains(t, r.URL.Query(), "foo")
+			assert.Equal(t, "/rulesets/path/to/ruleset", r.URL.Path)
+			fmt.Fprintf(w, `{"data": "baz", "type": "string"}]`)
+		}))
+		defer ts.Close()
+
+		cli, err := client.NewClient(ts.URL)
+		require.NoError(t, err)
+
+		p := map[string]string{
+			"foo": "bar",
+		}
+
+		exp := api.Response{
+			Data: "baz",
+			Type: "string",
+		}
+
+		resp, err := cli.EvalRuleset(context.Background(), "path/to/ruleset", p)
+		require.NoError(t, err)
+		require.Equal(t, &exp, resp)
 	})
 
 }

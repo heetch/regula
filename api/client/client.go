@@ -72,6 +72,26 @@ func (c *Client) ListRulesets(ctx context.Context, prefix string) ([]api.Ruleset
 	return rl, err
 }
 
+// EvalRuleset evaluates the given ruleset with the given params.
+func (c *Client) EvalRuleset(ctx context.Context, path string, params map[string]string) (*api.Response, error) {
+	req, err := c.newRequest("GET", ppath.Join("/rulesets/", path), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("eval", "")
+	for k, v := range params {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	var resp api.Response
+
+	_, err = c.do(ctx, req, &resp)
+	return &resp, nil
+}
+
 func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
 	rel := url.URL{Path: path}
 	u := c.baseURL.ResolveReference(&rel)
