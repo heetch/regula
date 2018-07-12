@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/heetch/rules-engine/api"
 	"github.com/heetch/rules-engine/rule"
 	"github.com/heetch/rules-engine/store"
 	"github.com/rs/zerolog"
@@ -71,6 +72,180 @@ func TestAPI(t *testing.T) {
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
 			call(t, "/rulesets/someprefix?list", http.StatusNotFound, nil)
+		})
+	})
+
+	t.Run("Eval", func(t *testing.T) {
+
+		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Value) {
+			t.Helper()
+
+			s.OneFn = func(context.Context, string) (*store.RulesetEntry, error) {
+				return rse, nil
+			}
+			defer func() { s.OneFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", url, nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var res api.Value
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				require.EqualValues(t, exp, &res)
+			}
+		}
+
+		t.Run("String - OK", func(t *testing.T) {
+			rs, _ := rule.NewStringRuleset(
+				rule.New(
+					rule.Eq(
+						rule.StringParam("foo"),
+						rule.StringValue("bar"),
+					),
+					rule.ReturnsString("success"),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			exp := &api.Value{
+				Data: "success",
+				Type: "string",
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusOK, &rse, exp)
+		})
+
+		t.Run("Bool - OK", func(t *testing.T) {
+			rs, _ := rule.NewBoolRuleset(
+				rule.New(
+					rule.Eq(
+						rule.BoolParam("foo"),
+						rule.BoolValue(true),
+					),
+					rule.ReturnsBool(true),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			exp := &api.Value{
+				Data: "true",
+				Type: "bool",
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&foo=true", http.StatusOK, &rse, exp)
+		})
+
+		t.Run("Int64 - OK", func(t *testing.T) {
+			rs, _ := rule.NewInt64Ruleset(
+				rule.New(
+					rule.Eq(
+						rule.Int64Param("foo"),
+						rule.Int64Value(42),
+					),
+					rule.ReturnsInt64(42),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			exp := &api.Value{
+				Data: "42",
+				Type: "int64",
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42", http.StatusOK, &rse, exp)
+		})
+
+		t.Run("Float64 - OK", func(t *testing.T) {
+			rs, _ := rule.NewFloat64Ruleset(
+				rule.New(
+					rule.Eq(
+						rule.Float64Param("foo"),
+						rule.Float64Value(42.42),
+					),
+					rule.ReturnsFloat64(42.42),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			exp := &api.Value{
+				Data: "42.420000",
+				Type: "float64",
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42.42", http.StatusOK, &rse, exp)
+		})
+
+		t.Run("NOK - Ruleset not found", func(t *testing.T) {
+			s.OneFn = func(context.Context, string) (*store.RulesetEntry, error) {
+				return nil, store.ErrNotFound
+			}
+			defer func() { s.OneFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
+			h.ServeHTTP(w, r)
+
+			exp := api.Error{
+				Err: "the path: 'path/to/my/ruleset' dosn't exist",
+			}
+
+			var resp api.Error
+			err := json.Unmarshal(w.Body.Bytes(), &resp)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusNotFound, w.Code)
+			require.Equal(t, exp, resp)
+		})
+
+		t.Run("NOK - bad parameter type", func(t *testing.T) {
+			rs, _ := rule.NewStringRuleset(
+				rule.New(
+					rule.Eq(
+						rule.BoolParam("foo"),
+						rule.BoolValue(true),
+					),
+					rule.ReturnsString("success"),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusBadRequest, &rse, nil)
+		})
+
+		t.Run("NOK - undefined parameter", func(t *testing.T) {
+			rs, _ := rule.NewStringRuleset(
+				rule.New(
+					rule.Eq(
+						rule.BoolParam("foo"),
+						rule.BoolValue(true),
+					),
+					rule.ReturnsString("success"),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&bar=true", http.StatusBadRequest, &rse, nil)
 		})
 	})
 }

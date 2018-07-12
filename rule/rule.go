@@ -14,9 +14,6 @@ var (
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
-// Params is a set of variables passed on rule evaluation.
-type Params map[string]interface{}
-
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
 	Root   Node   `json:"root"`
@@ -61,7 +58,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(params Params) (*Value, error) {
+func (r *Rule) Eval(params ParamGetter) (*Value, error) {
 	value, err := r.Root.Eval(params)
 	if err != nil {
 		return nil, err
@@ -148,7 +145,7 @@ func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r *Ruleset) Eval(params Params) (*Value, error) {
+func (r *Ruleset) Eval(params ParamGetter) (*Value, error) {
 	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != ErrNoMatch {
