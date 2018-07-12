@@ -1,10 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/heetch/rules-engine/api"
+	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/rules-engine/store"
 )
 
 type rulesetService struct {
@@ -19,6 +22,11 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		if _, ok := r.URL.Query()["list"]; ok {
 			s.list(w, r, path)
+			return
+		}
+
+		if _, ok := r.URL.Query()["eval"]; ok {
+			s.eval(w, r, path)
 			return
 		}
 	}
@@ -45,4 +53,40 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	}
 
 	s.encodeJSON(w, rl, http.StatusOK)
+}
+
+func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {
+	e, err := s.store.One(r.Context(), path)
+	if err != nil {
+		if err == store.ErrNotFound {
+			s.writeError(w, fmt.Errorf("the path: '%s' dosn't exist", path), http.StatusNotFound)
+			return
+		}
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	params := make(params)
+	for k, v := range r.URL.Query() {
+		params[k] = v[0]
+	}
+
+	v, err := e.Ruleset.Eval(params)
+	if err != nil {
+		if err == rule.ErrParamNotFound ||
+			err == rule.ErrTypeParamMismatch ||
+			err == rule.ErrNoMatch {
+			s.writeError(w, err, http.StatusBadRequest)
+			return
+		}
+		s.writeError(w, errInternal, http.StatusInternalServerError)
+		return
+	}
+
+	resp := api.Response{
+		Data: v.Data,
+		Type: v.Type,
+	}
+
+	s.encodeJSON(w, resp, http.StatusOK)
 }

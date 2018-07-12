@@ -4,6 +4,12 @@ import (
 	"github.com/heetch/rules-engine/rule"
 )
 
+// Response is the response sent to the client after an eval.
+type Response struct {
+	Data string `json:"data"`
+	Type string `json:"type"`
+}
+
 // Error is a generic error response.
 type Error struct {
 	Err string `json:"error"`
