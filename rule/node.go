@@ -17,7 +17,7 @@ var (
 // A Node is a piece of the AST that denotes a construct occurring in the rule source code.
 // Each node takes a set of params and evaluates to a value.
 type Node interface {
-	Eval(Params) (*Value, error)
+	Eval(ParamGetter) (*Value, error)
 }
 
 func parseNode(kind string, data []byte) (Node, error) {
@@ -103,7 +103,7 @@ func Not(n Node) Node {
 	}
 }
 
-func (n *nodeNot) Eval(params Params) (*Value, error) {
+func (n *nodeNot) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 1 {
 		return nil, errors.New("invalid number of operands in Not func")
 	}
@@ -157,7 +157,7 @@ func Or(v1, v2 Node, vN ...Node) Node {
 	}
 }
 
-func (n *nodeOr) Eval(params Params) (*Value, error) {
+func (n *nodeOr) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in Or func")
 	}
@@ -223,7 +223,7 @@ func And(v1, v2 Node, vN ...Node) Node {
 	}
 }
 
-func (n *nodeAnd) Eval(params Params) (*Value, error) {
+func (n *nodeAnd) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in And func")
 	}
@@ -288,7 +288,7 @@ func Eq(v1, v2 Node, vN ...Node) Node {
 	}
 }
 
-func (n *nodeEq) Eval(params Params) (*Value, error) {
+func (n *nodeEq) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in Eq func")
 	}
@@ -343,7 +343,7 @@ func In(v, e1 Node, eN ...Node) Node {
 	}
 }
 
-func (n *nodeIn) Eval(params Params) (*Value, error) {
+func (n *nodeIn) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in In func")
 	}
@@ -437,22 +437,35 @@ func Float64Param(name string) Node {
 	}
 }
 
-func (n *nodeParam) Eval(params Params) (*Value, error) {
-	val, ok := params[n.Name]
-	if !ok {
-		return nil, errors.New("param not found in given context")
+func (n *nodeParam) Eval(params ParamGetter) (*Value, error) {
+	if params == nil {
+		return nil, errors.New("params is nil")
 	}
 
-	switch v := val.(type) {
-	case string:
+	switch n.Type {
+	case "string":
+		v, err := params.GetString(n.Name)
+		if err != nil {
+			return nil, err
+		}
 		return StringValue(v), nil
-	case bool:
+	case "bool":
+		v, err := params.GetBool(n.Name)
+		if err != nil {
+			return nil, err
+		}
 		return BoolValue(v), nil
-	case int64:
+	case "int64":
+		v, err := params.GetInt64(n.Name)
+		if err != nil {
+			return nil, err
+		}
 		return Int64Value(v), nil
-	case int:
-		return Int64Value(int64(v)), nil
-	case float64:
+	case "float64":
+		v, err := params.GetFloat64(n.Name)
+		if err != nil {
+			return nil, err
+		}
 		return Float64Value(v), nil
 	}
 
@@ -500,7 +513,7 @@ func Float64Value(value float64) *Value {
 }
 
 // Eval evaluates the value to itself.
-func (v *Value) Eval(Params) (*Value, error) {
+func (v *Value) Eval(ParamGetter) (*Value, error) {
 	return v, nil
 }
 

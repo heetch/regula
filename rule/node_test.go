@@ -10,12 +10,12 @@ import (
 type mockNode struct {
 	val        *Value
 	err        error
-	evalFn     func(params Params) (*Value, error)
+	evalFn     func(params ParamGetter) (*Value, error)
 	evalCount  int
-	lastParams Params
+	lastParams ParamGetter
 }
 
-func (m *mockNode) Eval(params Params) (*Value, error) {
+func (m *mockNode) Eval(params ParamGetter) (*Value, error) {
 	m.evalCount++
 	m.lastParams = params
 

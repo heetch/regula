@@ -43,7 +43,7 @@ func ExampleAnd() {
 	)
 
 	val, err := tree.Eval(rule.Params{
-		"foo": 10,
+		"foo": int64(10),
 		"bar": 1.6,
 	})
 	if err != nil {
@@ -123,7 +123,7 @@ func ExampleEq_int64() {
 	)
 
 	val, err := tree.Eval(rule.Params{
-		"foo": 10,
+		"foo": int64(10),
 	})
 	if err != nil {
 		log.Fatal(err)
