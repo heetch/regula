@@ -14,9 +14,6 @@ var (
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
-// Params is a set of variables passed on rule evaluation.
-type Params map[string]interface{}
-
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
 	Root   Node   `json:"root"`
