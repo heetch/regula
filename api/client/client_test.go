@@ -101,7 +101,7 @@ func TestClient(t *testing.T) {
 			"foo": "bar",
 		}
 
-		exp := api.Response{
+		exp := api.Value{
 			Data: "baz",
 			Type: "string",
 		}

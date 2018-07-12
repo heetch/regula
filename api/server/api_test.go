@@ -77,7 +77,7 @@ func TestAPI(t *testing.T) {
 
 	t.Run("Eval", func(t *testing.T) {
 
-		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Response) {
+		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Value) {
 			t.Helper()
 
 			s.OneFn = func(context.Context, string) (*store.RulesetEntry, error) {
@@ -92,7 +92,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res api.Response
+				var res api.Value
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.EqualValues(t, exp, &res)
@@ -114,7 +114,7 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Response{
+			exp := &api.Value{
 				Data: "success",
 				Type: "string",
 			}
@@ -137,7 +137,7 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Response{
+			exp := &api.Value{
 				Data: "true",
 				Type: "bool",
 			}
@@ -160,7 +160,7 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Response{
+			exp := &api.Value{
 				Data: "42",
 				Type: "int64",
 			}
@@ -183,7 +183,7 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Response{
+			exp := &api.Value{
 				Data: "42.420000",
 				Type: "float64",
 			}

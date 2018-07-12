@@ -4,8 +4,8 @@ import (
 	"github.com/heetch/rules-engine/rule"
 )
 
-// Response is the response sent to the client after an eval.
-type Response struct {
+// Value is the response sent to the client after an eval.
+type Value struct {
 	Data string `json:"data"`
 	Type string `json:"type"`
 }
