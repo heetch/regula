@@ -60,3 +60,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/net"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  branch = "master"

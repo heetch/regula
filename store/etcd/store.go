@@ -8,8 +8,10 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 var _ store.Store = new(Store)
@@ -58,6 +60,34 @@ func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, erro
 	}
 
 	return &entry, nil
+}
+
+// Put adds a version of the given ruleset using an uuid.
+func (s *Store) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*store.RulesetEntry, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate ruleset version")
+	}
+
+	v := uid.String()
+
+	re := store.RulesetEntry{
+		Path:    path,
+		Version: v,
+		Ruleset: ruleset,
+	}
+
+	raw, err := json.Marshal(&re)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode entry")
+	}
+
+	_, err = s.Client.KV.Put(ctx, ppath.Join(s.Namespace, path, v), string(raw))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to put entry")
+	}
+
+	return &re, nil
 }
 
 // Watch the given prefix for anything new.

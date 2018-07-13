@@ -19,11 +19,13 @@ type Store interface {
 	// One returns the ruleset entry which corresponds to the given path.
 	One(ctx context.Context, path string) (*RulesetEntry, error)
 	Watch(ctx context.Context, prefix string) ([]Event, error)
+	Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*RulesetEntry, error)
 }
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
 	Path    string
+	Version string
 	Ruleset *rule.Ruleset
 }
 

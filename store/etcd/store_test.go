@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	ppath "path"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/heetch/rules-engine/rule"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/regula/store"
@@ -120,6 +123,34 @@ func TestOne(t *testing.T) {
 		require.EqualError(t, err, store.ErrNotFound.Error())
 	})
 }
+
+func TestPut(t *testing.T) {
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	t.Run("OK", func(t *testing.T) {
+		path := "a"
+		rs, _ := rule.NewBoolRuleset(
+			rule.New(
+				rule.True(),
+				rule.ReturnsBool(true),
+			),
+		)
+
+		entry, err := s.Put(context.Background(), path, rs)
+		require.NoError(t, err)
+		require.Equal(t, path, entry.Path)
+		require.NotEmpty(t, entry.Version)
+		require.Equal(t, rs, entry.Ruleset)
+
+		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, resp.Count, 1)
+		// verify if the path contains the right ruleset version
+		require.Equal(t, entry.Version, strings.TrimLeft(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "a")+"/"))
+	})
+}
+
 func TestWatch(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()

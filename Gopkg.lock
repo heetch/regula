@@ -90,6 +90,12 @@
   version = "v1.8.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+
+[[projects]]
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -129,7 +135,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "6f138e0f60713a248abf7046f1014a3ba90f5341"
+  revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
 [[projects]]
   branch = "master"
@@ -165,7 +171,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "8b2cc369ab52e0003a878865c9372afdd6ca5c5a"
+  revision = "e92b116572682a5b432ddd840aeaba2a559eeff1"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -203,6 +209,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9213278f43f0293d4e6a6051e440c6187426f7a25947ea3e8df9a4721bb08ab8"
+  inputs-digest = "83d9e3738d484016de1628cabb20fee92f6ea66fb612356f16e94c4ba61a0ebd"
   solver-name = "gps-cdcl"
   solver-version = 1
