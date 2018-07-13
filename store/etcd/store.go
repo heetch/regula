@@ -6,7 +6,7 @@ import (
 	ppath "path"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/rules-engine/store"
+	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 )
 

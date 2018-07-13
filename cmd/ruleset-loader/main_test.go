@@ -8,8 +8,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 
-	"github.com/heetch/rules-engine/rule"
-	"github.com/heetch/rules-engine/store/etcd"
+	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
 )
 

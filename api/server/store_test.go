@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/heetch/rules-engine/store"
+	"github.com/heetch/regula/store"
 )
 
 var _ store.Store = new(mockStore)

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/heetch/rules-engine/api"
-	"github.com/heetch/rules-engine/store"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"

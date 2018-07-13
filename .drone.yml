@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/heetch/rules-engine
+  path: src/github.com/heetch/regula
 
 pipeline:
   build:
@@ -31,14 +31,14 @@ pipeline:
     secrets: [ aws_access_key_id, aws_secret_access_key ]
     source: doc/**/*
     strip_prefix: doc/
-    target: /go/heetch/rules-engine/tag
+    target: /go/heetch/regula/tag
     when:
      event: [ tag ]
 
   docker:
     image: plugins/docker
     registry: quay.io
-    repo: quay.io/heetch/rules-engine
+    repo: quay.io/heetch/regula
     secrets: [ plugin_username, plugin_password ]
     tags:
       - latest

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/rules-engine/store"
-	"github.com/heetch/rules-engine/store/etcd"
+	"github.com/heetch/regula/store"
+	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 
 	s := etcd.Store{
 		Client:    cli,
-		Namespace: "rules-engine-store-tests",
+		Namespace: "regula-store-tests",
 	}
 
 	return &s, func() {

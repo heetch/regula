@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
 

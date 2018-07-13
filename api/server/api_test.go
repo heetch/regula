@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/heetch/rules-engine/api"
-	"github.com/heetch/rules-engine/rule"
-	"github.com/heetch/rules-engine/store"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula/store"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )

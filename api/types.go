@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 )
 
 // Value is the response sent to the client after an eval.
