@@ -6,7 +6,7 @@ import (
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend"
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
@@ -103,7 +103,7 @@ func (e *Engine) GetFloat64(ctx context.Context, key string, params rule.Params)
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
 // tagged with the "ruleset" struct tag.
 func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Params) error {
-	b := backend.Func("rules-engine", func(ctx context.Context, key string) ([]byte, error) {
+	b := backend.Func("regula", func(ctx context.Context, key string) ([]byte, error) {
 		ruleset, err := e.getter.Get(ctx, key)
 		if err != nil {
 			if err == ErrRulesetNotFound {

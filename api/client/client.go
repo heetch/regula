@@ -10,9 +10,9 @@ import (
 	ppath "path"
 	"time"
 
-	"github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/api"
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"golang.org/x/net/context/ctxhttp"
 )
 

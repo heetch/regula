@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	rules "github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/rule"
+	rules "github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
 

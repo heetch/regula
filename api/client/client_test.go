@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/heetch/rules-engine/api"
-	"github.com/heetch/rules-engine/api/client"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/api/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

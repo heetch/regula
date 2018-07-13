@@ -2,12 +2,12 @@ FROM golang:1.10-alpine as builder
 
 RUN apk --update add git ca-certificates && rm -rf /var/cache/apk/*
 
-COPY . /go/src/github.com/heetch/rules-engine
+COPY . /go/src/github.com/heetch/regula
 
-WORKDIR /go/src/github.com/heetch/rules-engine
+WORKDIR /go/src/github.com/heetch/regula
 
-RUN go install -v github.com/heetch/rules-engine/cmd/re-server
-RUN go install -v github.com/heetch/rules-engine/cmd/ruleset-loader
+RUN go install -v github.com/heetch/regula/cmd/re-server
+RUN go install -v github.com/heetch/regula/cmd/ruleset-loader
 
 FROM alpine:latest
 

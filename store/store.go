@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 )
 
 // Store errors

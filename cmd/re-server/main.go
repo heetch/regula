@@ -16,8 +16,8 @@ import (
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/flags"
-	"github.com/heetch/rules-engine/api/server"
-	"github.com/heetch/rules-engine/store/etcd"
+	"github.com/heetch/regula/api/server"
+	"github.com/heetch/regula/store/etcd"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 )

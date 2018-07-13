@@ -3,7 +3,7 @@ package server
 import (
 	"strconv"
 
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 )
 
 // params represents the parameters computed from the query string.

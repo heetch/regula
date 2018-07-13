@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/rule"
 )
 
 func Example() {
