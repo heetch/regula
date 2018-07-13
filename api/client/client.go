@@ -12,12 +12,12 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula/version"
 	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
-	userAgent = "RulesEngine/" + rules.Version + " Go"
+	userAgent = "RulesEngine/" + version.Version + " Go"
 	timeout   = 5 * time.Second
 )
 
@@ -175,13 +175,11 @@ func NewGetter(ctx context.Context, client *Client, prefix string) (*rules.Memor
 		return nil, err
 	}
 
-	g := rules.MemoryGetter{
-		Rulesets: make(map[string]*rule.Ruleset),
-	}
+	var m rules.MemoryGetter
 
 	for _, re := range ls {
-		g.Rulesets[re.Path] = re.Ruleset
+		m.AddRuleset(re.Path, re.Version, re.Ruleset)
 	}
 
-	return &g, nil
+	return &m, nil
 }

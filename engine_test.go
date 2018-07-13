@@ -15,56 +15,62 @@ import (
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	m := rules.MemoryGetter{Rulesets: map[rules.MemoryGetterKey]*rule.Ruleset{
-		rules.MemoryGetterKey{"match-string-a", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a")),
-			},
+	var m rules.MemoryGetter
+
+	m.AddRuleset("match-string-a", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a v1")),
 		},
-		rules.MemoryGetterKey{"match-string-b", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsString("matched b")),
-			},
+	})
+	m.AddRuleset("match-string-a", "2", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a v2")),
 		},
-		rules.MemoryGetterKey{"type-mismatch", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
-			},
+	})
+	m.AddRuleset("match-string-b", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsString("matched b")),
 		},
-		rules.MemoryGetterKey{"no-match", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
-			},
+	})
+	m.AddRuleset("type-mismatch", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 		},
-		rules.MemoryGetterKey{"match-bool", "latest"}: &rule.Ruleset{
-			Type: "bool",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
-			},
+	})
+	m.AddRuleset("no-match", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
 		},
-		rules.MemoryGetterKey{"match-int64", "latest"}: &rule.Ruleset{
-			Type: "int64",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
-			},
+	})
+	m.AddRuleset("match-bool", "1", &rule.Ruleset{
+		Type: "bool",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 		},
-		rules.MemoryGetterKey{"match-float64", "latest"}: &rule.Ruleset{
-			Type: "float64",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
-			},
+	})
+	m.AddRuleset("match-int64", "1", &rule.Ruleset{
+		Type: "int64",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 		},
-		rules.MemoryGetterKey{"match-duration", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsString("3s")),
-			},
+	})
+	m.AddRuleset("match-float64", "1", &rule.Ruleset{
+		Type: "float64",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 		},
-	}}
+	})
+	m.AddRuleset("match-duration", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsString("3s")),
+		},
+	})
 
 	e := rules.NewEngine(&m)
 
@@ -73,7 +79,13 @@ func TestEngine(t *testing.T) {
 			"foo": "bar",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "matched a", str)
+		require.Equal(t, "matched a v2", str)
+
+		str, err = e.GetString(ctx, "match-string-a", rule.Params{
+			"foo": "bar",
+		}, rules.Version("1"))
+		require.NoError(t, err)
+		require.Equal(t, "matched a v1", str)
 
 		str, err = e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
@@ -118,7 +130,7 @@ func TestEngine(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		require.Equal(t, "matched a", to.StringA)
+		require.Equal(t, "matched a v2", to.StringA)
 		require.Equal(t, true, to.Bool)
 		require.Equal(t, int64(-10), to.Int64)
 		require.Equal(t, -3.14, to.Float64)
@@ -152,42 +164,43 @@ func TestEngine(t *testing.T) {
 var gt rules.Getter
 
 func init() {
-	gt = &rules.MemoryGetter{Rulesets: map[rules.MemoryGetterKey]*rule.Ruleset{
-		rules.MemoryGetterKey{"/path/to/string/key", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsString("some-string")),
-			},
-		},
+	var m rules.MemoryGetter
+	gt = &m
 
-		rules.MemoryGetterKey{"/path/to/int64/key", "latest"}: &rule.Ruleset{
-			Type: "int64",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsInt64(10)),
-			},
+	m.AddRuleset("/path/to/string/key", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsString("some-string")),
 		},
+	})
 
-		rules.MemoryGetterKey{"/path/to/float64/key", "latest"}: &rule.Ruleset{
-			Type: "float64",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsFloat64(3.14)),
-			},
+	m.AddRuleset("/path/to/int64/key", "1", &rule.Ruleset{
+		Type: "int64",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsInt64(10)),
 		},
+	})
 
-		rules.MemoryGetterKey{"/path/to/bool/key", "latest"}: &rule.Ruleset{
-			Type: "bool",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsBool(true)),
-			},
+	m.AddRuleset("/path/to/float64/key", "1", &rule.Ruleset{
+		Type: "float64",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsFloat64(3.14)),
 		},
+	})
 
-		rules.MemoryGetterKey{"/path/to/duration/key", "latest"}: &rule.Ruleset{
-			Type: "string",
-			Rules: []*rule.Rule{
-				rule.New(rule.True(), rule.ReturnsString("3s")),
-			},
+	m.AddRuleset("/path/to/bool/key", "1", &rule.Ruleset{
+		Type: "bool",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsBool(true)),
 		},
-	}}
+	})
+
+	m.AddRuleset("/path/to/duration/key", "1", &rule.Ruleset{
+		Type: "string",
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.ReturnsString("3s")),
+		},
+	})
 }
 
 func ExampleEngine() {

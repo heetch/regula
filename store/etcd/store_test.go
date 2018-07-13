@@ -2,16 +2,14 @@ package etcd_test
 
 import (
 	"context"
-	"encoding/json"
 	ppath "path"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/heetch/rules-engine/rule"
-
 	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
@@ -42,14 +40,9 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createEntry(t *testing.T, s *etcd.Store, path string, e *store.RulesetEntry) string {
-	v, err := json.Marshal(e)
+func createRuleset(t *testing.T, s *etcd.Store, path string, r *rule.Ruleset) {
+	_, err := s.Put(context.Background(), path, r)
 	require.NoError(t, err)
-
-	_, err = s.Client.KV.Put(context.Background(), ppath.Join(s.Namespace, path), string(v))
-	require.NoError(t, err)
-
-	return path
 }
 
 func TestList(t *testing.T) {
@@ -57,12 +50,12 @@ func TestList(t *testing.T) {
 	defer cleanup()
 
 	t.Run("Root", func(t *testing.T) {
-		createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
-		createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
-		createEntry(t, s, "b", &store.RulesetEntry{Path: "b"})
-		createEntry(t, s, "c", &store.RulesetEntry{Path: "c"})
+		createRuleset(t, s, "a", nil)
+		createRuleset(t, s, "a", nil)
+		createRuleset(t, s, "b", nil)
+		createRuleset(t, s, "c", nil)
 
-		paths := []string{"a", "b", "c"}
+		paths := []string{"a", "a", "b", "c"}
 
 		entries, err := s.List(context.Background(), "")
 		require.NoError(t, err)
@@ -73,10 +66,10 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("Prefix", func(t *testing.T) {
-		createEntry(t, s, "x", &store.RulesetEntry{Path: "x"})
-		createEntry(t, s, "xx", &store.RulesetEntry{Path: "xx"})
-		createEntry(t, s, "x/1", &store.RulesetEntry{Path: "x/1"})
-		createEntry(t, s, "x/2", &store.RulesetEntry{Path: "x/2"})
+		createRuleset(t, s, "x", nil)
+		createRuleset(t, s, "xx", nil)
+		createRuleset(t, s, "x/1", nil)
+		createRuleset(t, s, "x/2", nil)
 
 		paths := []string{"x", "xx", "x/1", "x/2"}
 
@@ -93,11 +86,11 @@ func TestOne(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	createEntry(t, s, "a", &store.RulesetEntry{Path: "a"})
-	createEntry(t, s, "b", &store.RulesetEntry{Path: "b"})
-	createEntry(t, s, "c", &store.RulesetEntry{Path: "c"})
-	createEntry(t, s, "abc", &store.RulesetEntry{Path: "abc"})
-	createEntry(t, s, "abcd", &store.RulesetEntry{Path: "abcd"})
+	createRuleset(t, s, "a", nil)
+	createRuleset(t, s, "b", nil)
+	createRuleset(t, s, "c", nil)
+	createRuleset(t, s, "abc", nil)
+	createRuleset(t, s, "abcd", nil)
 
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
@@ -172,7 +165,7 @@ func TestWatch(t *testing.T) {
 		}()
 
 		time.Sleep(1 * time.Second)
-		createEntry(t, s, "aa", &store.RulesetEntry{Path: "aa"})
+		createRuleset(t, s, "aa", nil)
 		wg.Wait()
 	})
 }

@@ -259,12 +259,11 @@ func TestAPI(t *testing.T) {
 			{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
 		}
 
-		call := func(t *testing.T, url string, code int, l []store.Event, after time.Duration) {
+		call := func(t *testing.T, url string, code int, l []store.Event, err error) {
 			t.Helper()
 
 			s.WatchFn = func(context.Context, string) ([]store.Event, error) {
-				time.Sleep(after)
-				return l, nil
+				return l, err
 			}
 			defer func() { s.WatchFn = nil }()
 
@@ -286,15 +285,15 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, l, 0)
+			call(t, "/rulesets/?watch", http.StatusOK, l, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusOK, l[:1], 0)
+			call(t, "/rulesets/a?watch", http.StatusOK, l[:1], nil)
 		})
 
 		t.Run("Timeout", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusRequestTimeout, nil, 2*time.Second)
+			call(t, "/rulesets/?watch", http.StatusRequestTimeout, nil, context.DeadlineExceeded)
 		})
 	})
 }

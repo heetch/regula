@@ -6,8 +6,9 @@ import (
 
 // Value is the response sent to the client after an eval.
 type Value struct {
-	Data string `json:"data"`
-	Type string `json:"type"`
+	Data    string `json:"data"`
+	Type    string `json:"type"`
+	Version string `json:"version"`
 }
 
 // Error is a generic error response.

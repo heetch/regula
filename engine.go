@@ -30,8 +30,22 @@ func NewEngine(getter Getter) *Engine {
 }
 
 // Get evaluates the ruleset associated with key and returns the result.
-func (e *Engine) get(ctx context.Context, typ, key string, params rule.Params) (*rule.Value, error) {
-	ruleset, err := e.getter.Get(ctx, key)
+func (e *Engine) get(ctx context.Context, typ, key string, params rule.Params, opts ...Option) (*rule.Value, error) {
+	var cfg engineConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	var (
+		ruleset *rule.Ruleset
+		err     error
+	)
+
+	if cfg.Version != "" {
+		ruleset, err = e.getter.GetVersion(ctx, key, cfg.Version)
+	} else {
+		ruleset, err = e.getter.Get(ctx, key)
+	}
 	if err != nil {
 		if err == ErrRulesetNotFound {
 			return nil, err
@@ -61,8 +75,8 @@ func (e *Engine) get(ctx context.Context, typ, key string, params rule.Params) (
 }
 
 // GetString evaluates the ruleset associated with key and returns the result as a string.
-func (e *Engine) GetString(ctx context.Context, key string, params rule.Params) (string, error) {
-	res, err := e.get(ctx, "string", key, params)
+func (e *Engine) GetString(ctx context.Context, key string, params rule.Params, opts ...Option) (string, error) {
+	res, err := e.get(ctx, "string", key, params, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -71,8 +85,8 @@ func (e *Engine) GetString(ctx context.Context, key string, params rule.Params) 
 }
 
 // GetBool evaluates the ruleset associated with key and returns the result as a bool.
-func (e *Engine) GetBool(ctx context.Context, key string, params rule.Params) (bool, error) {
-	res, err := e.get(ctx, "bool", key, params)
+func (e *Engine) GetBool(ctx context.Context, key string, params rule.Params, opts ...Option) (bool, error) {
+	res, err := e.get(ctx, "bool", key, params, opts...)
 	if err != nil {
 		return false, err
 	}
@@ -81,8 +95,8 @@ func (e *Engine) GetBool(ctx context.Context, key string, params rule.Params) (b
 }
 
 // GetInt64 evaluates the ruleset associated with key and returns the result as an int64.
-func (e *Engine) GetInt64(ctx context.Context, key string, params rule.Params) (int64, error) {
-	res, err := e.get(ctx, "int64", key, params)
+func (e *Engine) GetInt64(ctx context.Context, key string, params rule.Params, opts ...Option) (int64, error) {
+	res, err := e.get(ctx, "int64", key, params, opts...)
 	if err != nil {
 		return 0, err
 	}
@@ -91,8 +105,8 @@ func (e *Engine) GetInt64(ctx context.Context, key string, params rule.Params) (
 }
 
 // GetFloat64 evaluates the ruleset associated with key and returns the result as a float64.
-func (e *Engine) GetFloat64(ctx context.Context, key string, params rule.Params) (float64, error) {
-	res, err := e.get(ctx, "float64", key, params)
+func (e *Engine) GetFloat64(ctx context.Context, key string, params rule.Params, opts ...Option) (float64, error) {
+	res, err := e.get(ctx, "float64", key, params, opts...)
 	if err != nil {
 		return 0, err
 	}
@@ -127,6 +141,20 @@ func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Par
 	return l.Load(ctx, to)
 }
 
+type engineConfig struct {
+	Version string
+}
+
+// Option is used to customize the engine behaviour.
+type Option func(cfg *engineConfig)
+
+// Version is an option used to describe which ruleset version the engine should return.
+func Version(version string) Option {
+	return func(cfg *engineConfig) {
+		cfg.Version = version
+	}
+}
+
 // A Getter allows a ruleset to be retrieved.
 type Getter interface {
 	// Get returns the ruleset associated with the given key.
@@ -139,28 +167,54 @@ type Getter interface {
 
 // MemoryGetter is an in-memory getter which stores rulesets in a map.
 type MemoryGetter struct {
-	Rulesets map[MemoryGetterKey]*rule.Ruleset
+	rulesets map[string][]*rulesetInfo
 }
 
-// MemoryGetterKey is used by MemoryGetter to identify a ruleset and its version within a map.
-type MemoryGetterKey struct {
-	Path, Version string
+type rulesetInfo struct {
+	path, version string
+	r             *rule.Ruleset
 }
 
-// Get returns the selected ruleset from memory or returns ErrRulesetNotFound.
-func (g *MemoryGetter) Get(ctx context.Context, path string) (*rule.Ruleset, error) {
-	return g.GetVersion(ctx, path, "latest")
+// AddRuleset adds the given ruleset version to a list for a specific path.
+// The last added ruleset is treated as the latest version.
+func (m *MemoryGetter) AddRuleset(path, version string, r *rule.Ruleset) {
+	if m.rulesets == nil {
+		m.rulesets = make(map[string][]*rulesetInfo)
+	}
+
+	m.rulesets[path] = append(m.rulesets[path], &rulesetInfo{path, version, r})
 }
 
-// GetVersion returns the selected ruleset from memory using the given path and version or returns ErrRulesetNotFound.
-func (g *MemoryGetter) GetVersion(_ context.Context, path, version string) (*rule.Ruleset, error) {
-	r, ok := g.Rulesets[MemoryGetterKey{
-		Version: version,
-		Path:    path,
-	}]
-	if !ok {
+// Get returns the latest added ruleset from memory or returns ErrRulesetNotFound if not found.
+func (m *MemoryGetter) Get(ctx context.Context, path string) (*rule.Ruleset, error) {
+	if m.rulesets == nil {
+		m.rulesets = make(map[string][]*rulesetInfo)
+	}
+
+	l, ok := m.rulesets[path]
+	if !ok || len(l) == 0 {
 		return nil, ErrRulesetNotFound
 	}
 
-	return r, nil
+	return l[len(l)-1].r, nil
+}
+
+// GetVersion returns the selected ruleset from memory using the given path and version or returns ErrRulesetNotFound.
+func (m *MemoryGetter) GetVersion(ctx context.Context, path, version string) (*rule.Ruleset, error) {
+	if m.rulesets == nil {
+		m.rulesets = make(map[string][]*rulesetInfo)
+	}
+
+	l, ok := m.rulesets[path]
+	if !ok || len(l) == 0 {
+		return nil, ErrRulesetNotFound
+	}
+
+	for _, r := range l {
+		if r.version == version {
+			return r.r, nil
+		}
+	}
+
+	return nil, ErrRulesetNotFound
 }
