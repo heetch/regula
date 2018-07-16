@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/heetch/regula/rule"
+
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
 	"github.com/stretchr/testify/assert"
@@ -111,4 +113,25 @@ func TestClient(t *testing.T) {
 		require.Equal(t, &exp, resp)
 	})
 
+	t.Run("PutRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"path": "a", "version": "v"}`)
+		}))
+		defer ts.Close()
+
+		cli, err := client.NewClient(ts.URL)
+		require.NoError(t, err)
+
+		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
+		require.NoError(t, err)
+
+		ars, err := cli.PutRuleset(context.Background(), "a", rs)
+		require.NoError(t, err)
+		require.Equal(t, "a", ars.Path)
+		require.Equal(t, "v", ars.Version)
+	})
 }

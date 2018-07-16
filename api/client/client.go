@@ -12,6 +12,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/version"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -88,6 +89,19 @@ func (c *Client) EvalRuleset(ctx context.Context, path string, params map[string
 	req.URL.RawQuery = q.Encode()
 
 	var resp api.Value
+
+	_, err = c.do(ctx, req, &resp)
+	return &resp, nil
+}
+
+// PutRuleset creates a ruleset version on the given path.
+func (c *Client) PutRuleset(ctx context.Context, path string, rs *rule.Ruleset) (*api.Ruleset, error) {
+	req, err := c.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp api.Ruleset
 
 	_, err = c.do(ctx, req, &resp)
 	return &resp, nil
