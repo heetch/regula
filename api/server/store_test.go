@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 )
 
@@ -15,6 +16,8 @@ type mockStore struct {
 	OneFn      func(context.Context, string) (*store.RulesetEntry, error)
 	WatchCount int
 	WatchFn    func(context.Context, string) ([]store.Event, error)
+	PutCount   int
+	PutFn      func(context.Context, string) (*store.RulesetEntry, error)
 }
 
 func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
@@ -43,5 +46,14 @@ func (s *mockStore) Watch(ctx context.Context, prefix string) ([]store.Event, er
 		return s.WatchFn(ctx, prefix)
 	}
 
+	return nil, nil
+}
+
+func (s *mockStore) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*store.RulesetEntry, error) {
+	s.PutCount++
+
+	if s.PutFn != nil {
+		return s.PutFn(ctx, path)
+	}
 	return nil, nil
 }
