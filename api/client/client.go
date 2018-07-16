@@ -29,8 +29,8 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates an HTTP client that uses a base url to communicate with the api server.
-func NewClient(baseURL string, opts ...Option) (*Client, error) {
+// New creates an HTTP client that uses a base url to communicate with the api server.
+func New(baseURL string, opts ...Option) (*Client, error) {
 	var c Client
 	var err error
 

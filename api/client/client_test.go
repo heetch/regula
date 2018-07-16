@@ -17,7 +17,7 @@ import (
 )
 
 func ExampleClient_ListRulesets() {
-	c, err := client.NewClient("http://127.0.0.1:5331")
+	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func ExampleClient_ListRulesets() {
 }
 
 func ExampleClient_EvalRuleset() {
-	c, err := client.NewClient("http://127.0.0.1:5331")
+	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		_, err = cli.ListRulesets(context.Background(), "")
@@ -78,7 +78,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
@@ -97,7 +97,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		p := map[string]string{
@@ -124,7 +124,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))

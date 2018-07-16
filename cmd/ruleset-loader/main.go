@@ -36,7 +36,7 @@ func main() {
 	}
 	defer f.Close()
 
-	client, err := client.NewClient(*addr)
+	client, err := client.New(*addr)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -38,7 +38,7 @@ func TestLoadSnapshot(t *testing.T) {
 		"snapshot-tests/d": ` + string(raw) + `
 	}`
 
-	client, err := client.NewClient(ts.URL)
+	client, err := client.New(ts.URL)
 	require.NoError(t, err)
 
 	err = loadSnapshot(client, strings.NewReader(snapshot))
