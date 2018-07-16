@@ -1,6 +1,9 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/heetch/regula/rule"
 )
 
@@ -14,10 +17,16 @@ type Value struct {
 // Error is a generic error response.
 type Error struct {
 	Err string `json:"error"`
+	// Used by clients to return the origin server response
+	Response *http.Response `json:"-"`
 }
 
 func (e Error) Error() string {
-	return e.Err
+	return fmt.Sprintf("%v %v: %d %v",
+		e.Response.Request.Method,
+		e.Response.Request.URL,
+		e.Response.StatusCode,
+		e.Err)
 }
 
 // Ruleset holds a ruleset and its metadata.

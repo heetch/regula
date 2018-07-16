@@ -60,8 +60,8 @@ func TestList(t *testing.T) {
 		entries, err := s.List(context.Background(), "")
 		require.NoError(t, err)
 		require.Len(t, entries, len(paths))
-		for _, e := range entries {
-			require.Contains(t, paths, e.Path)
+		for i, e := range entries {
+			require.Equal(t, paths[i], e.Path)
 		}
 	})
 

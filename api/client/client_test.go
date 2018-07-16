@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleListRulesets() {
+func ExampleClient_ListRulesets() {
 	c, err := client.NewClient("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
@@ -32,7 +32,7 @@ func ExampleListRulesets() {
 	}
 }
 
-func ExampleEvalRuleset() {
+func ExampleClient_EvalRuleset() {
 	c, err := client.NewClient("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
@@ -64,7 +64,8 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = cli.ListRulesets(context.Background(), "")
-		require.EqualError(t, err, "some err")
+		aerr := err.(*api.Error)
+		require.Equal(t, "some err", aerr.Err)
 	})
 
 	t.Run("ListRulesets", func(t *testing.T) {
