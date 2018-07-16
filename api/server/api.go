@@ -63,7 +63,7 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 }
 
 func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {
-	e, err := s.store.One(r.Context(), path)
+	e, err := s.store.Latest(r.Context(), path)
 	if err != nil {
 		if err == store.ErrNotFound {
 			s.writeError(w, fmt.Errorf("the path: '%s' dosn't exist", path), http.StatusNotFound)
