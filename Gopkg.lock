@@ -21,14 +21,23 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/globalsign/mgo"
+  packages = [
+    "bson",
+    "internal/json"
+  ]
+  revision = "113d3961e7311526535a1ef7042196563d442761"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
     "proto",
     "protoc-gen-gogo/descriptor"
   ]
-  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
-  version = "v1.0.0"
+  revision = "7d68e886eac4f7e34d0d82241a6273d6c304c5cf"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -50,8 +59,8 @@
     "backend/env",
     "backend/flags"
   ]
-  revision = "b2c3464fd4b6a7fa45af979ece87092d86ddd69f"
-  version = "v0.5.0"
+  revision = "67096f89cfbe7bfed88e320a8bf4399f50a29667"
+  version = "v0.5.1"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -88,12 +97,6 @@
   ]
   revision = "77db4b4f350e31be66a57c332acb7721cf9ff9bb"
   version = "v1.8.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -144,7 +147,7 @@
     "unix",
     "windows"
   ]
-  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
+  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -209,6 +212,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "83d9e3738d484016de1628cabb20fee92f6ea66fb612356f16e94c4ba61a0ebd"
+  inputs-digest = "4088bdff65cb4a7d39ded4da682b3bb45c24d69f1dffeaf0d3cce3e19a5e60b2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -18,7 +18,9 @@ type Store interface {
 	List(ctx context.Context, prefix string) ([]RulesetEntry, error)
 	// One returns the ruleset entry which corresponds to the given path.
 	One(ctx context.Context, path string) (*RulesetEntry, error)
+	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string) ([]Event, error)
+	// Put is used to store a ruleset version.
 	Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*RulesetEntry, error)
 }
 

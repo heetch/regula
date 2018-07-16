@@ -62,5 +62,5 @@
   name = "golang.org/x/net"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  branch = "master"
+  version = "r2018.06.15"
+  name = "github.com/globalsign/mgo"

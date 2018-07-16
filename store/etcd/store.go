@@ -8,10 +8,10 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/globalsign/mgo/bson"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 var _ store.Store = new(Store)
@@ -43,6 +43,7 @@ func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, 
 // One returns the ruleset entry which corresponds to the given path.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
 func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, error) {
+	// TODO fix how rulesets are get
 	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, path))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
@@ -64,12 +65,7 @@ func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, erro
 
 // Put adds a version of the given ruleset using an uuid.
 func (s *Store) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*store.RulesetEntry, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate ruleset version")
-	}
-
-	v := uid.String()
+	v := bson.NewObjectId().Hex()
 
 	re := store.RulesetEntry{
 		Path:    path,
