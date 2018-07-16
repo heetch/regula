@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -35,6 +36,10 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.URL.Query()["watch"]; ok {
 			s.watch(w, r, path)
 			return
+		}
+	case "PUT":
+		if path != "" {
+			s.put(w, r, path)
 		}
 	}
 
@@ -124,4 +129,27 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 	}
 
 	s.encodeJSON(w, el, http.StatusOK)
+
+}
+
+func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string) {
+	var rs rule.Ruleset
+
+	err := json.NewDecoder(r.Body).Decode(&rs)
+	if err != nil {
+		s.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	entry, err := s.store.Put(r.Context(), path, &rs)
+	if err != nil {
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode((*api.Ruleset)(entry))
+	if err != nil {
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
 }
