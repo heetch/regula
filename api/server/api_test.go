@@ -36,15 +36,18 @@ func TestAPI(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 		r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
-		l := []store.RulesetEntry{
-			{Path: "aa", Ruleset: r1},
-			{Path: "bb", Ruleset: r2},
+		l := store.RulesetEntries{
+			Entries: []store.RulesetEntry{
+				{Path: "aa", Ruleset: r1},
+				{Path: "bb", Ruleset: r2},
+			},
+			Revision: "somerev",
 		}
 
-		call := func(t *testing.T, url string, code int, l []store.RulesetEntry) {
+		call := func(t *testing.T, url string, code int, l *store.RulesetEntries) {
 			t.Helper()
 
-			s.ListFn = func(context.Context, string) ([]store.RulesetEntry, error) {
+			s.ListFn = func(context.Context, string) (*store.RulesetEntries, error) {
 				return l, nil
 			}
 			defer func() { s.ListFn = nil }()
@@ -56,30 +59,30 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res []store.RulesetEntry
+				var res api.RulesetList
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l), len(res))
-				for i := range l {
-					require.Equal(t, l[i], res[i])
+				require.Equal(t, len(l.Entries), len(res.Rulesets))
+				for i := range l.Entries {
+					require.EqualValues(t, l.Entries[i], res.Rulesets[i])
 				}
 			}
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, l)
+			call(t, "/rulesets/?list", http.StatusOK, &l)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, l[:1])
+			call(t, "/rulesets/a?list", http.StatusOK, &l)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries))
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, nil)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries))
 		})
 	})
 

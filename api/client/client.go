@@ -57,7 +57,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 }
 
 // ListRulesets fetches all the rulesets.
-func (c *Client) ListRulesets(ctx context.Context, prefix string) ([]api.Ruleset, error) {
+func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.RulesetList, error) {
 	req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
 	if err != nil {
 		return nil, err
@@ -67,10 +67,10 @@ func (c *Client) ListRulesets(ctx context.Context, prefix string) ([]api.Ruleset
 	q.Add("list", "")
 	req.URL.RawQuery = q.Encode()
 
-	var rl []api.Ruleset
+	var rl api.RulesetList
 
 	_, err = c.do(ctx, req, &rl)
-	return rl, err
+	return &rl, err
 }
 
 // EvalRuleset evaluates the given ruleset with the given params.
@@ -191,7 +191,7 @@ func NewGetter(ctx context.Context, client *Client, prefix string) (*rules.Memor
 
 	var m rules.MemoryGetter
 
-	for _, re := range ls {
+	for _, re := range ls.Rulesets {
 		m.AddRuleset(re.Path, re.Version, re.Ruleset)
 	}
 

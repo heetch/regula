@@ -27,7 +27,7 @@ func ExampleClient_ListRulesets() {
 		log.Fatal(err)
 	}
 
-	for _, e := range list {
+	for _, e := range list.Rulesets {
 		e.Ruleset.Eval(nil)
 	}
 }
@@ -74,7 +74,7 @@ func TestClient(t *testing.T) {
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
 			assert.Contains(t, r.URL.Query(), "list")
 			assert.Equal(t, "/rulesets/prefix", r.URL.Path)
-			fmt.Fprintf(w, `[{"path": "a"}]`)
+			fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
 		}))
 		defer ts.Close()
 
@@ -83,7 +83,7 @@ func TestClient(t *testing.T) {
 
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
 		require.NoError(t, err)
-		require.Len(t, rs, 1)
+		require.Len(t, rs.Rulesets, 1)
 	})
 
 	t.Run("EvalRuleset", func(t *testing.T) {

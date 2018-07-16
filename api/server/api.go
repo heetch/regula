@@ -48,23 +48,26 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
-	l, err := s.store.List(r.Context(), prefix)
+	entries, err := s.store.List(r.Context(), prefix)
 	if err != nil {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	if len(l) == 0 && prefix != "" {
+	if len(entries.Entries) == 0 && prefix != "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	rl := make([]api.Ruleset, len(l))
-	for i := range l {
-		rl[i] = api.Ruleset(l[i])
-	}
+	var rl api.RulesetList
 
-	s.encodeJSON(w, rl, http.StatusOK)
+	rl.Rulesets = make([]api.Ruleset, len(entries.Entries))
+	for i := range entries.Entries {
+		rl.Rulesets[i] = api.Ruleset(entries.Entries[i])
+	}
+	rl.Revision = entries.Revision
+
+	s.encodeJSON(w, &rl, http.StatusOK)
 }
 
 func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {

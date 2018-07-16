@@ -11,7 +11,7 @@ var _ store.Store = new(mockStore)
 
 type mockStore struct {
 	ListCount         int
-	ListFn            func(context.Context, string) ([]store.RulesetEntry, error)
+	ListFn            func(context.Context, string) (*store.RulesetEntries, error)
 	LatestCount       int
 	LatestFn          func(context.Context, string) (*store.RulesetEntry, error)
 	OneByVersionCount int
@@ -22,7 +22,7 @@ type mockStore struct {
 	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
 }
 
-func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
+func (s *mockStore) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {

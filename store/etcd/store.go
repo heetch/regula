@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	ppath "path"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/etcd/clientv3"
@@ -23,21 +24,23 @@ type Store struct {
 }
 
 // List returns all the rulesets entries under the given prefix.
-func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
+func (s *Store) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
 	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, prefix), clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
 
-	entries := make([]store.RulesetEntry, len(resp.Kvs))
+	var entries store.RulesetEntries
+	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
 	for i, pair := range resp.Kvs {
-		err = json.Unmarshal(pair.Value, &entries[i])
+		err = json.Unmarshal(pair.Value, &entries.Entries[i])
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
 
-	return entries, nil
+	return &entries, nil
 }
 
 // Latest returns the latest version of the ruleset entry which corresponds to the given path.

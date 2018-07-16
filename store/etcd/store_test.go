@@ -50,19 +50,21 @@ func TestList(t *testing.T) {
 	defer cleanup()
 
 	t.Run("Root", func(t *testing.T) {
-		createRuleset(t, s, "a", nil)
-		createRuleset(t, s, "a", nil)
-		createRuleset(t, s, "b", nil)
 		createRuleset(t, s, "c", nil)
+		createRuleset(t, s, "a", nil)
+		createRuleset(t, s, "a/1", nil)
+		createRuleset(t, s, "b", nil)
+		createRuleset(t, s, "a", nil)
 
-		paths := []string{"a", "a", "b", "c"}
+		paths := []string{"a/1", "a", "a", "b", "c"}
 
 		entries, err := s.List(context.Background(), "")
 		require.NoError(t, err)
-		require.Len(t, entries, len(paths))
-		for i, e := range entries {
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
 			require.Equal(t, paths[i], e.Path)
 		}
+		require.NotEmpty(t, entries.Revision)
 	})
 
 	t.Run("Prefix", func(t *testing.T) {
@@ -71,14 +73,15 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "x/1", nil)
 		createRuleset(t, s, "x/2", nil)
 
-		paths := []string{"x", "xx", "x/1", "x/2"}
+		paths := []string{"x/1", "x", "x/2", "xx"}
 
 		entries, err := s.List(context.Background(), "x")
 		require.NoError(t, err)
-		require.Len(t, entries, len(paths))
-		for _, e := range entries {
-			require.Contains(t, paths, e.Path)
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
 		}
+		require.NotEmpty(t, entries.Revision)
 	})
 }
 
