@@ -1,4 +1,4 @@
-NAME := re-server
+NAME := regula
 
 .PHONY: all $(NAME) test testrace
 
