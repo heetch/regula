@@ -62,5 +62,5 @@
   name = "golang.org/x/net"
 
 [[constraint]]
-  version = "r2018.06.15"
-  name = "github.com/globalsign/mgo"
+  name = "github.com/segmentio/ksuid"
+  version = "1.0.1"
