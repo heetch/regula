@@ -36,8 +36,8 @@ type Ruleset struct {
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }
 
-// RulesetList holds a list of rulesets.
-type RulesetList struct {
+// Rulesets holds a list of rulesets.
+type Rulesets struct {
 	Rulesets []Ruleset `json:"rulesets"`
 	Revision string    `json:"revision"`
 }
@@ -52,6 +52,7 @@ const (
 type Event struct {
 	Type    string        `json:"type"`
 	Path    string        `json:"path"`
+	Version string        `json:"version"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }
 

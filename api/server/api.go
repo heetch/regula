@@ -16,12 +16,24 @@ import (
 type rulesetService struct {
 	*service
 
+	timeout      time.Duration
 	watchTimeout time.Duration
 }
 
 func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets")
 	path = strings.TrimPrefix(path, "/")
+
+	if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
+		ctx, cancel := context.WithTimeout(r.Context(), s.watchTimeout)
+		defer cancel()
+		s.watch(w, r.WithContext(ctx), path)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), s.timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
 
 	switch r.Method {
 	case "GET":
@@ -33,13 +45,10 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.eval(w, r, path)
 			return
 		}
-		if _, ok := r.URL.Query()["watch"]; ok {
-			s.watch(w, r, path)
-			return
-		}
 	case "PUT":
 		if path != "" {
 			s.put(w, r, path)
+			return
 		}
 	}
 
@@ -59,7 +68,7 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 		return
 	}
 
-	var rl api.RulesetList
+	var rl api.Rulesets
 
 	rl.Rulesets = make([]api.Ruleset, len(entries.Entries))
 	for i := range entries.Entries {
@@ -82,7 +91,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 	if err != nil {
 		if err == store.ErrNotFound {
-			s.writeError(w, fmt.Errorf("the path: '%s' dosn't exist", path), http.StatusNotFound)
+			s.writeError(w, fmt.Errorf("the path: '%s' doesn't exist", path), http.StatusNotFound)
 			return
 		}
 		s.writeError(w, err, http.StatusInternalServerError)
@@ -116,10 +125,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.watchTimeout)
-	defer cancel()
-
-	events, err := s.store.Watch(ctx, prefix, r.Header.Get("revision"))
+	events, err := s.store.Watch(r.Context(), prefix, r.Header.Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:

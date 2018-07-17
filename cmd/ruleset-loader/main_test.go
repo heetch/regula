@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/heetch/regula/api/client"
 	"github.com/heetch/regula/rule"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,8 +19,10 @@ import (
 func TestLoadSnapshot(t *testing.T) {
 	var counter int
 
+	paths := []string{"a", "b", "c", "d"}
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, fmt.Sprintf("/rulesets/snapshot-tests/%c", 'a'+byte(counter)), r.URL.Path)
+		assert.Contains(t, paths, strings.TrimPrefix(r.URL.Path, "/rulesets/snapshot-tests/"))
 		counter++
 		fmt.Fprintf(w, `{"path": "a", "version": "v"}]`)
 	}))
@@ -40,6 +44,7 @@ func TestLoadSnapshot(t *testing.T) {
 
 	client, err := client.New(ts.URL)
 	require.NoError(t, err)
+	client.Logger = zerolog.New(ioutil.Discard)
 
 	err = loadSnapshot(client, strings.NewReader(snapshot))
 	require.NoError(t, err)

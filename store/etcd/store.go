@@ -126,35 +126,43 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 	}
 
 	wc := s.Client.Watch(ctx, ppath.Join(s.Namespace, prefix), opts...)
-	select {
-	case wresp := <-wc:
-		if err := wresp.Err(); err != nil {
-			return nil, errors.Wrapf(err, "failed to watch prefix: '%s'", prefix)
-		}
-
-		events := make([]store.Event, len(wresp.Events))
-		for i, ev := range wresp.Events {
-			switch ev.Type {
-			case mvccpb.PUT:
-				events[i].Type = store.PutEvent
-			case mvccpb.DELETE:
-				events[i].Type = store.DeleteEvent
+	for {
+		select {
+		case wresp := <-wc:
+			if err := wresp.Err(); err != nil {
+				return nil, errors.Wrapf(err, "failed to watch prefix: '%s'", prefix)
 			}
 
-			var e store.RulesetEntry
-			err := json.Unmarshal(ev.Kv.Value, &e)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal entry")
+			if len(wresp.Events) == 0 {
+				continue
 			}
-			events[i].Path = e.Path
-			events[i].Ruleset = e.Ruleset
-		}
 
-		return &store.Events{
-			Events:   events,
-			Revision: strconv.FormatInt(wresp.Header.Revision, 10),
-		}, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
+			events := make([]store.Event, len(wresp.Events))
+			for i, ev := range wresp.Events {
+				switch ev.Type {
+				case mvccpb.PUT:
+					events[i].Type = store.PutEvent
+				case mvccpb.DELETE:
+					events[i].Type = store.DeleteEvent
+				}
+
+				var e store.RulesetEntry
+				err := json.Unmarshal(ev.Kv.Value, &e)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to unmarshal entry")
+				}
+				events[i].Path = e.Path
+				events[i].Ruleset = e.Ruleset
+				events[i].Version = e.Version
+			}
+
+			return &store.Events{
+				Events:   events,
+				Revision: strconv.FormatInt(wresp.Header.Revision, 10),
+			}, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
+
 }

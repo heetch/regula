@@ -55,9 +55,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	}
 
 	if c.httpClient == nil {
-		c.httpClient = &http.Client{
-			Timeout: timeout,
-		}
+		c.httpClient = http.DefaultClient
 	}
 
 	c.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
@@ -67,7 +65,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 }
 
 // ListRulesets fetches all the rulesets starting with the given prefix.
-func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.RulesetList, error) {
+func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.Rulesets, error) {
 	req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
 	if err != nil {
 		return nil, err
@@ -77,7 +75,7 @@ func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.RulesetL
 	q.Add("list", "")
 	req.URL.RawQuery = q.Encode()
 
-	var rl api.RulesetList
+	var rl api.Rulesets
 
 	_, err = c.do(ctx, req, &rl)
 	return &rl, err
@@ -117,14 +115,14 @@ func (c *Client) PutRuleset(ctx context.Context, path string, rs *rule.Ruleset) 
 	return &resp, err
 }
 
-// WatchResponse contains a list of events occured on group of rulesets.
+// WatchResponse contains a list of events occured on a group of rulesets.
 // If an error occurs during the watching, the Err field will be populated.
 type WatchResponse struct {
 	Events *api.Events
 	Err    error
 }
 
-// WatchRulesets watchs the given path for changes and send the events in the returned channel.
+// WatchRulesets watchs the given path for changes and sends the events in the returned channel.
 // The given context must be used to stop the watcher.
 func (c *Client) WatchRulesets(ctx context.Context, prefix string) <-chan WatchResponse {
 	ch := make(chan WatchResponse)

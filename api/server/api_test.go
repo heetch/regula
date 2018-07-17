@@ -21,7 +21,7 @@ import (
 func TestAPI(t *testing.T) {
 	s := new(mockStore)
 	log := zerolog.New(ioutil.Discard)
-	h := NewHandler(s, Config{
+	h := NewHandler(context.Background(), s, Config{
 		WatchTimeout: 1 * time.Second,
 		Logger:       &log,
 	})
@@ -59,7 +59,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res api.RulesetList
+				var res api.Rulesets
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.Equal(t, len(l.Entries), len(res.Rulesets))
@@ -242,7 +242,7 @@ func TestAPI(t *testing.T) {
 			h.ServeHTTP(w, r)
 
 			exp := api.Error{
-				Err: "the path: 'path/to/my/ruleset' dosn't exist",
+				Err: "the path: 'path/to/my/ruleset' doesn't exist",
 			}
 
 			var resp api.Error

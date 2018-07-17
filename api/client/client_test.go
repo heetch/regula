@@ -3,6 +3,7 @@ package client_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/heetch/regula/rule"
+	"github.com/rs/zerolog"
 
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
@@ -64,6 +66,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		_, err = cli.ListRulesets(context.Background(), "")
 		aerr := err.(*api.Error)
@@ -82,6 +85,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
 		require.NoError(t, err)
@@ -101,6 +105,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		p := map[string]string{
 			"foo": "bar",
@@ -128,6 +133,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
 		require.NoError(t, err)
@@ -152,6 +158,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		ch := cli.WatchRulesets(ctx, "a")
 		evs := <-ch
@@ -169,6 +176,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		ch := cli.WatchRulesets(ctx, "a")
 		evs := <-ch
@@ -199,6 +207,7 @@ func TestClient(t *testing.T) {
 
 			cli, err := client.New(ts.URL)
 			require.NoError(t, err)
+			cli.Logger = zerolog.New(ioutil.Discard)
 			cli.WatchDelay = 1 * time.Millisecond
 
 			ch := cli.WatchRulesets(ctx, "a")

@@ -49,6 +49,7 @@ const (
 type Event struct {
 	Type    string
 	Path    string
+	Version string
 	Ruleset *rule.Ruleset
 }
 
