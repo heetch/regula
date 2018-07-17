@@ -128,6 +128,10 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 	wc := s.Client.Watch(ctx, ppath.Join(s.Namespace, prefix), opts...)
 	select {
 	case wresp := <-wc:
+		if err := wresp.Err(); err != nil {
+			return nil, errors.Wrapf(err, "failed to watch prefix: '%s'", prefix)
+		}
+
 		events := make([]store.Event, len(wresp.Events))
 		for i, ev := range wresp.Events {
 			switch ev.Type {

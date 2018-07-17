@@ -150,6 +150,6 @@ func runServer(srv *http.Server, addr string, logger zerolog.Logger) {
 
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error().Err(err).Msg("failed to shutdown server gracefully")
 	}
 }

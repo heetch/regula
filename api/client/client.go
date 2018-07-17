@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	ppath "path"
 	"time"
 
@@ -14,16 +15,22 @@ import (
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/version"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
-	userAgent = "RulesEngine/" + version.Version + " Go"
-	timeout   = 5 * time.Second
+	userAgent  = "RulesEngine/" + version.Version + " Go"
+	timeout    = 5 * time.Second
+	watchDelay = 1 * time.Second
 )
 
 // A Client manages communication with the Rules Engine API using HTTP.
 type Client struct {
+	Logger     zerolog.Logger
+	WatchDelay time.Duration // Time between failed watch requests. Defaults to 1s
+
 	baseURL    *url.URL
 	userAgent  string
 	httpClient *http.Client
@@ -53,10 +60,13 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		}
 	}
 
+	c.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	c.WatchDelay = watchDelay
+
 	return &c, nil
 }
 
-// ListRulesets fetches all the rulesets.
+// ListRulesets fetches all the rulesets starting with the given prefix.
 func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.RulesetList, error) {
 	req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
 	if err != nil {
@@ -107,6 +117,82 @@ func (c *Client) PutRuleset(ctx context.Context, path string, rs *rule.Ruleset) 
 	return &resp, err
 }
 
+// WatchResponse contains a list of events occured on group of rulesets.
+// If an error occurs during the watching, the Err field will be populated.
+type WatchResponse struct {
+	Events *api.Events
+	Err    error
+}
+
+// WatchRulesets watchs the given path for changes and send the events in the returned channel.
+// The given context must be used to stop the watcher.
+func (c *Client) WatchRulesets(ctx context.Context, prefix string) <-chan WatchResponse {
+	ch := make(chan WatchResponse)
+
+	go func() {
+		defer close(ch)
+
+		var revision string
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
+			if err != nil {
+				ch <- WatchResponse{Err: errors.Wrap(err, "failed to create watch request")}
+				return
+			}
+
+			q := req.URL.Query()
+			q.Add("watch", "")
+			if revision != "" {
+				q.Add("revision", revision)
+			}
+			req.URL.RawQuery = q.Encode()
+
+			var events api.Events
+			_, err = c.do(ctx, req, &events)
+			if err != nil {
+				if e, ok := err.(*api.Error); ok {
+					switch e.Response.StatusCode {
+					case http.StatusNotFound:
+						ch <- WatchResponse{Err: err}
+						return
+					case http.StatusRequestTimeout:
+						c.Logger.Debug().Err(err).Msg("watch request timed out")
+					case http.StatusInternalServerError:
+						c.Logger.Debug().Err(err).Msg("watch request failed: internal server error")
+					default:
+						c.Logger.Error().Err(err).Int("status", e.Response.StatusCode).Msg("watch request returned unexpected status")
+					}
+				} else {
+					switch err {
+					case context.Canceled:
+						fallthrough
+					case context.DeadlineExceeded:
+						c.Logger.Debug().Msg("watch context done")
+					default:
+						c.Logger.Error().Err(err).Msg("watch request failed")
+					}
+				}
+
+				// avoid too many requests on errors.
+				time.Sleep(c.WatchDelay)
+				continue
+			}
+
+			ch <- WatchResponse{Events: &events}
+			revision = events.Revision
+		}
+	}()
+
+	return ch
+}
+
 func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
 	rel := url.URL{Path: path}
 	u := c.baseURL.ResolveReference(&rel)
@@ -146,6 +232,8 @@ func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	}
 	defer resp.Body.Close()
 
+	c.Logger.Debug().Str("url", req.URL.String()).Int("status", resp.StatusCode).Msg("request sent")
+
 	dec := json.NewDecoder(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
@@ -158,7 +246,12 @@ func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		return resp, &apiErr
 	}
 
-	return resp, dec.Decode(v)
+	err = dec.Decode(v)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // Option allows Client customization.

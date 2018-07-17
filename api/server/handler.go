@@ -60,7 +60,7 @@ func NewHandler(store store.Store, cfg Config) http.Handler {
 				Int("status", status).
 				Int("size", size).
 				Dur("duration", duration).
-				Msg("")
+				Msg("request received")
 		}),
 		hlog.RemoteAddrHandler("ip"),
 		hlog.UserAgentHandler("user_agent"),

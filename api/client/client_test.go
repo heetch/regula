@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/heetch/regula/rule"
 
@@ -134,5 +136,74 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)
+	})
+
+	t.Run("WatchRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"events": [{"type": "PUT", "path": "a"}], "revision": "rev"}`)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		evs := <-ch
+		require.NoError(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/NotFound", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		evs := <-ch
+		require.Error(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/Errors", func(t *testing.T) {
+		statuses := []int{
+			http.StatusRequestTimeout,
+			http.StatusInternalServerError,
+			http.StatusBadRequest,
+		}
+
+		for _, status := range statuses {
+			var i int32
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if atomic.AddInt32(&i, 1) > 3 {
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+
+				w.WriteHeader(status)
+			}))
+			defer ts.Close()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			cli, err := client.New(ts.URL)
+			require.NoError(t, err)
+			cli.WatchDelay = 1 * time.Millisecond
+
+			ch := cli.WatchRulesets(ctx, "a")
+			evs := <-ch
+			require.NoError(t, evs.Err)
+		}
 	})
 }
