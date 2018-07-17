@@ -54,3 +54,9 @@ type Event struct {
 	Path    string        `json:"path"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }
+
+// Events holds a list of events occured on a group of rulesets.
+type Events struct {
+	Events   []Event `json:"events"`
+	Revision string  `json:"revision"`
+}

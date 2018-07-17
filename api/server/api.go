@@ -119,7 +119,7 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 	ctx, cancel := context.WithTimeout(context.Background(), s.watchTimeout)
 	defer cancel()
 
-	l, err := s.store.Watch(ctx, prefix)
+	events, err := s.store.Watch(ctx, prefix, r.Header.Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:
@@ -134,15 +134,19 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 		}
 	}
 
-	el := make([]api.Event, len(l))
-	for i := range l {
-		el[i] = api.Event(l[i])
+	el := api.Events{
+		Events:   make([]api.Event, len(events.Events)),
+		Revision: events.Revision,
+	}
+
+	for i := range events.Events {
+		el.Events[i] = api.Event(events.Events[i])
 	}
 
 	s.encodeJSON(w, el, http.StatusOK)
-
 }
 
+// put creates a new version of a ruleset.
 func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string) {
 	var rs rule.Ruleset
 

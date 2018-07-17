@@ -292,17 +292,20 @@ func TestAPI(t *testing.T) {
 	t.Run("Watch", func(t *testing.T) {
 		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 		r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
-		l := []store.Event{
-			{Type: store.PutEvent, Path: "a", Ruleset: r1},
-			{Type: store.PutEvent, Path: "b", Ruleset: r2},
-			{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+		l := store.Events{
+			Events: []store.Event{
+				{Type: store.PutEvent, Path: "a", Ruleset: r1},
+				{Type: store.PutEvent, Path: "b", Ruleset: r2},
+				{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+			},
+			Revision: "rev",
 		}
 
-		call := func(t *testing.T, url string, code int, l []store.Event, err error) {
+		call := func(t *testing.T, url string, code int, es *store.Events, err error) {
 			t.Helper()
 
-			s.WatchFn = func(context.Context, string) ([]store.Event, error) {
-				return l, err
+			s.WatchFn = func(context.Context, string, string) (*store.Events, error) {
+				return es, err
 			}
 			defer func() { s.WatchFn = nil }()
 
@@ -313,22 +316,26 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res []store.Event
+				var res store.Events
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l), len(res))
-				for i := range l {
-					require.Equal(t, l[i], res[i])
+				require.Equal(t, len(l.Events), len(res.Events))
+				for i := range l.Events {
+					require.Equal(t, l.Events[i], res.Events[i])
 				}
 			}
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, l, nil)
+			call(t, "/rulesets/?watch", http.StatusOK, &l, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusOK, l[:1], nil)
+			call(t, "/rulesets/a?watch", http.StatusOK, &l, nil)
+		})
+
+		t.Run("WithRevision", func(t *testing.T) {
+			call(t, "/rulesets/a?watch&revision=somerev", http.StatusOK, &l, nil)
 		})
 
 		t.Run("Timeout", func(t *testing.T) {

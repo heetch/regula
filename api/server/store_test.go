@@ -17,7 +17,7 @@ type mockStore struct {
 	OneByVersionCount int
 	OneByVersionFn    func(context.Context, string, string) (*store.RulesetEntry, error)
 	WatchCount        int
-	WatchFn           func(context.Context, string) ([]store.Event, error)
+	WatchFn           func(context.Context, string, string) (*store.Events, error)
 	PutCount          int
 	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
 }
@@ -50,11 +50,11 @@ func (s *mockStore) OneByVersion(ctx context.Context, path, version string) (*st
 	return nil, nil
 }
 
-func (s *mockStore) Watch(ctx context.Context, prefix string) ([]store.Event, error) {
+func (s *mockStore) Watch(ctx context.Context, prefix, revision string) (*store.Events, error) {
 	s.WatchCount++
 
 	if s.WatchFn != nil {
-		return s.WatchFn(ctx, prefix)
+		return s.WatchFn(ctx, prefix, revision)
 	}
 
 	return nil, nil
