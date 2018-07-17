@@ -8,14 +8,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/heetch/regula/rule"
+
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleListRulesets() {
-	c, err := client.NewClient("http://127.0.0.1:5331")
+func ExampleClient_ListRulesets() {
+	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,8 +32,8 @@ func ExampleListRulesets() {
 	}
 }
 
-func ExampleEvalRuleset() {
-	c, err := client.NewClient("http://127.0.0.1:5331")
+func ExampleClient_EvalRuleset() {
+	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,11 +60,12 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		_, err = cli.ListRulesets(context.Background(), "")
-		require.EqualError(t, err, "some err")
+		aerr := err.(*api.Error)
+		require.Equal(t, "some err", aerr.Err)
 	})
 
 	t.Run("ListRulesets", func(t *testing.T) {
@@ -75,7 +78,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
@@ -94,7 +97,7 @@ func TestClient(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		cli, err := client.NewClient(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 
 		p := map[string]string{
@@ -111,4 +114,25 @@ func TestClient(t *testing.T) {
 		require.Equal(t, &exp, resp)
 	})
 
+	t.Run("PutRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"path": "a", "version": "v"}`)
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+
+		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
+		require.NoError(t, err)
+
+		ars, err := cli.PutRuleset(context.Background(), "a", rs)
+		require.NoError(t, err)
+		require.Equal(t, "a", ars.Path)
+		require.Equal(t, "v", ars.Version)
+	})
 }

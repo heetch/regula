@@ -13,14 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"github.com/heetch/regula/api/client"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
 )
 
 var (
 	file = flag.String("f", "", "path to file containing rulesets informations")
-	addr = flag.String("addr", "127.0.0.1:2379,etcd:2379", "coma separated list of the etcd endpoint addresses.")
+	addr = flag.String("addr", "127.0.0.1:5331", "regula server address")
 )
 
 func main() {
@@ -37,29 +36,21 @@ func main() {
 	}
 	defer f.Close()
 
-	loadSnapshot(f)
+	client, err := client.New(*addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	loadSnapshot(client, f)
 }
 
-func newClient() (*clientv3.Client, error) {
-	return clientv3.New(clientv3.Config{
-		Endpoints:   strings.Split(*addr, ","),
-		DialTimeout: 5 * time.Second,
-	})
-}
-
-func loadSnapshot(r io.Reader) error {
+func loadSnapshot(client *client.Client, r io.Reader) error {
 	var snapshot map[string]*rule.Ruleset
 
 	err := json.NewDecoder(r).Decode(&snapshot)
 	if err != nil {
 		return err
 	}
-
-	client, err := newClient()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
 
 	for path, rs := range snapshot {
 		path = strings.TrimSpace(path)
@@ -69,18 +60,10 @@ func loadSnapshot(r io.Reader) error {
 
 		path = strings.Trim(path, "/")
 
-		raw, err := json.Marshal(&store.RulesetEntry{
-			Path:    path,
-			Ruleset: rs,
-		})
-		if err != nil {
-			return err
-		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err = client.Put(ctx, path, string(raw))
+		_, err = client.PutRuleset(ctx, path, rs)
 		if err != nil {
 			return err
 		}

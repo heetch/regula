@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -294,6 +296,53 @@ func TestAPI(t *testing.T) {
 
 		t.Run("Timeout", func(t *testing.T) {
 			call(t, "/rulesets/?watch", http.StatusRequestTimeout, nil, context.DeadlineExceeded)
+		})
+	})
+
+	t.Run("Put", func(t *testing.T) {
+		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
+		e1 := store.RulesetEntry{
+			Path:    "a",
+			Version: "version",
+			Ruleset: r1,
+		}
+
+		call := func(t *testing.T, url string, code int, e *store.RulesetEntry, putErr error) {
+			t.Helper()
+
+			s.PutFn = func(context.Context, string) (*store.RulesetEntry, error) {
+				return e, putErr
+			}
+			defer func() { s.PutFn = nil }()
+
+			var buf bytes.Buffer
+			err := json.NewEncoder(&buf).Encode(r1)
+			require.NoError(t, err)
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("PUT", url, &buf)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var rs api.Ruleset
+				err := json.NewDecoder(w.Body).Decode(&rs)
+				require.NoError(t, err)
+				require.EqualValues(t, *e, rs)
+			}
+		}
+
+		t.Run("OK", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
+		})
+
+		t.Run("EmptyPath", func(t *testing.T) {
+			call(t, "/rulesets/", http.StatusNotFound, &e1, nil)
+		})
+
+		t.Run("StoreError", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
 		})
 	})
 }

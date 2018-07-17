@@ -1,19 +1,29 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/coreos/etcd/clientv3"
-
+	"github.com/heetch/regula/api/client"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store/etcd"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoadSnapshot(t *testing.T) {
+	var counter int
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, fmt.Sprintf("/rulesets/snapshot-tests/%c", 'a'+byte(counter)), r.URL.Path)
+		counter++
+		fmt.Fprintf(w, `{"path": "a", "version": "v"}]`)
+	}))
+	defer ts.Close()
+
 	rs, err := rule.NewInt64Ruleset(
 		rule.New(rule.True(), rule.ReturnsInt64(10)),
 	)
@@ -28,25 +38,9 @@ func TestLoadSnapshot(t *testing.T) {
 		"snapshot-tests/d": ` + string(raw) + `
 	}`
 
-	err = loadSnapshot(strings.NewReader(snapshot))
+	client, err := client.New(ts.URL)
 	require.NoError(t, err)
 
-	client, err := newClient()
+	err = loadSnapshot(client, strings.NewReader(snapshot))
 	require.NoError(t, err)
-	defer client.Close()
-	defer client.Delete(context.Background(), "snapshot-tests/", clientv3.WithPrefix())
-
-	store := etcd.Store{
-		Client:    client,
-		Namespace: "snapshot-tests",
-	}
-
-	entries, err := store.List(context.Background(), "")
-	require.NoError(t, err)
-
-	require.Len(t, entries, 4)
-	require.Equal(t, "snapshot-tests/a", entries[0].Path)
-	require.Equal(t, "snapshot-tests/b", entries[1].Path)
-	require.Equal(t, "snapshot-tests/c", entries[2].Path)
-	require.Equal(t, "snapshot-tests/d", entries[3].Path)
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/version"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -28,8 +29,8 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates an HTTP client that uses a base url to communicate with the api server.
-func NewClient(baseURL string, opts ...Option) (*Client, error) {
+// New creates an HTTP client that uses a base url to communicate with the api server.
+func New(baseURL string, opts ...Option) (*Client, error) {
 	var c Client
 	var err error
 
@@ -90,7 +91,20 @@ func (c *Client) EvalRuleset(ctx context.Context, path string, params map[string
 	var resp api.Value
 
 	_, err = c.do(ctx, req, &resp)
-	return &resp, nil
+	return &resp, err
+}
+
+// PutRuleset creates a ruleset version on the given path.
+func (c *Client) PutRuleset(ctx context.Context, path string, rs *rule.Ruleset) (*api.Ruleset, error) {
+	req, err := c.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp api.Ruleset
+
+	_, err = c.do(ctx, req, &resp)
+	return &resp, err
 }
 
 func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
@@ -136,12 +150,12 @@ func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*htt
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		var apiErr api.Error
-		err = dec.Decode(&apiErr)
-		if err != nil {
-			return resp, err
-		}
 
-		return resp, apiErr
+		_ = dec.Decode(&apiErr)
+
+		apiErr.Response = resp
+
+		return resp, &apiErr
 	}
 
 	return resp, dec.Decode(v)

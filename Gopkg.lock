@@ -21,15 +21,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/globalsign/mgo"
-  packages = [
-    "bson",
-    "internal/json"
-  ]
-  revision = "113d3961e7311526535a1ef7042196563d442761"
-
-[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -97,6 +88,12 @@
   ]
   revision = "77db4b4f350e31be66a57c332acb7721cf9ff9bb"
   version = "v1.8.0"
+
+[[projects]]
+  name = "github.com/segmentio/ksuid"
+  packages = ["."]
+  revision = "112f929a3020abfcd06b77c963ec919130796a35"
+  version = "1.0.1"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -212,6 +209,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4088bdff65cb4a7d39ded4da682b3bb45c24d69f1dffeaf0d3cce3e19a5e60b2"
+  inputs-digest = "d1c6a9cf66fbbfa88f29ca641726878ab4197de10d46721691a47cd3e0c6e21b"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -63,6 +63,8 @@ func NewHandler(store store.Store, cfg Config) http.Handler {
 				Msg("")
 		}),
 		hlog.RemoteAddrHandler("ip"),
+		hlog.UserAgentHandler("user_agent"),
+		hlog.RefererHandler("referer"),
 		func(http.Handler) http.Handler {
 			return mux
 		},
@@ -102,12 +104,15 @@ func (s *service) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
 
 // writeError writes an error to the http response in JSON format.
 func (s *service) writeError(w http.ResponseWriter, err error, code int) {
-	// Log error.
-	s.logger.Debug().Err(err).Int("code", code).Msg("http error")
+	// Prepare log.
+	logger := s.logger.With().Err(err).Int("code", code).Logger()
 
 	// Hide error from client if it's internal.
 	if code == http.StatusInternalServerError {
+		logger.Error().Msg("unexpected http error")
 		err = errInternal
+	} else {
+		logger.Debug().Msg("http error")
 	}
 
 	s.encodeJSON(w, &api.Error{Err: err.Error()}, code)
