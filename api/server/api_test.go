@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,13 +14,16 @@ import (
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAPI(t *testing.T) {
 	s := new(mockStore)
+	log := zerolog.New(ioutil.Discard)
 	h := NewHandler(s, Config{
 		WatchTimeout: 1 * time.Second,
+		Logger:       &log,
 	})
 
 	t.Run("Root", func(t *testing.T) {
@@ -88,6 +92,11 @@ func TestAPI(t *testing.T) {
 			}
 			defer func() { s.LatestFn = nil }()
 
+			s.OneByVersionFn = func(context.Context, string, string) (*store.RulesetEntry, error) {
+				return rse, nil
+			}
+			defer func() { s.OneByVersionFn = nil }()
+
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", url, nil)
 			h.ServeHTTP(w, r)
@@ -123,6 +132,31 @@ func TestAPI(t *testing.T) {
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusOK, &rse, exp)
+			require.Equal(t, 1, s.LatestCount)
+		})
+
+		t.Run("String with version - OK", func(t *testing.T) {
+			rs, _ := rule.NewStringRuleset(
+				rule.New(
+					rule.Eq(
+						rule.StringParam("foo"),
+						rule.StringValue("bar"),
+					),
+					rule.ReturnsString("success"),
+				),
+			)
+			rse := store.RulesetEntry{
+				Path:    "path/to/my/ruleset",
+				Ruleset: rs,
+			}
+
+			exp := &api.Value{
+				Data: "success",
+				Type: "string",
+			}
+
+			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&foo=bar", http.StatusOK, &rse, exp)
+			require.Equal(t, 1, s.OneByVersionCount)
 		})
 
 		t.Run("Bool - OK", func(t *testing.T) {
