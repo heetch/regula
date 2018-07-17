@@ -40,11 +40,32 @@ func (s *Store) List(ctx context.Context, prefix string) ([]store.RulesetEntry, 
 	return entries, nil
 }
 
-// One returns the ruleset entry which corresponds to the given path.
+// Latest returns the latest version of the ruleset entry which corresponds to the given path.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
-func (s *Store) One(ctx context.Context, path string) (*store.RulesetEntry, error) {
-	// TODO fix how rulesets are get
-	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, path))
+func (s *Store) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
+	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, path)+"/", clientv3.WithLastKey()...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
+	}
+
+	// Count will be 0 if the path doesn't exist or if it's not a ruleset.
+	if resp.Count == 0 {
+		return nil, store.ErrNotFound
+	}
+
+	var entry store.RulesetEntry
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal entry")
+	}
+
+	return &entry, nil
+}
+
+// OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
+// It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
+func (s *Store) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	resp, err := s.Client.KV.Get(ctx, ppath.Join(s.Namespace, path, version))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}

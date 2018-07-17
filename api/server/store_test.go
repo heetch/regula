@@ -10,14 +10,16 @@ import (
 var _ store.Store = new(mockStore)
 
 type mockStore struct {
-	ListCount  int
-	ListFn     func(context.Context, string) ([]store.RulesetEntry, error)
-	OneCount   int
-	OneFn      func(context.Context, string) (*store.RulesetEntry, error)
-	WatchCount int
-	WatchFn    func(context.Context, string) ([]store.Event, error)
-	PutCount   int
-	PutFn      func(context.Context, string) (*store.RulesetEntry, error)
+	ListCount         int
+	ListFn            func(context.Context, string) ([]store.RulesetEntry, error)
+	LatestCount       int
+	LatestFn          func(context.Context, string) (*store.RulesetEntry, error)
+	OneByVersionCount int
+	OneByVersionFn    func(context.Context, string, string) (*store.RulesetEntry, error)
+	WatchCount        int
+	WatchFn           func(context.Context, string) ([]store.Event, error)
+	PutCount          int
+	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
 }
 
 func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
@@ -30,11 +32,20 @@ func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEnt
 	return nil, nil
 }
 
-func (s *mockStore) One(ctx context.Context, path string) (*store.RulesetEntry, error) {
-	s.OneCount++
+func (s *mockStore) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
+	s.LatestCount++
 
-	if s.OneFn != nil {
-		return s.OneFn(ctx, path)
+	if s.LatestFn != nil {
+		return s.LatestFn(ctx, path)
+	}
+	return nil, nil
+}
+
+func (s *mockStore) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	s.OneByVersionCount++
+
+	if s.OneByVersionFn != nil {
+		return s.OneByVersionFn(ctx, path, version)
 	}
 	return nil, nil
 }

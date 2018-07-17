@@ -81,10 +81,10 @@ func TestAPI(t *testing.T) {
 		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Value) {
 			t.Helper()
 
-			s.OneFn = func(context.Context, string) (*store.RulesetEntry, error) {
+			s.LatestFn = func(context.Context, string) (*store.RulesetEntry, error) {
 				return rse, nil
 			}
-			defer func() { s.OneFn = nil }()
+			defer func() { s.LatestFn = nil }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", url, nil)
@@ -193,10 +193,10 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.OneFn = func(context.Context, string) (*store.RulesetEntry, error) {
+			s.LatestFn = func(context.Context, string) (*store.RulesetEntry, error) {
 				return nil, store.ErrNotFound
 			}
-			defer func() { s.OneFn = nil }()
+			defer func() { s.LatestFn = nil }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)

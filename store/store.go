@@ -16,8 +16,10 @@ var (
 type Store interface {
 	// List returns all the rulesets entries under the given prefix.
 	List(ctx context.Context, prefix string) ([]RulesetEntry, error)
-	// One returns the ruleset entry which corresponds to the given path.
-	One(ctx context.Context, path string) (*RulesetEntry, error)
+	// Latest returns the latest version of the ruleset entry which corresponds to the given path.
+	Latest(ctx context.Context, path string) (*RulesetEntry, error)
+	// OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
+	OneByVersion(ctx context.Context, path, version string) (*RulesetEntry, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string) ([]Event, error)
 	// Put is used to store a ruleset version.

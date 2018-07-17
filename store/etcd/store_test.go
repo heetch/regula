@@ -82,28 +82,56 @@ func TestList(t *testing.T) {
 	})
 }
 
-func TestOne(t *testing.T) {
+func TestLatest(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	createRuleset(t, s, "a", nil)
+	oldRse, _ := rule.NewBoolRuleset(
+		rule.New(
+			rule.True(),
+			rule.ReturnsBool(true),
+		),
+	)
+
+	newRse, _ := rule.NewStringRuleset(
+		rule.New(
+			rule.True(),
+			rule.ReturnsString("success"),
+		),
+	)
+
+	createRuleset(t, s, "a", oldRse)
+	// sleep 1 second because bson.ObjectID is based on unix timestamp (second).
+	time.Sleep(time.Second)
+	createRuleset(t, s, "a", newRse)
 	createRuleset(t, s, "b", nil)
 	createRuleset(t, s, "c", nil)
 	createRuleset(t, s, "abc", nil)
 	createRuleset(t, s, "abcd", nil)
 
-	t.Run("OK", func(t *testing.T) {
+	t.Run("OK - several versions of a ruleset", func(t *testing.T) {
 		path := "a"
 
-		entry, err := s.One(context.Background(), path)
+		entry, err := s.Latest(context.Background(), path)
 		require.NoError(t, err)
 		require.Equal(t, path, entry.Path)
+		require.Equal(t, newRse, entry.Ruleset)
+	})
+
+	t.Run("OK - only one version of a ruleset", func(t *testing.T) {
+		var exp store.RulesetEntry
+		path := "b"
+
+		entry, err := s.Latest(context.Background(), path)
+		require.NoError(t, err)
+		require.Equal(t, path, entry.Path)
+		require.Equal(t, exp.Ruleset, entry.Ruleset)
 	})
 
 	t.Run("NOK - path doesn't exist", func(t *testing.T) {
 		path := "aa"
 
-		_, err := s.One(context.Background(), path)
+		_, err := s.Latest(context.Background(), path)
 		require.Error(t, err)
 		require.EqualError(t, err, store.ErrNotFound.Error())
 	})
@@ -111,7 +139,62 @@ func TestOne(t *testing.T) {
 	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
 		path := "ab"
 
-		_, err := s.One(context.Background(), path)
+		_, err := s.Latest(context.Background(), path)
+		require.Error(t, err)
+		require.EqualError(t, err, store.ErrNotFound.Error())
+	})
+}
+
+func TestOneByVersion(t *testing.T) {
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	oldRse, _ := rule.NewBoolRuleset(
+		rule.New(
+			rule.True(),
+			rule.ReturnsBool(true),
+		),
+	)
+
+	newRse, _ := rule.NewStringRuleset(
+		rule.New(
+			rule.True(),
+			rule.ReturnsString("success"),
+		),
+	)
+
+	createRuleset(t, s, "a", oldRse)
+	entry, err := s.Latest(context.Background(), "a")
+	require.NoError(t, err)
+	version := entry.Version
+
+	// sleep 1 second because bson.ObjectID is based on unix timestamp (second).
+	time.Sleep(time.Second)
+	createRuleset(t, s, "a", newRse)
+	createRuleset(t, s, "abc", nil)
+
+	t.Run("OK", func(t *testing.T) {
+		path := "a"
+
+		entry, err := s.OneByVersion(context.Background(), path, version)
+		require.NoError(t, err)
+		require.Equal(t, path, entry.Path)
+		require.Equal(t, version, entry.Version)
+		require.Equal(t, oldRse, entry.Ruleset)
+	})
+
+	t.Run("NOK - path doesn't exist", func(t *testing.T) {
+		path := "a"
+
+		_, err := s.OneByVersion(context.Background(), path, "123version")
+		require.Error(t, err)
+		require.EqualError(t, err, store.ErrNotFound.Error())
+	})
+
+	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
+		path := "ab"
+
+		_, err := s.OneByVersion(context.Background(), path, "123version")
 		require.Error(t, err)
 		require.EqualError(t, err, store.ErrNotFound.Error())
 	})
