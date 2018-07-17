@@ -2,6 +2,8 @@ package etcd_test
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	ppath "path"
 	"strings"
 	"sync"
@@ -20,6 +22,10 @@ var (
 	endpoints   = []string{"localhost:2379", "etcd:2379"}
 )
 
+func Init() {
+	rand.Seed(time.Now().Unix())
+}
+
 func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	t.Helper()
 
@@ -31,7 +37,7 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 
 	s := etcd.Store{
 		Client:    cli,
-		Namespace: "regula-store-tests",
+		Namespace: fmt.Sprintf("regula-store-tests-%d", rand.Int()),
 	}
 
 	return &s, func() {
@@ -46,6 +52,8 @@ func createRuleset(t *testing.T, s *etcd.Store, path string, r *rule.Ruleset) {
 }
 
 func TestList(t *testing.T) {
+	t.Parallel()
+
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
@@ -86,6 +94,8 @@ func TestList(t *testing.T) {
 }
 
 func TestLatest(t *testing.T) {
+	t.Parallel()
+
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
@@ -104,7 +114,7 @@ func TestLatest(t *testing.T) {
 	)
 
 	createRuleset(t, s, "a", oldRse)
-	// sleep 1 second because bson.ObjectID is based on unix timestamp (second).
+	// sleep 1 second because ksuid doesn't guarantee the order within the same second since it's based on a 32 bits timestamp (second).
 	time.Sleep(time.Second)
 	createRuleset(t, s, "a", newRse)
 	createRuleset(t, s, "b", nil)
@@ -149,6 +159,8 @@ func TestLatest(t *testing.T) {
 }
 
 func TestOneByVersion(t *testing.T) {
+	t.Parallel()
+
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
@@ -171,8 +183,6 @@ func TestOneByVersion(t *testing.T) {
 	require.NoError(t, err)
 	version := entry.Version
 
-	// sleep 1 second because bson.ObjectID is based on unix timestamp (second).
-	time.Sleep(time.Second)
 	createRuleset(t, s, "a", newRse)
 	createRuleset(t, s, "abc", nil)
 
@@ -204,6 +214,8 @@ func TestOneByVersion(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
+	t.Parallel()
+
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
@@ -226,32 +238,46 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, resp.Count, 1)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimLeft(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "a")+"/"))
 	})
 }
 
 func TestWatch(t *testing.T) {
+	t.Parallel()
+
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	t.Run("Prefix", func(t *testing.T) {
-		var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-
-			events, err := s.Watch(ctx, "a")
-			require.NoError(t, err)
-			require.Len(t, events, 1)
-			require.Equal(t, store.PutEvent, events[0].Type)
-		}()
-
-		time.Sleep(1 * time.Second)
+		time.Sleep(time.Second)
 		createRuleset(t, s, "aa", nil)
-		wg.Wait()
-	})
+		createRuleset(t, s, "ab", nil)
+		createRuleset(t, s, "a/1", nil)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	events, err := s.Watch(ctx, "a", "")
+	require.NoError(t, err)
+	require.Len(t, events.Events, 1)
+	require.NotEmpty(t, events.Revision)
+	require.Equal(t, "aa", events.Events[0].Path)
+	require.Equal(t, store.PutEvent, events.Events[0].Type)
+
+	wg.Wait()
+
+	events, err = s.Watch(ctx, "a", events.Revision)
+	require.NoError(t, err)
+	require.Len(t, events.Events, 2)
+	require.NotEmpty(t, events.Revision)
+	require.Equal(t, store.PutEvent, events.Events[0].Type)
+	require.Equal(t, "ab", events.Events[0].Path)
+	require.Equal(t, store.PutEvent, events.Events[1].Type)
+	require.Equal(t, "a/1", events.Events[1].Path)
 }

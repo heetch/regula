@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	ppath "path"
 	"strconv"
-	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
@@ -116,11 +115,17 @@ func (s *Store) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*s
 }
 
 // Watch the given prefix for anything new.
-func (s *Store) Watch(ctx context.Context, prefix string) ([]store.Event, error) {
+func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*store.Events, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	wc := s.Client.Watch(ctx, ppath.Join(s.Namespace, prefix), clientv3.WithPrefix())
+	opts := []clientv3.OpOption{clientv3.WithPrefix()}
+	if i, _ := strconv.ParseInt(revision, 10, 64); i > 0 {
+		// watch from the next revision
+		opts = append(opts, clientv3.WithRev(i+1))
+	}
+
+	wc := s.Client.Watch(ctx, ppath.Join(s.Namespace, prefix), opts...)
 	select {
 	case wresp := <-wc:
 		events := make([]store.Event, len(wresp.Events))
@@ -132,16 +137,19 @@ func (s *Store) Watch(ctx context.Context, prefix string) ([]store.Event, error)
 				events[i].Type = store.DeleteEvent
 			}
 
-			events[i].Path = strings.TrimPrefix(s.Namespace, string(ev.Kv.Key))
 			var e store.RulesetEntry
 			err := json.Unmarshal(ev.Kv.Value, &e)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal entry")
 			}
+			events[i].Path = e.Path
 			events[i].Ruleset = e.Ruleset
 		}
 
-		return events, nil
+		return &store.Events{
+			Events:   events,
+			Revision: strconv.FormatInt(wresp.Header.Revision, 10),
+		}, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}

@@ -21,7 +21,7 @@ type Store interface {
 	// OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
 	OneByVersion(ctx context.Context, path, version string) (*RulesetEntry, error)
 	// Watch a prefix for changes and return a list of events.
-	Watch(ctx context.Context, prefix string) ([]Event, error)
+	Watch(ctx context.Context, prefix string, revision string) (*Events, error)
 	// Put is used to store a ruleset version.
 	Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*RulesetEntry, error)
 }
@@ -50,4 +50,10 @@ type Event struct {
 	Type    string
 	Path    string
 	Ruleset *rule.Ruleset
+}
+
+// Events holds a list of events occured on a group of rulesets.
+type Events struct {
+	Events   []Event
+	Revision string
 }
