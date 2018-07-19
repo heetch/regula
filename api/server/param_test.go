@@ -22,7 +22,7 @@ func TestGetString(t *testing.T) {
 	t.Run("GetString - NOK - ErrParamNotFound", func(t *testing.T) {
 		_, err := p.GetString("badkey")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrParamNotFound.Error())
+		require.Equal(t, err, regula.ErrParamNotFound)
 	})
 }
 
@@ -41,13 +41,13 @@ func TestGetBool(t *testing.T) {
 	t.Run("GetBool - NOK - ErrParamNotFound", func(t *testing.T) {
 		_, err := p.GetBool("badkey")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrParamNotFound.Error())
+		require.Equal(t, err, regula.ErrParamNotFound)
 	})
 
-	t.Run("GetBool - NOK - ErrTypeParamMismatch", func(t *testing.T) {
+	t.Run("GetBool - NOK - ErrParamTypeMismatch", func(t *testing.T) {
 		_, err := p.GetBool("string")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrTypeParamMismatch.Error())
+		require.Equal(t, err, regula.ErrParamTypeMismatch)
 	})
 }
 
@@ -66,13 +66,13 @@ func TestGetInt64(t *testing.T) {
 	t.Run("GetInt64 - NOK - ErrParamNotFound", func(t *testing.T) {
 		_, err := p.GetInt64("badkey")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrParamNotFound.Error())
+		require.Equal(t, err, regula.ErrParamNotFound)
 	})
 
-	t.Run("GetInt64 - NOK - ErrTypeParamMismatch", func(t *testing.T) {
+	t.Run("GetInt64 - NOK - ErrParamTypeMismatch", func(t *testing.T) {
 		_, err := p.GetInt64("string")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrTypeParamMismatch.Error())
+		require.Equal(t, err, regula.ErrParamTypeMismatch)
 	})
 }
 
@@ -91,12 +91,12 @@ func TestGetFloat64(t *testing.T) {
 	t.Run("GetFloat64 - NOK - ErrParamNotFound", func(t *testing.T) {
 		_, err := p.GetFloat64("badkey")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrParamNotFound.Error())
+		require.Equal(t, err, regula.ErrParamNotFound)
 	})
 
-	t.Run("GetFloat64 - NOK - ErrTypeParamMismatch", func(t *testing.T) {
+	t.Run("GetFloat64 - NOK - ErrParamTypeMismatch", func(t *testing.T) {
 		_, err := p.GetFloat64("string")
 		require.Error(t, err)
-		require.EqualError(t, err, regula.ErrTypeParamMismatch.Error())
+		require.Equal(t, err, regula.ErrParamTypeMismatch)
 	})
 }

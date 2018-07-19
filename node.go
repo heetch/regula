@@ -9,11 +9,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var (
-	// ErrNoMatch is returned when the rule doesn't match the given context.
-	ErrNoMatch = errors.New("rule doesn't match the given context")
-)
-
 // A Node is a piece of the AST that denotes a construct occurring in the rule source code.
 // Each node takes a set of params and evaluates to a value.
 type Node interface {

@@ -9,13 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
-	ErrRulesetNotFound = errors.New("ruleset not found")
-	// ErrTypeMismatch is returned when the evaluated rule doesn't return the expected result type.
-	ErrTypeMismatch = errors.New("type returned by rule doesn't match")
-)
-
 // Engine fetches the rules from the store and executes the selected ruleset.
 type Engine struct {
 	getter Getter

@@ -8,11 +8,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var (
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
-	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
-)
-
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
 	Root   Node   `json:"root"`

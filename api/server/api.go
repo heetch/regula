@@ -106,7 +106,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 	v, err := e.Ruleset.Eval(params)
 	if err != nil {
 		if err == regula.ErrParamNotFound ||
-			err == regula.ErrTypeParamMismatch ||
+			err == regula.ErrParamTypeMismatch ||
 			err == regula.ErrNoMatch {
 			s.writeError(w, err, http.StatusBadRequest)
 			return
