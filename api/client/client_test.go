@@ -11,11 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/heetch/regula/rule"
-	"github.com/rs/zerolog"
-
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -135,7 +134,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
+		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.ReturnsInt64(1)))
 		require.NoError(t, err)
 
 		ars, err := cli.PutRuleset(context.Background(), "a", rs)

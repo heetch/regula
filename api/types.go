@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 )
 
 // Value is the response sent to the client after an eval.
@@ -31,9 +31,9 @@ func (e Error) Error() string {
 
 // Ruleset holds a ruleset and its metadata.
 type Ruleset struct {
-	Path    string        `json:"path"`
-	Version string        `json:"version"`
-	Ruleset *rule.Ruleset `json:"ruleset"`
+	Path    string          `json:"path"`
+	Version string          `json:"version"`
+	Ruleset *regula.Ruleset `json:"ruleset"`
 }
 
 // Rulesets holds a list of rulesets.
@@ -50,10 +50,10 @@ const (
 
 // Event describes an event occured on a ruleset.
 type Event struct {
-	Type    string        `json:"type"`
-	Path    string        `json:"path"`
-	Version string        `json:"version"`
-	Ruleset *rule.Ruleset `json:"ruleset"`
+	Type    string          `json:"type"`
+	Path    string          `json:"path"`
+	Version string          `json:"version"`
+	Ruleset *regula.Ruleset `json:"ruleset"`
 }
 
 // Events holds a list of events occured on a group of rulesets.

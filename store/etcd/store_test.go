@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createRuleset(t *testing.T, s *etcd.Store, path string, r *rule.Ruleset) {
+func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) {
 	_, err := s.Put(context.Background(), path, r)
 	require.NoError(t, err)
 }
@@ -99,17 +99,17 @@ func TestLatest(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	oldRse, _ := rule.NewBoolRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsBool(true),
+	oldRse, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.ReturnsBool(true),
 		),
 	)
 
-	newRse, _ := rule.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsString("success"),
+	newRse, _ := regula.NewStringRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.ReturnsString("success"),
 		),
 	)
 
@@ -164,17 +164,17 @@ func TestOneByVersion(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	oldRse, _ := rule.NewBoolRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsBool(true),
+	oldRse, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.ReturnsBool(true),
 		),
 	)
 
-	newRse, _ := rule.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsString("success"),
+	newRse, _ := regula.NewStringRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.ReturnsString("success"),
 		),
 	)
 
@@ -221,10 +221,10 @@ func TestPut(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
-		rs, _ := rule.NewBoolRuleset(
-			rule.New(
-				rule.True(),
-				rule.ReturnsBool(true),
+		rs, _ := regula.NewBoolRuleset(
+			regula.NewRule(
+				regula.True(),
+				regula.ReturnsBool(true),
 			),
 		)
 

@@ -13,7 +13,6 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
-	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/version"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -103,7 +102,7 @@ func (c *Client) EvalRuleset(ctx context.Context, path string, params map[string
 }
 
 // PutRuleset creates a ruleset version on the given path.
-func (c *Client) PutRuleset(ctx context.Context, path string, rs *rule.Ruleset) (*api.Ruleset, error) {
+func (c *Client) PutRuleset(ctx context.Context, path string, rs *regula.Ruleset) (*api.Ruleset, error) {
 	req, err := c.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
 	if err != nil {
 		return nil, err
@@ -275,13 +274,13 @@ func UserAgent(userAgent string) Option {
 // NewGetter uses the given client to fetch all the rulesets from the server
 // and returns a Getter that holds the results in memory.
 // No subsequent round trips are performed after this function returns.
-func NewGetter(ctx context.Context, client *Client, prefix string) (*rules.MemoryGetter, error) {
+func NewGetter(ctx context.Context, client *Client, prefix string) (*regula.MemoryGetter, error) {
 	ls, err := client.ListRulesets(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	var m rules.MemoryGetter
+	var m regula.MemoryGetter
 
 	for _, re := range ls.Rulesets {
 		m.AddRuleset(re.Path, re.Version, re.Ruleset)

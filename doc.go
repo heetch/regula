@@ -1,5 +1,5 @@
 /*
-Package rules provides a rules engine implementation.
+Package regula provides a rules engine implementation.
 
 Usage of this package revolves around the concept of rulesets.
 
@@ -25,4 +25,4 @@ returned to the caller.
 		"email": "example@provider.com",
 	})
 */
-package rules
+package regula

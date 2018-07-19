@@ -8,7 +8,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/segmentio/ksuid"
@@ -87,7 +87,7 @@ func (s *Store) OneByVersion(ctx context.Context, path, version string) (*store.
 }
 
 // Put adds a version of the given ruleset using an uuid.
-func (s *Store) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*store.RulesetEntry, error) {
+func (s *Store) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	k, err := ksuid.NewRandom()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate version")

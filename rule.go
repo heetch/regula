@@ -1,5 +1,4 @@
-// Package rule provides primitives for creating and evaluating logical rules.
-package rule
+package regula
 
 import (
 	"encoding/json"
@@ -20,8 +19,8 @@ type Rule struct {
 	Result *Value `json:"result"`
 }
 
-// New creates a rule with the given node and that returns the given result on evaluation.
-func New(node Node, result *Value) *Rule {
+// NewRule creates a rule with the given node and that returns the given result on evaluation.
+func NewRule(node Node, result *Value) *Rule {
 	return &Rule{
 		Root:   node,
 		Result: result,

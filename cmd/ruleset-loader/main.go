@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/api/client"
-	"github.com/heetch/regula/rule"
 )
 
 var (
@@ -45,7 +45,7 @@ func main() {
 }
 
 func loadSnapshot(client *client.Client, r io.Reader) error {
-	var snapshot map[string]*rule.Ruleset
+	var snapshot map[string]*regula.Ruleset
 
 	err := json.NewDecoder(r).Decode(&snapshot)
 	if err != nil {

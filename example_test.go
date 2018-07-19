@@ -1,22 +1,22 @@
-package rule_test
+package regula_test
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 )
 
 func Example() {
-	r := rule.New(
-		rule.Eq(
-			rule.StringValue("foo"),
-			rule.StringParam("bar"),
+	r := regula.NewRule(
+		regula.Eq(
+			regula.StringValue("foo"),
+			regula.StringParam("bar"),
 		),
-		rule.ReturnsString("matched"),
+		regula.ReturnsString("matched"),
 	)
 
-	ret, err := r.Eval(rule.Params{
+	ret, err := r.Eval(regula.Params{
 		"bar": "foo",
 	})
 	if err != nil {
@@ -29,20 +29,20 @@ func Example() {
 }
 
 func ExampleAnd() {
-	tree := rule.And(
-		rule.Eq(
-			rule.Int64Value(10),
-			rule.Int64Param("foo"),
+	tree := regula.And(
+		regula.Eq(
+			regula.Int64Value(10),
+			regula.Int64Param("foo"),
 		),
-		rule.Not(
-			rule.Eq(
-				rule.Float64Value(1.5),
-				rule.Float64Param("bar"),
+		regula.Not(
+			regula.Eq(
+				regula.Float64Value(1.5),
+				regula.Float64Param("bar"),
 			),
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": int64(10),
 		"bar": 1.6,
 	})
@@ -55,18 +55,18 @@ func ExampleAnd() {
 }
 
 func ExampleOr() {
-	tree := rule.Or(
-		rule.Eq(
-			rule.Float64Value(1.2),
-			rule.Float64Param("foo"),
+	tree := regula.Or(
+		regula.Eq(
+			regula.Float64Value(1.2),
+			regula.Float64Param("foo"),
 		),
-		rule.Eq(
-			rule.Float64Value(3.14),
-			rule.Float64Param("foo"),
+		regula.Eq(
+			regula.Float64Value(3.14),
+			regula.Float64Param("foo"),
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": 3.14,
 	})
 	if err != nil {
@@ -78,13 +78,13 @@ func ExampleOr() {
 }
 
 func ExampleEq_string() {
-	tree := rule.Eq(
-		rule.StringValue("bar"),
-		rule.StringValue("bar"),
-		rule.StringParam("foo"),
+	tree := regula.Eq(
+		regula.StringValue("bar"),
+		regula.StringValue("bar"),
+		regula.StringParam("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -96,16 +96,16 @@ func ExampleEq_string() {
 }
 
 func ExampleEq_bool() {
-	tree := rule.Eq(
-		rule.BoolValue(false),
-		rule.Not(rule.BoolValue(true)),
-		rule.Eq(
-			rule.StringValue("bar"),
-			rule.StringValue("baz"),
+	tree := regula.Eq(
+		regula.BoolValue(false),
+		regula.Not(regula.BoolValue(true)),
+		regula.Eq(
+			regula.StringValue("bar"),
+			regula.StringValue("baz"),
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -117,12 +117,12 @@ func ExampleEq_bool() {
 }
 
 func ExampleEq_int64() {
-	tree := rule.Eq(
-		rule.Int64Value(10),
-		rule.Int64Param("foo"),
+	tree := regula.Eq(
+		regula.Int64Value(10),
+		regula.Int64Param("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": int64(10),
 	})
 	if err != nil {
@@ -134,12 +134,12 @@ func ExampleEq_int64() {
 }
 
 func ExampleEq_float64() {
-	tree := rule.Eq(
-		rule.Float64Value(3.14),
-		rule.Float64Param("foo"),
+	tree := regula.Eq(
+		regula.Float64Value(3.14),
+		regula.Float64Param("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": 3.14,
 	})
 	if err != nil {
@@ -151,12 +151,12 @@ func ExampleEq_float64() {
 }
 
 func ExampleIn() {
-	tree := rule.In(
-		rule.StringValue("c"),
-		rule.StringValue("a"),
-		rule.StringValue("b"),
-		rule.StringValue("c"),
-		rule.StringValue("d"),
+	tree := regula.In(
+		regula.StringValue("c"),
+		regula.StringValue("a"),
+		regula.StringValue("b"),
+		regula.StringValue("c"),
+		regula.StringValue("d"),
 	)
 
 	val, err := tree.Eval(nil)
@@ -169,7 +169,7 @@ func ExampleIn() {
 }
 
 func ExampleNot() {
-	tree := rule.Not(rule.BoolValue(false))
+	tree := regula.Not(regula.BoolValue(false))
 
 	val, err := tree.Eval(nil)
 	if err != nil {
@@ -181,9 +181,9 @@ func ExampleNot() {
 }
 
 func ExampleStringParam() {
-	tree := rule.StringParam("foo")
+	tree := regula.StringParam("foo")
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -195,7 +195,7 @@ func ExampleStringParam() {
 }
 
 func ExampleTrue() {
-	tree := rule.True()
+	tree := regula.True()
 
 	val, err := tree.Eval(nil)
 	if err != nil {

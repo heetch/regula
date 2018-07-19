@@ -1,4 +1,4 @@
-package rule
+package regula
 
 import (
 	"encoding/json"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 )
 
 // Errors
@@ -23,14 +23,14 @@ type Store interface {
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*Events, error)
 	// Put is used to store a ruleset version.
-	Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*RulesetEntry, error)
+	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
 }
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
 	Path    string
 	Version string
-	Ruleset *rule.Ruleset
+	Ruleset *regula.Ruleset
 }
 
 // RulesetEntries holds a list of ruleset entries.
@@ -50,7 +50,7 @@ type Event struct {
 	Type    string
 	Path    string
 	Version string
-	Ruleset *rule.Ruleset
+	Ruleset *regula.Ruleset
 }
 
 // Events holds a list of events occured on a group of rulesets.
