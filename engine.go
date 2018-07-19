@@ -9,7 +9,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Engine fetches the rules from the store and executes the selected ruleset.
+// Engine is used to evaluate a ruleset against a group of parameters.
+// It provides a list of type safe methods to evaluate ruleset and always return the expected type to the caller.
+// The engine is stateless and relies on the given getter to query rulesets.
 type Engine struct {
 	getter Getter
 }
@@ -22,7 +24,7 @@ func NewEngine(getter Getter) *Engine {
 }
 
 // Get evaluates the ruleset associated with key and returns the result.
-func (e *Engine) get(ctx context.Context, typ, key string, params Params, opts ...Option) (*Value, error) {
+func (e *Engine) get(ctx context.Context, typ, key string, params ParamGetter, opts ...Option) (*Value, error) {
 	var cfg engineConfig
 	for _, opt := range opts {
 		opt(&cfg)
@@ -67,7 +69,7 @@ func (e *Engine) get(ctx context.Context, typ, key string, params Params, opts .
 }
 
 // GetString evaluates the ruleset associated with key and returns the result as a string.
-func (e *Engine) GetString(ctx context.Context, key string, params Params, opts ...Option) (string, error) {
+func (e *Engine) GetString(ctx context.Context, key string, params ParamGetter, opts ...Option) (string, error) {
 	res, err := e.get(ctx, "string", key, params, opts...)
 	if err != nil {
 		return "", err
@@ -77,7 +79,7 @@ func (e *Engine) GetString(ctx context.Context, key string, params Params, opts 
 }
 
 // GetBool evaluates the ruleset associated with key and returns the result as a bool.
-func (e *Engine) GetBool(ctx context.Context, key string, params Params, opts ...Option) (bool, error) {
+func (e *Engine) GetBool(ctx context.Context, key string, params ParamGetter, opts ...Option) (bool, error) {
 	res, err := e.get(ctx, "bool", key, params, opts...)
 	if err != nil {
 		return false, err
@@ -87,7 +89,7 @@ func (e *Engine) GetBool(ctx context.Context, key string, params Params, opts ..
 }
 
 // GetInt64 evaluates the ruleset associated with key and returns the result as an int64.
-func (e *Engine) GetInt64(ctx context.Context, key string, params Params, opts ...Option) (int64, error) {
+func (e *Engine) GetInt64(ctx context.Context, key string, params ParamGetter, opts ...Option) (int64, error) {
 	res, err := e.get(ctx, "int64", key, params, opts...)
 	if err != nil {
 		return 0, err
@@ -97,7 +99,7 @@ func (e *Engine) GetInt64(ctx context.Context, key string, params Params, opts .
 }
 
 // GetFloat64 evaluates the ruleset associated with key and returns the result as a float64.
-func (e *Engine) GetFloat64(ctx context.Context, key string, params Params, opts ...Option) (float64, error) {
+func (e *Engine) GetFloat64(ctx context.Context, key string, params ParamGetter, opts ...Option) (float64, error) {
 	res, err := e.get(ctx, "float64", key, params, opts...)
 	if err != nil {
 		return 0, err
@@ -108,7 +110,7 @@ func (e *Engine) GetFloat64(ctx context.Context, key string, params Params, opts
 
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
 // tagged with the "ruleset" struct tag.
-func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params Params) error {
+func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params ParamGetter) error {
 	b := backend.Func("regula", func(ctx context.Context, key string) ([]byte, error) {
 		ruleset, err := e.getter.Get(ctx, key)
 		if err != nil {
@@ -147,7 +149,8 @@ func Version(version string) Option {
 	}
 }
 
-// A Getter allows a ruleset to be retrieved.
+// A Getter provides methods to fetch rulesets from any location.
+// Long running implementations must listen to the given context for timeout and cancelation.
 type Getter interface {
 	// Get returns the ruleset associated with the given key.
 	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.

@@ -1,6 +1,7 @@
 package regula
 
-// A ParamGetter enables to extract a parameter (key) of a specific type from a map.
+// A ParamGetter is a set of parameters passed on rule evaluation.
+// It provides type safe methods to query params.
 type ParamGetter interface {
 	GetString(key string) (string, error)
 	GetBool(key string) (bool, error)
@@ -8,12 +9,10 @@ type ParamGetter interface {
 	GetFloat64(key string) (float64, error)
 }
 
-// Params is a set of variables passed on rule evaluation.
+// Params is a map based ParamGetter implementation.
 type Params map[string]interface{}
 
-// GetString extracts a string parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
+// GetString extracts a string parameter corresponding to the given key.
 func (p Params) GetString(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
@@ -28,9 +27,7 @@ func (p Params) GetString(key string) (string, error) {
 	return s, nil
 }
 
-// GetBool extracts a bool parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
+// GetBool extracts a bool parameter corresponding to the given key.
 func (p Params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
@@ -45,9 +42,7 @@ func (p Params) GetBool(key string) (bool, error) {
 	return b, nil
 }
 
-// GetInt64 extracts an int64 parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
+// GetInt64 extracts an int64 parameter corresponding to the given key.
 func (p Params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
@@ -62,9 +57,7 @@ func (p Params) GetInt64(key string) (int64, error) {
 	return i, nil
 }
 
-// GetFloat64 extracts a float64 parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
+// GetFloat64 extracts a float64 parameter corresponding to the given key.
 func (p Params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {

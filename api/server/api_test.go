@@ -151,11 +151,13 @@ func TestAPI(t *testing.T) {
 			rse := store.RulesetEntry{
 				Path:    "path/to/my/ruleset",
 				Ruleset: rs,
+				Version: "123",
 			}
 
 			exp := &api.Value{
-				Data: "success",
-				Type: "string",
+				Data:    "success",
+				Type:    "string",
+				Version: "123",
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&foo=bar", http.StatusOK, &rse, exp)

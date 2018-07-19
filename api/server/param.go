@@ -11,8 +11,6 @@ import (
 type params map[string]string
 
 // GetString extracts a string parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
 func (p params) GetString(key string) (string, error) {
 	s, ok := p[key]
 	if !ok {
@@ -23,8 +21,6 @@ func (p params) GetString(key string) (string, error) {
 }
 
 // GetBool extracts a bool parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
 func (p params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
@@ -40,8 +36,6 @@ func (p params) GetBool(key string) (bool, error) {
 }
 
 // GetInt64 extracts an int64 parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
 func (p params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
@@ -57,8 +51,6 @@ func (p params) GetInt64(key string) (int64, error) {
 }
 
 // GetFloat64 extracts a float64 parameter which corresponds to the given key.
-// If the key doesn't exist, it returns ErrParamNotFound.
-// If the type assertion fails, it returns ErrParamTypeMismatch.
 func (p params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {

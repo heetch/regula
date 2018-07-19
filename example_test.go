@@ -1,13 +1,15 @@
 package regula_test
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/heetch/regula"
 )
 
-func Example() {
+func ExampleRule() {
 	r := regula.NewRule(
 		regula.Eq(
 			regula.StringValue("foo"),
@@ -204,4 +206,201 @@ func ExampleTrue() {
 
 	fmt.Println(val.Data)
 	// Output: true
+}
+
+func ExampleRuleset() {
+	rs, err := regula.NewStringRuleset(
+		regula.NewRule(
+			regula.Eq(
+				regula.StringParam("group"),
+				regula.StringValue("admin"),
+			),
+			regula.ReturnsString("first rule matched"),
+		),
+		regula.NewRule(
+			regula.In(
+				regula.Int64Param("score"),
+				regula.Int64Value(10),
+				regula.Int64Value(20),
+				regula.Int64Value(30),
+			),
+			regula.ReturnsString("second rule matched"),
+		),
+		regula.NewRule(
+			regula.True(),
+			regula.ReturnsString("default rule matched"),
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ret, err := rs.Eval(regula.Params{
+		"group": "staff",
+		"score": int64(20),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(ret.Data)
+	// Output
+	// second rule matched
+}
+
+var gt regula.Getter
+
+func init() {
+	var m regula.MemoryGetter
+	gt = &m
+
+	m.AddRuleset("/path/to/string/key", "1", &regula.Ruleset{
+		Type: "string",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
+		},
+	})
+
+	m.AddRuleset("/path/to/int64/key", "1", &regula.Ruleset{
+		Type: "int64",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
+		},
+	})
+
+	m.AddRuleset("/path/to/float64/key", "1", &regula.Ruleset{
+		Type: "float64",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsFloat64(3.14)),
+		},
+	})
+
+	m.AddRuleset("/path/to/bool/key", "1", &regula.Ruleset{
+		Type: "bool",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsBool(true)),
+		},
+	})
+
+	m.AddRuleset("/path/to/duration/key", "1", &regula.Ruleset{
+		Type: "string",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
+		},
+	})
+}
+
+func ExampleEngine() {
+	engine := regula.NewEngine(gt)
+
+	_, err := engine.GetString(context.Background(), "/a/b/c", regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		switch err {
+		case regula.ErrRulesetNotFound:
+			// when the ruleset doesn't exist
+		case regula.ErrTypeMismatch:
+			// when the ruleset returns the bad type
+		case regula.ErrNoMatch:
+			// when the ruleset doesn't match
+		default:
+			// something unexpected happened
+		}
+	}
+}
+
+func ExampleEngine_GetBool() {
+	engine := regula.NewEngine(gt)
+
+	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(b)
+	// Output: true
+}
+
+func ExampleEngine_GetString() {
+	engine := regula.NewEngine(gt)
+
+	s, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(s)
+	// Output: some-string
+}
+
+func ExampleEngine_GetInt64() {
+	engine := regula.NewEngine(gt)
+
+	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(s)
+	// Output: 10
+}
+
+func ExampleEngine_GetFloat64() {
+	engine := regula.NewEngine(gt)
+
+	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(f)
+	// Output: 3.14
+}
+
+func ExampleEngine_LoadStruct() {
+	type Values struct {
+		A string        `ruleset:"/path/to/string/key"`
+		B int64         `ruleset:"/path/to/int64/key,required"`
+		C time.Duration `ruleset:"/path/to/duration/key"`
+	}
+
+	var v Values
+
+	engine := regula.NewEngine(gt)
+
+	err := engine.LoadStruct(context.Background(), &v, regula.Params{
+		"product-id": "1234",
+		"user-id":    "5678",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(v.A)
+	fmt.Println(v.B)
+	fmt.Println(v.C)
+	// Output:
+	// some-string
+	// 10
+	// 3s
 }

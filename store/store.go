@@ -7,7 +7,7 @@ import (
 	"github.com/heetch/regula"
 )
 
-// Errors
+// Errors.
 var (
 	ErrNotFound = errors.New("not found")
 )
