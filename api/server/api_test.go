@@ -21,7 +21,7 @@ import (
 func TestAPI(t *testing.T) {
 	s := new(mockStore)
 	log := zerolog.New(ioutil.Discard)
-	h := NewHandler(s, Config{
+	h := NewHandler(context.Background(), s, Config{
 		WatchTimeout: 1 * time.Second,
 		Logger:       &log,
 	})
@@ -36,15 +36,18 @@ func TestAPI(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 		r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
-		l := []store.RulesetEntry{
-			{Path: "aa", Ruleset: r1},
-			{Path: "bb", Ruleset: r2},
+		l := store.RulesetEntries{
+			Entries: []store.RulesetEntry{
+				{Path: "aa", Ruleset: r1},
+				{Path: "bb", Ruleset: r2},
+			},
+			Revision: "somerev",
 		}
 
-		call := func(t *testing.T, url string, code int, l []store.RulesetEntry) {
+		call := func(t *testing.T, url string, code int, l *store.RulesetEntries) {
 			t.Helper()
 
-			s.ListFn = func(context.Context, string) ([]store.RulesetEntry, error) {
+			s.ListFn = func(context.Context, string) (*store.RulesetEntries, error) {
 				return l, nil
 			}
 			defer func() { s.ListFn = nil }()
@@ -56,30 +59,30 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res []store.RulesetEntry
+				var res api.Rulesets
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l), len(res))
-				for i := range l {
-					require.Equal(t, l[i], res[i])
+				require.Equal(t, len(l.Entries), len(res.Rulesets))
+				for i := range l.Entries {
+					require.EqualValues(t, l.Entries[i], res.Rulesets[i])
 				}
 			}
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, l)
+			call(t, "/rulesets/?list", http.StatusOK, &l)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, l[:1])
+			call(t, "/rulesets/a?list", http.StatusOK, &l)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries))
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, nil)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries))
 		})
 	})
 
@@ -239,7 +242,7 @@ func TestAPI(t *testing.T) {
 			h.ServeHTTP(w, r)
 
 			exp := api.Error{
-				Err: "the path: 'path/to/my/ruleset' dosn't exist",
+				Err: "the path: 'path/to/my/ruleset' doesn't exist",
 			}
 
 			var resp api.Error
@@ -289,17 +292,20 @@ func TestAPI(t *testing.T) {
 	t.Run("Watch", func(t *testing.T) {
 		r1, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
 		r2, _ := rule.NewBoolRuleset(rule.New(rule.True(), rule.ReturnsBool(true)))
-		l := []store.Event{
-			{Type: store.PutEvent, Path: "a", Ruleset: r1},
-			{Type: store.PutEvent, Path: "b", Ruleset: r2},
-			{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+		l := store.Events{
+			Events: []store.Event{
+				{Type: store.PutEvent, Path: "a", Ruleset: r1},
+				{Type: store.PutEvent, Path: "b", Ruleset: r2},
+				{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+			},
+			Revision: "rev",
 		}
 
-		call := func(t *testing.T, url string, code int, l []store.Event, err error) {
+		call := func(t *testing.T, url string, code int, es *store.Events, err error) {
 			t.Helper()
 
-			s.WatchFn = func(context.Context, string) ([]store.Event, error) {
-				return l, err
+			s.WatchFn = func(context.Context, string, string) (*store.Events, error) {
+				return es, err
 			}
 			defer func() { s.WatchFn = nil }()
 
@@ -310,22 +316,26 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res []store.Event
+				var res store.Events
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l), len(res))
-				for i := range l {
-					require.Equal(t, l[i], res[i])
+				require.Equal(t, len(l.Events), len(res.Events))
+				for i := range l.Events {
+					require.Equal(t, l.Events[i], res.Events[i])
 				}
 			}
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, l, nil)
+			call(t, "/rulesets/?watch", http.StatusOK, &l, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusOK, l[:1], nil)
+			call(t, "/rulesets/a?watch", http.StatusOK, &l, nil)
+		})
+
+		t.Run("WithRevision", func(t *testing.T) {
+			call(t, "/rulesets/a?watch&revision=somerev", http.StatusOK, &l, nil)
 		})
 
 		t.Run("Timeout", func(t *testing.T) {

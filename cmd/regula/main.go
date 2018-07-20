@@ -98,14 +98,21 @@ func etcdClient(endpoints string) *clientv3.Client {
 }
 
 func createServer(cli *clientv3.Client, namespace string, store *etcd.Store, logger zerolog.Logger) *http.Server {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthCheckHandler(cli, namespace, logger))
-	mux.Handle("/", server.NewHandler(store, server.Config{
+	mux.Handle("/", server.NewHandler(ctx, store, server.Config{
 		Logger: &logger,
 	}))
-	return &http.Server{
+	srv := http.Server{
 		Handler: mux,
 	}
+
+	// cancel context on shutdown to stop long running operations like watches.
+	srv.RegisterOnShutdown(cancel)
+
+	return &srv
 }
 
 func healthCheckHandler(cli *clientv3.Client, namespace string, logger zerolog.Logger) http.Handler {
@@ -150,6 +157,6 @@ func runServer(srv *http.Server, addr string, logger zerolog.Logger) {
 
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error().Err(err).Msg("failed to shutdown server gracefully")
 	}
 }

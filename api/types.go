@@ -36,6 +36,12 @@ type Ruleset struct {
 	Ruleset *rule.Ruleset `json:"ruleset"`
 }
 
+// Rulesets holds a list of rulesets.
+type Rulesets struct {
+	Rulesets []Ruleset `json:"rulesets"`
+	Revision string    `json:"revision"`
+}
+
 // List of possible events executed against a ruleset.
 const (
 	PutEvent    = "PUT"
@@ -46,5 +52,12 @@ const (
 type Event struct {
 	Type    string        `json:"type"`
 	Path    string        `json:"path"`
+	Version string        `json:"version"`
 	Ruleset *rule.Ruleset `json:"ruleset"`
+}
+
+// Events holds a list of events occured on a group of rulesets.
+type Events struct {
+	Events   []Event `json:"events"`
+	Revision string  `json:"revision"`
 }

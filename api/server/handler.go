@@ -14,10 +14,6 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
-const (
-	timeout = 5 * time.Second
-)
-
 // HTTP errors
 var (
 	errInternal = errors.New("internal_error")
@@ -30,7 +26,7 @@ type Config struct {
 }
 
 // NewHandler creates an http handler to serve the rules engine API.
-func NewHandler(store store.Store, cfg Config) http.Handler {
+func NewHandler(ctx context.Context, store store.Store, cfg Config) http.Handler {
 	s := service{
 		store: store,
 	}
@@ -44,6 +40,7 @@ func NewHandler(store store.Store, cfg Config) http.Handler {
 	rs := rulesetService{
 		service:      &s,
 		watchTimeout: 60 * time.Second,
+		timeout:      5 * time.Second,
 	}
 
 	// router
@@ -60,7 +57,7 @@ func NewHandler(store store.Store, cfg Config) http.Handler {
 				Int("status", status).
 				Int("size", size).
 				Dur("duration", duration).
-				Msg("")
+				Msg("request received")
 		}),
 		hlog.RemoteAddrHandler("ip"),
 		hlog.UserAgentHandler("user_agent"),
@@ -71,11 +68,6 @@ func NewHandler(store store.Store, cfg Config) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// setting request timeout
-		// handlers are responsible for using or ignoring it.
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
 		// playing the middleware chain
 		var cur http.Handler
 		for i := len(chain) - 1; i >= 0; i-- {

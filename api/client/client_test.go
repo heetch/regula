@@ -3,12 +3,16 @@ package client_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/heetch/regula/rule"
+	"github.com/rs/zerolog"
 
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
@@ -27,7 +31,7 @@ func ExampleClient_ListRulesets() {
 		log.Fatal(err)
 	}
 
-	for _, e := range list {
+	for _, e := range list.Rulesets {
 		e.Ruleset.Eval(nil)
 	}
 }
@@ -62,6 +66,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		_, err = cli.ListRulesets(context.Background(), "")
 		aerr := err.(*api.Error)
@@ -74,16 +79,17 @@ func TestClient(t *testing.T) {
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
 			assert.Contains(t, r.URL.Query(), "list")
 			assert.Equal(t, "/rulesets/prefix", r.URL.Path)
-			fmt.Fprintf(w, `[{"path": "a"}]`)
+			fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
 		}))
 		defer ts.Close()
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		rs, err := cli.ListRulesets(context.Background(), "prefix")
 		require.NoError(t, err)
-		require.Len(t, rs, 1)
+		require.Len(t, rs.Rulesets, 1)
 	})
 
 	t.Run("EvalRuleset", func(t *testing.T) {
@@ -99,6 +105,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		p := map[string]string{
 			"foo": "bar",
@@ -126,6 +133,7 @@ func TestClient(t *testing.T) {
 
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
 
 		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
 		require.NoError(t, err)
@@ -134,5 +142,99 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)
+	})
+
+	t.Run("WatchRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"events": [{"type": "PUT", "path": "a"}], "revision": "rev"}`)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		evs := <-ch
+		require.NoError(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/NotFound", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		evs := <-ch
+		require.Error(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/Errors", func(t *testing.T) {
+		statuses := []int{
+			http.StatusRequestTimeout,
+			http.StatusInternalServerError,
+			http.StatusBadRequest,
+		}
+
+		for _, status := range statuses {
+			var i int32
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if atomic.AddInt32(&i, 1) > 3 {
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+
+				w.WriteHeader(status)
+			}))
+			defer ts.Close()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			cli, err := client.New(ts.URL)
+			require.NoError(t, err)
+			cli.Logger = zerolog.New(ioutil.Discard)
+			cli.WatchDelay = 1 * time.Millisecond
+
+			ch := cli.WatchRulesets(ctx, "a")
+			evs := <-ch
+			require.NoError(t, evs.Err)
+		}
+	})
+
+	t.Run("WatchRuleset/Cancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case <-ctx.Done():
+				return
+			}
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		cancel()
+		evs := <-ch
+		require.Zero(t, evs)
 	})
 }

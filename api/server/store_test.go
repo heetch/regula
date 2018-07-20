@@ -11,18 +11,18 @@ var _ store.Store = new(mockStore)
 
 type mockStore struct {
 	ListCount         int
-	ListFn            func(context.Context, string) ([]store.RulesetEntry, error)
+	ListFn            func(context.Context, string) (*store.RulesetEntries, error)
 	LatestCount       int
 	LatestFn          func(context.Context, string) (*store.RulesetEntry, error)
 	OneByVersionCount int
 	OneByVersionFn    func(context.Context, string, string) (*store.RulesetEntry, error)
 	WatchCount        int
-	WatchFn           func(context.Context, string) ([]store.Event, error)
+	WatchFn           func(context.Context, string, string) (*store.Events, error)
 	PutCount          int
 	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
 }
 
-func (s *mockStore) List(ctx context.Context, prefix string) ([]store.RulesetEntry, error) {
+func (s *mockStore) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
@@ -50,11 +50,11 @@ func (s *mockStore) OneByVersion(ctx context.Context, path, version string) (*st
 	return nil, nil
 }
 
-func (s *mockStore) Watch(ctx context.Context, prefix string) ([]store.Event, error) {
+func (s *mockStore) Watch(ctx context.Context, prefix, revision string) (*store.Events, error) {
 	s.WatchCount++
 
 	if s.WatchFn != nil {
-		return s.WatchFn(ctx, prefix)
+		return s.WatchFn(ctx, prefix, revision)
 	}
 
 	return nil, nil
