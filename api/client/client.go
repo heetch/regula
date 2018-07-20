@@ -173,6 +173,7 @@ func (c *Client) WatchRulesets(ctx context.Context, prefix string) <-chan WatchR
 						fallthrough
 					case context.DeadlineExceeded:
 						c.Logger.Debug().Msg("watch context done")
+						return
 					default:
 						c.Logger.Error().Err(err).Msg("watch request failed")
 					}

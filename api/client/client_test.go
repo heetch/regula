@@ -215,4 +215,26 @@ func TestClient(t *testing.T) {
 			require.NoError(t, evs.Err)
 		}
 	})
+
+	t.Run("WatchRuleset/Cancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case <-ctx.Done():
+				return
+			}
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.WatchRulesets(ctx, "a")
+		cancel()
+		evs := <-ch
+		require.Zero(t, evs)
+	})
 }
