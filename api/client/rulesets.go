@@ -35,13 +35,13 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets
 }
 
 // Eval evaluates the given ruleset with the given params.
-// It implements the regula.Evaluator interface.
+// It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
 func (s *RulesetService) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
 	return s.EvalVersion(ctx, path, "", params)
 }
 
 // EvalVersion evaluates the given ruleset version with the given params.
-// It implements the regula.Evaluator interface.
+// It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
 func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
 	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", path), nil)
 	if err != nil {
@@ -97,14 +97,14 @@ type WatchResponse struct {
 }
 
 // Watch watchs the given path for changes and sends the events in the returned channel.
+// If revision is empty it will start to watch for changes occuring from the moment the request is performed,
+// otherwise it will watch for any changes occured from the given revision.
 // The given context must be used to stop the watcher.
-func (s *RulesetService) Watch(ctx context.Context, prefix string) <-chan WatchResponse {
+func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) <-chan WatchResponse {
 	ch := make(chan WatchResponse)
 
 	go func() {
 		defer close(ch)
-
-		var revision string
 
 		for {
 			select {

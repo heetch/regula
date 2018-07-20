@@ -174,7 +174,29 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.Rulesets.Watch(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
+		evs := <-ch
+		require.NoError(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/Revision", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "rev", r.URL.Query().Get("revision"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"events": [{"type": "PUT", "path": "a"}], "revision": "rev"}`)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.Rulesets.Watch(ctx, "a", "rev")
 		evs := <-ch
 		require.NoError(t, evs.Err)
 	})
@@ -192,7 +214,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.Rulesets.Watch(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
 		evs := <-ch
 		require.Error(t, evs.Err)
 	})
@@ -224,7 +246,7 @@ func TestClient(t *testing.T) {
 			cli.Logger = zerolog.New(ioutil.Discard)
 			cli.WatchDelay = 1 * time.Millisecond
 
-			ch := cli.Rulesets.Watch(ctx, "a")
+			ch := cli.Rulesets.Watch(ctx, "a", "")
 			evs := <-ch
 			require.NoError(t, evs.Err)
 		}
@@ -246,7 +268,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.Rulesets.Watch(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
 		cancel()
 		evs := <-ch
 		require.Zero(t, evs)
