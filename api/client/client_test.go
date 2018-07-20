@@ -19,6 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var ev regula.Evaluator = new(client.RulesetService)
+
 func ExampleRulesetService_List() {
 	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
@@ -41,18 +43,36 @@ func ExampleRulesetService_Eval() {
 		log.Fatal(err)
 	}
 
-	p := map[string]string{
+	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
 		"foo": "bar",
-		"baz": "42",
-	}
-
-	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", p)
+		"baz": int64(42),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(resp.Data)
-	fmt.Println(resp.Type)
+	fmt.Println(resp.Value.Data)
+	fmt.Println(resp.Value.Type)
+	fmt.Println(resp.Version)
+}
+
+func ExampleRulesetService_EvalVersion() {
+	c, err := client.New("http://127.0.0.1:5331")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := c.Rulesets.EvalVersion(context.Background(), "path/to/ruleset", "xyzabc", regula.Params{
+		"foo": "bar",
+		"baz": int64(42),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resp.Value.Data)
+	fmt.Println(resp.Value.Type)
+	fmt.Println(resp.Version)
 }
 
 func TestClient(t *testing.T) {
@@ -98,7 +118,7 @@ func TestClient(t *testing.T) {
 			assert.Contains(t, r.URL.Query(), "eval")
 			assert.Contains(t, r.URL.Query(), "foo")
 			assert.Equal(t, "/rulesets/path/to/ruleset", r.URL.Path)
-			fmt.Fprintf(w, `{"data": "baz", "type": "string"}]`)
+			fmt.Fprintf(w, `{"value": {"data": "baz", "type": "string", "kind": "value"}, "version": "1234"}`)
 		}))
 		defer ts.Close()
 
@@ -106,16 +126,11 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		p := map[string]string{
+		exp := regula.EvalResult{Value: regula.StringValue("baz"), Version: "1234"}
+
+		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
 			"foo": "bar",
-		}
-
-		exp := api.Value{
-			Data: "baz",
-			Type: "string",
-		}
-
-		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", p)
+		})
 		require.NoError(t, err)
 		require.Equal(t, &exp, resp)
 	})

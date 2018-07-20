@@ -7,11 +7,10 @@ import (
 	"github.com/heetch/regula"
 )
 
-// Value is the response sent to the client after an eval.
-type Value struct {
-	Data    string `json:"data"`
-	Type    string `json:"type"`
-	Version string `json:"version"`
+// EvalResult is the response sent to the client after an eval.
+type EvalResult struct {
+	Value   *regula.Value `json:"value"`
+	Version string        `json:"version"`
 }
 
 // Error is a generic error response.

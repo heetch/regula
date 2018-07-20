@@ -35,8 +35,14 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets
 }
 
 // Eval evaluates the given ruleset with the given params.
-// Each parameter must be encoded to string before being passed to the params map.
-func (s *RulesetService) Eval(ctx context.Context, path string, params map[string]string) (*api.Value, error) {
+// It implements the regula.Evaluator interface.
+func (s *RulesetService) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+	return s.EvalVersion(ctx, path, "", params)
+}
+
+// EvalVersion evaluates the given ruleset version with the given params.
+// It implements the regula.Evaluator interface.
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
 	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", path), nil)
 	if err != nil {
 		return nil, err
@@ -44,15 +50,30 @@ func (s *RulesetService) Eval(ctx context.Context, path string, params map[strin
 
 	q := req.URL.Query()
 	q.Add("eval", "")
-	for k, v := range params {
+	for _, k := range params.Keys() {
+		v, err := params.EncodeKey(k)
+		if err != nil {
+			return nil, err
+		}
+
 		q.Add(k, v)
+	}
+	if version != "" {
+		q.Add("version", version)
 	}
 	req.URL.RawQuery = q.Encode()
 
-	var resp api.Value
+	var resp api.EvalResult
 
 	_, err = s.client.do(ctx, req, &resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &regula.EvalResult{
+		Value:   resp.Value,
+		Version: resp.Version,
+	}, nil
 }
 
 // Put creates a ruleset version on the given path.

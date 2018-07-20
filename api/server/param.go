@@ -64,3 +64,23 @@ func (p params) GetFloat64(key string) (float64, error) {
 
 	return f, err
 }
+
+// Keys returns the list of all the keys.
+func (p params) Keys() []string {
+	keys := make([]string, 0, len(p))
+	for k := range p {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+// EncodeKey returns the string representation of the given key.
+func (p params) EncodeKey(key string) (string, error) {
+	v, ok := p[key]
+	if !ok {
+		return "", regula.ErrParamNotFound
+	}
+
+	return v, nil
+}

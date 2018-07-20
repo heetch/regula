@@ -87,7 +87,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.Value) {
+		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.EvalResult) {
 			t.Helper()
 
 			s.LatestFn = func(context.Context, string) (*store.RulesetEntry, error) {
@@ -107,7 +107,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res api.Value
+				var res api.EvalResult
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.EqualValues(t, exp, &res)
@@ -129,9 +129,8 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Value{
-				Data: "success",
-				Type: "string",
+			exp := &api.EvalResult{
+				Value: regula.StringValue("success"),
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusOK, &rse, exp)
@@ -154,9 +153,8 @@ func TestAPI(t *testing.T) {
 				Version: "123",
 			}
 
-			exp := &api.Value{
-				Data:    "success",
-				Type:    "string",
+			exp := &api.EvalResult{
+				Value:   regula.StringValue("success"),
 				Version: "123",
 			}
 
@@ -179,9 +177,8 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Value{
-				Data: "true",
-				Type: "bool",
+			exp := &api.EvalResult{
+				Value: regula.BoolValue(true),
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&foo=true", http.StatusOK, &rse, exp)
@@ -202,9 +199,8 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Value{
-				Data: "42",
-				Type: "int64",
+			exp := &api.EvalResult{
+				Value: regula.Int64Value(42),
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42", http.StatusOK, &rse, exp)
@@ -225,9 +221,8 @@ func TestAPI(t *testing.T) {
 				Ruleset: rs,
 			}
 
-			exp := &api.Value{
-				Data: "42.420000",
-				Type: "float64",
+			exp := &api.EvalResult{
+				Value: regula.Float64Value(42.42),
 			}
 
 			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42.42", http.StatusOK, &rse, exp)

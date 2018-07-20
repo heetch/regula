@@ -115,9 +115,8 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 		return
 	}
 
-	resp := api.Value{
-		Data:    v.Data,
-		Type:    v.Type,
+	resp := api.EvalResult{
+		Value:   v,
 		Version: e.Version,
 	}
 

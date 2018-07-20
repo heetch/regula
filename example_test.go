@@ -254,35 +254,42 @@ func init() {
 	var buf regula.RulesetBuffer
 	ev = &buf
 
-	buf.AddRuleset("/path/to/string/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
 		},
 	})
 
-	buf.AddRuleset("/path/to/int64/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Type: "string",
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
+		},
+	})
+
+	buf.AddRuleset("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "int64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/float64/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "float64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsFloat64(3.14)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/bool/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "bool",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsBool(true)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/duration/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
@@ -293,7 +300,7 @@ func init() {
 func ExampleEngine() {
 	engine := regula.NewEngine(ev)
 
-	_, err := engine.GetString(context.Background(), "/a/b/c", regula.Params{
+	str, res, err := engine.GetString(context.Background(), "/a/b/c", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -310,12 +317,18 @@ func ExampleEngine() {
 			// something unexpected happened
 		}
 	}
+
+	fmt.Println(str)
+	fmt.Println(res.Version)
+	// Output
+	// some-string
+	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetBool() {
 	engine := regula.NewEngine(ev)
 
-	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
+	b, res, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -325,13 +338,16 @@ func ExampleEngine_GetBool() {
 	}
 
 	fmt.Println(b)
-	// Output: true
+	fmt.Println(res.Version)
+	// Output
+	// true
+	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetString() {
 	engine := regula.NewEngine(ev)
 
-	s, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
+	s, res, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -341,13 +357,16 @@ func ExampleEngine_GetString() {
 	}
 
 	fmt.Println(s)
-	// Output: some-string
+	fmt.Println(res.Version)
+	// Output
+	// some-string
+	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetInt64() {
 	engine := regula.NewEngine(ev)
 
-	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
+	i, res, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -356,14 +375,17 @@ func ExampleEngine_GetInt64() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(s)
-	// Output: 10
+	fmt.Println(i)
+	fmt.Println(res.Version)
+	// Output
+	// 10
+	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetFloat64() {
 	engine := regula.NewEngine(ev)
 
-	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
+	f, res, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -373,7 +395,10 @@ func ExampleEngine_GetFloat64() {
 	}
 
 	fmt.Println(f)
-	// Output: 3.14
+	fmt.Println(res.Version)
+	// Output
+	// 3.14
+	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_LoadStruct() {

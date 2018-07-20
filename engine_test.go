@@ -72,44 +72,46 @@ func TestEngine(t *testing.T) {
 	e := regula.NewEngine(&buf)
 
 	t.Run("LowLevel", func(t *testing.T) {
-		str, err := e.GetString(ctx, "match-string-a", regula.Params{
+		str, res, err := e.GetString(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
 		require.Equal(t, "matched a v2", str)
+		require.Equal(t, "2", res.Version)
 
-		str, err = e.GetString(ctx, "match-string-a", regula.Params{
+		str, res, err = e.GetString(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
 		}, regula.Version("1"))
 		require.NoError(t, err)
 		require.Equal(t, "matched a v1", str)
+		require.Equal(t, "1", res.Version)
 
-		str, err = e.GetString(ctx, "match-string-b", nil)
+		str, _, err = e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
 		require.Equal(t, "matched b", str)
 
-		b, err := e.GetBool(ctx, "match-bool", nil)
+		b, _, err := e.GetBool(ctx, "match-bool", nil)
 		require.NoError(t, err)
 		require.True(t, b)
 
-		i, err := e.GetInt64(ctx, "match-int64", nil)
+		i, _, err := e.GetInt64(ctx, "match-int64", nil)
 		require.NoError(t, err)
 		require.Equal(t, int64(-10), i)
 
-		f, err := e.GetFloat64(ctx, "match-float64", nil)
+		f, _, err := e.GetFloat64(ctx, "match-float64", nil)
 		require.NoError(t, err)
 		require.Equal(t, -3.14, f)
 
-		_, err = e.GetString(ctx, "match-bool", nil)
+		_, _, err = e.GetString(ctx, "match-bool", nil)
 		require.Equal(t, regula.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "type-mismatch", nil)
+		_, _, err = e.GetString(ctx, "type-mismatch", nil)
 		require.Equal(t, regula.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "no-match", nil)
+		_, _, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, regula.ErrNoMatch, err)
 
-		_, err = e.GetString(ctx, "not-found", nil)
+		_, _, err = e.GetString(ctx, "not-found", nil)
 		require.Equal(t, regula.ErrRulesetNotFound, err)
 	})
 

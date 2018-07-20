@@ -1,5 +1,11 @@
 package regula
 
+import (
+	"strconv"
+
+	"github.com/pkg/errors"
+)
+
 // A ParamGetter is a set of parameters passed on rule evaluation.
 // It provides type safe methods to query params.
 type ParamGetter interface {
@@ -7,6 +13,8 @@ type ParamGetter interface {
 	GetBool(key string) (bool, error)
 	GetInt64(key string) (int64, error)
 	GetFloat64(key string) (float64, error)
+	Keys() []string
+	EncodeKey(key string) (string, error)
 }
 
 // Params is a map based ParamGetter implementation.
@@ -70,4 +78,35 @@ func (p Params) GetFloat64(key string) (float64, error) {
 	}
 
 	return f, nil
+}
+
+// Keys returns the list of all the keys.
+func (p Params) Keys() []string {
+	keys := make([]string, 0, len(p))
+	for k := range p {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+// EncodeKey returns the string representation of the given key.
+func (p Params) EncodeKey(key string) (string, error) {
+	v, ok := p[key]
+	if !ok {
+		return "", ErrParamNotFound
+	}
+
+	switch t := v.(type) {
+	case string:
+		return t, nil
+	case int64:
+		return strconv.FormatInt(t, 10), nil
+	case float64:
+		return strconv.FormatFloat(t, 'f', 6, 64), nil
+	case bool:
+		return strconv.FormatBool(t), nil
+	default:
+		return "", errors.Errorf("type %t is not supported", t)
+	}
 }
