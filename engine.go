@@ -10,67 +10,53 @@ import (
 )
 
 // Engine is used to evaluate a ruleset against a group of parameters.
-// It provides a list of type safe methods to evaluate ruleset and always return the expected type to the caller.
-// The engine is stateless and relies on the given getter to query rulesets.
+// It provides a list of type safe methods to evaluate a ruleset and always returns the expected type to the caller.
+// The engine is stateless and relies on the given evaluator to evaluate a ruleset.
 type Engine struct {
-	getter Getter
+	evaluator Evaluator
 }
 
-// NewEngine creates an Engine using the given getter.
-func NewEngine(getter Getter) *Engine {
+// NewEngine creates an Engine using the given evaluator.
+func NewEngine(evaluator Evaluator) *Engine {
 	return &Engine{
-		getter: getter,
+		evaluator: evaluator,
 	}
 }
 
-// Get evaluates the ruleset associated with key and returns the result.
-func (e *Engine) get(ctx context.Context, typ, key string, params ParamGetter, opts ...Option) (*Value, error) {
+// Get evaluates a ruleset and returns the result.
+func (e *Engine) get(ctx context.Context, typ, path string, params ParamGetter, opts ...Option) (*Value, error) {
 	var cfg engineConfig
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
 	var (
-		ruleset *Ruleset
-		err     error
+		value *Value
+		err   error
 	)
 
 	if cfg.Version != "" {
-		ruleset, err = e.getter.GetVersion(ctx, key, cfg.Version)
+		value, err = e.evaluator.EvalVersion(ctx, path, cfg.Version, params)
 	} else {
-		ruleset, err = e.getter.Get(ctx, key)
+		value, err = e.evaluator.Eval(ctx, path, params)
 	}
 	if err != nil {
-		if err == ErrRulesetNotFound {
+		if err == ErrRulesetNotFound || err == ErrNoMatch {
 			return nil, err
 		}
-
-		return nil, errors.Wrap(err, "failed to get ruleset")
-	}
-
-	if ruleset.Type != typ {
-		return nil, ErrTypeMismatch
-	}
-
-	res, err := ruleset.Eval(params)
-	if err != nil {
-		if err == ErrNoMatch {
-			return nil, err
-		}
-
 		return nil, errors.Wrap(err, "failed to evaluate ruleset")
 	}
 
-	if res.Type != typ {
+	if value.Type != typ {
 		return nil, ErrTypeMismatch
 	}
 
-	return res, nil
+	return value, nil
 }
 
-// GetString evaluates the ruleset associated with key and returns the result as a string.
-func (e *Engine) GetString(ctx context.Context, key string, params ParamGetter, opts ...Option) (string, error) {
-	res, err := e.get(ctx, "string", key, params, opts...)
+// GetString evaluates a ruleset and returns the result as a string.
+func (e *Engine) GetString(ctx context.Context, path string, params ParamGetter, opts ...Option) (string, error) {
+	res, err := e.get(ctx, "string", path, params, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -78,9 +64,9 @@ func (e *Engine) GetString(ctx context.Context, key string, params ParamGetter, 
 	return res.Data, nil
 }
 
-// GetBool evaluates the ruleset associated with key and returns the result as a bool.
-func (e *Engine) GetBool(ctx context.Context, key string, params ParamGetter, opts ...Option) (bool, error) {
-	res, err := e.get(ctx, "bool", key, params, opts...)
+// GetBool evaluates a ruleset and returns the result as a bool.
+func (e *Engine) GetBool(ctx context.Context, path string, params ParamGetter, opts ...Option) (bool, error) {
+	res, err := e.get(ctx, "bool", path, params, opts...)
 	if err != nil {
 		return false, err
 	}
@@ -88,9 +74,9 @@ func (e *Engine) GetBool(ctx context.Context, key string, params ParamGetter, op
 	return strconv.ParseBool(res.Data)
 }
 
-// GetInt64 evaluates the ruleset associated with key and returns the result as an int64.
-func (e *Engine) GetInt64(ctx context.Context, key string, params ParamGetter, opts ...Option) (int64, error) {
-	res, err := e.get(ctx, "int64", key, params, opts...)
+// GetInt64 evaluates a ruleset and returns the result as an int64.
+func (e *Engine) GetInt64(ctx context.Context, path string, params ParamGetter, opts ...Option) (int64, error) {
+	res, err := e.get(ctx, "int64", path, params, opts...)
 	if err != nil {
 		return 0, err
 	}
@@ -98,9 +84,9 @@ func (e *Engine) GetInt64(ctx context.Context, key string, params ParamGetter, o
 	return strconv.ParseInt(res.Data, 10, 64)
 }
 
-// GetFloat64 evaluates the ruleset associated with key and returns the result as a float64.
-func (e *Engine) GetFloat64(ctx context.Context, key string, params ParamGetter, opts ...Option) (float64, error) {
-	res, err := e.get(ctx, "float64", key, params, opts...)
+// GetFloat64 evaluates a ruleset and returns the result as a float64.
+func (e *Engine) GetFloat64(ctx context.Context, path string, params ParamGetter, opts ...Option) (float64, error) {
+	res, err := e.get(ctx, "float64", path, params, opts...)
 	if err != nil {
 		return 0, err
 	}
@@ -111,18 +97,13 @@ func (e *Engine) GetFloat64(ctx context.Context, key string, params ParamGetter,
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
 // tagged with the "ruleset" struct tag.
 func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params ParamGetter) error {
-	b := backend.Func("regula", func(ctx context.Context, key string) ([]byte, error) {
-		ruleset, err := e.getter.Get(ctx, key)
+	b := backend.Func("regula", func(ctx context.Context, path string) ([]byte, error) {
+		val, err := e.evaluator.Eval(ctx, path, params)
 		if err != nil {
 			if err == ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
 			}
 
-			return nil, errors.Wrap(err, "failed to get ruleset")
-		}
-
-		val, err := ruleset.Eval(params)
-		if err != nil {
 			return nil, err
 		}
 
@@ -149,19 +130,19 @@ func Version(version string) Option {
 	}
 }
 
-// A Getter provides methods to fetch rulesets from any location.
+// An Evaluator provides methods to evaluate rulesets from any location.
 // Long running implementations must listen to the given context for timeout and cancelation.
-type Getter interface {
-	// Get returns the ruleset associated with the given key.
-	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.
-	Get(ctx context.Context, key string) (*Ruleset, error)
-	// GetVersion returns the ruleset associated with the given key and version.
-	// If no ruleset is found for a given key, the implementation must return ErrRulesetNotFound.
-	GetVersion(ctx context.Context, key string, version string) (*Ruleset, error)
+type Evaluator interface {
+	// Eval evaluates a ruleset using the given params.
+	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
+	Eval(ctx context.Context, path string, params ParamGetter) (*Value, error)
+	// EvalVersion evaluates a specific version of a ruleset using the given params.
+	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
+	EvalVersion(ctx context.Context, path string, version string, params ParamGetter) (*Value, error)
 }
 
-// MemoryGetter is an in-memory getter which stores rulesets in a map.
-type MemoryGetter struct {
+// RulesetBuffer can hold a group of rulesets in memory and can be used as an evaluator.
+type RulesetBuffer struct {
 	rulesets map[string][]*rulesetInfo
 }
 
@@ -172,42 +153,42 @@ type rulesetInfo struct {
 
 // AddRuleset adds the given ruleset version to a list for a specific path.
 // The last added ruleset is treated as the latest version.
-func (m *MemoryGetter) AddRuleset(path, version string, r *Ruleset) {
-	if m.rulesets == nil {
-		m.rulesets = make(map[string][]*rulesetInfo)
+func (b *RulesetBuffer) AddRuleset(path, version string, r *Ruleset) {
+	if b.rulesets == nil {
+		b.rulesets = make(map[string][]*rulesetInfo)
 	}
 
-	m.rulesets[path] = append(m.rulesets[path], &rulesetInfo{path, version, r})
+	b.rulesets[path] = append(b.rulesets[path], &rulesetInfo{path, version, r})
 }
 
-// Get returns the latest added ruleset from memory or returns ErrRulesetNotFound if not found.
-func (m *MemoryGetter) Get(ctx context.Context, path string) (*Ruleset, error) {
-	if m.rulesets == nil {
-		m.rulesets = make(map[string][]*rulesetInfo)
+// Eval evaluates the latest added ruleset or returns ErrRulesetNotFound if not found.
+func (b *RulesetBuffer) Eval(ctx context.Context, path string, params ParamGetter) (*Value, error) {
+	if b.rulesets == nil {
+		b.rulesets = make(map[string][]*rulesetInfo)
 	}
 
-	l, ok := m.rulesets[path]
+	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
 		return nil, ErrRulesetNotFound
 	}
 
-	return l[len(l)-1].r, nil
+	return l[len(l)-1].r.Eval(params)
 }
 
-// GetVersion returns the selected ruleset from memory using the given path and version or returns ErrRulesetNotFound.
-func (m *MemoryGetter) GetVersion(ctx context.Context, path, version string) (*Ruleset, error) {
-	if m.rulesets == nil {
-		m.rulesets = make(map[string][]*rulesetInfo)
+// EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
+func (b *RulesetBuffer) EvalVersion(ctx context.Context, path string, version string, params ParamGetter) (*Value, error) {
+	if b.rulesets == nil {
+		b.rulesets = make(map[string][]*rulesetInfo)
 	}
 
-	l, ok := m.rulesets[path]
+	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
 		return nil, ErrRulesetNotFound
 	}
 
 	for _, r := range l {
 		if r.version == version {
-			return r.r, nil
+			return r.r.Eval(params)
 		}
 	}
 

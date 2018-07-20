@@ -33,6 +33,7 @@ type Client struct {
 	baseURL    *url.URL
 	userAgent  string
 	httpClient *http.Client
+	// TODO add a rulesets client type that would implement the regula.Evaluator interface
 }
 
 // New creates an HTTP client that uses a base url to communicate with the api server.
@@ -271,20 +272,20 @@ func UserAgent(userAgent string) Option {
 	}
 }
 
-// NewGetter uses the given client to fetch all the rulesets from the server
-// and returns a Getter that holds the results in memory.
+// NewEvaluator uses the given client to fetch all the rulesets from the server
+// and returns an evaluator that holds the results in memory.
 // No subsequent round trips are performed after this function returns.
-func NewGetter(ctx context.Context, client *Client, prefix string) (*regula.MemoryGetter, error) {
+func NewEvaluator(ctx context.Context, client *Client, prefix string) (*regula.RulesetBuffer, error) {
 	ls, err := client.ListRulesets(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	var m regula.MemoryGetter
+	var buf regula.RulesetBuffer
 
 	for _, re := range ls.Rulesets {
-		m.AddRuleset(re.Path, re.Version, re.Ruleset)
+		buf.AddRuleset(re.Path, re.Version, re.Ruleset)
 	}
 
-	return &m, nil
+	return &buf, nil
 }

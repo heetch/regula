@@ -12,64 +12,64 @@ import (
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	var m regula.MemoryGetter
+	var buf regula.RulesetBuffer
 
-	m.AddRuleset("match-string-a", "1", &regula.Ruleset{
+	buf.AddRuleset("match-string-a", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.ReturnsString("matched a v1")),
 		},
 	})
-	m.AddRuleset("match-string-a", "2", &regula.Ruleset{
+	buf.AddRuleset("match-string-a", "2", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.ReturnsString("matched a v2")),
 		},
 	})
-	m.AddRuleset("match-string-b", "1", &regula.Ruleset{
+	buf.AddRuleset("match-string-b", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("matched b")),
 		},
 	})
-	m.AddRuleset("type-mismatch", "1", &regula.Ruleset{
+	buf.AddRuleset("type-mismatch", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), &regula.Value{Type: "int", Data: "5"}),
 		},
 	})
-	m.AddRuleset("no-match", "1", &regula.Ruleset{
+	buf.AddRuleset("no-match", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.Eq(regula.StringValue("foo"), regula.StringValue("bar")), regula.ReturnsString("matched d")),
 		},
 	})
-	m.AddRuleset("match-bool", "1", &regula.Ruleset{
+	buf.AddRuleset("match-bool", "1", &regula.Ruleset{
 		Type: "bool",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), &regula.Value{Type: "bool", Data: "true"}),
 		},
 	})
-	m.AddRuleset("match-int64", "1", &regula.Ruleset{
+	buf.AddRuleset("match-int64", "1", &regula.Ruleset{
 		Type: "int64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), &regula.Value{Type: "int64", Data: "-10"}),
 		},
 	})
-	m.AddRuleset("match-float64", "1", &regula.Ruleset{
+	buf.AddRuleset("match-float64", "1", &regula.Ruleset{
 		Type: "float64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), &regula.Value{Type: "float64", Data: "-3.14"}),
 		},
 	})
-	m.AddRuleset("match-duration", "1", &regula.Ruleset{
+	buf.AddRuleset("match-duration", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
 		},
 	})
 
-	e := regula.NewEngine(&m)
+	e := regula.NewEngine(&buf)
 
 	t.Run("LowLevel", func(t *testing.T) {
 		str, err := e.GetString(ctx, "match-string-a", regula.Params{

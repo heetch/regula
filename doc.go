@@ -39,13 +39,13 @@ All the rules of a ruleset always return the same type.
 	})
 
 To query and evaluate rulesets with a set of parameters, the engine must be used.
-An engine takes a getter which is responsible of serving rulesets on demand, the engine then evaluates the returned ruleset to return a result.
+An engine takes an evaluator which is responsible of evaluating rulesets on demand and return a value, the engine then parses the value into a type safe result
+and return it to the caller.
 
-While the getter is stateful and can hold rulesets in-memory, fetch them over the network or read them from a file,
-the engine is stateless and simply queries the getter for rulesets. The rulesets are then evaluated to a type safe result and
-returned to the caller.
+While the evaluator is stateful and can hold rulesets in-memory, fetch them over the network or read them from a file,
+the engine is stateless and simply deleguates the evaluation to the evaluator.
 
-	engine := NewEngine(getter)
+	engine := NewEngine(evaluator)
 
 	s, err := engine.GetString("path/to/string/ruleset/key", rule.Params{
 		"user-id": 123,

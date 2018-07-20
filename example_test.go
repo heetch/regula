@@ -248,41 +248,41 @@ func ExampleRuleset() {
 	// second rule matched
 }
 
-var gt regula.Getter
+var ev regula.Evaluator
 
 func init() {
-	var m regula.MemoryGetter
-	gt = &m
+	var buf regula.RulesetBuffer
+	ev = &buf
 
-	m.AddRuleset("/path/to/string/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/string/key", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
 		},
 	})
 
-	m.AddRuleset("/path/to/int64/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/int64/key", "1", &regula.Ruleset{
 		Type: "int64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
 		},
 	})
 
-	m.AddRuleset("/path/to/float64/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/float64/key", "1", &regula.Ruleset{
 		Type: "float64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsFloat64(3.14)),
 		},
 	})
 
-	m.AddRuleset("/path/to/bool/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/bool/key", "1", &regula.Ruleset{
 		Type: "bool",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsBool(true)),
 		},
 	})
 
-	m.AddRuleset("/path/to/duration/key", "1", &regula.Ruleset{
+	buf.AddRuleset("/path/to/duration/key", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
@@ -291,7 +291,7 @@ func init() {
 }
 
 func ExampleEngine() {
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	_, err := engine.GetString(context.Background(), "/a/b/c", regula.Params{
 		"product-id": "1234",
@@ -313,7 +313,7 @@ func ExampleEngine() {
 }
 
 func ExampleEngine_GetBool() {
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
 		"product-id": "1234",
@@ -329,7 +329,7 @@ func ExampleEngine_GetBool() {
 }
 
 func ExampleEngine_GetString() {
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	s, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
 		"product-id": "1234",
@@ -345,7 +345,7 @@ func ExampleEngine_GetString() {
 }
 
 func ExampleEngine_GetInt64() {
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
 		"product-id": "1234",
@@ -361,7 +361,7 @@ func ExampleEngine_GetInt64() {
 }
 
 func ExampleEngine_GetFloat64() {
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
 		"product-id": "1234",
@@ -385,7 +385,7 @@ func ExampleEngine_LoadStruct() {
 
 	var v Values
 
-	engine := regula.NewEngine(gt)
+	engine := regula.NewEngine(ev)
 
 	err := engine.LoadStruct(context.Background(), &v, regula.Params{
 		"product-id": "1234",
