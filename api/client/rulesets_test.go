@@ -75,7 +75,7 @@ func ExampleRulesetService_EvalVersion() {
 	fmt.Println(resp.Version)
 }
 
-func TestClient(t *testing.T) {
+func TestRulesetService(t *testing.T) {
 	t.Run("Error", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)

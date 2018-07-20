@@ -251,45 +251,45 @@ func ExampleRuleset() {
 var ev regula.Evaluator
 
 func init() {
-	var buf regula.RulesetBuffer
-	ev = &buf
+	buf := regula.NewRulesetBuffer()
+	ev = buf
 
-	buf.AddRuleset("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
 		},
 	})
 
-	buf.AddRuleset("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
 		},
 	})
 
-	buf.AddRuleset("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "int64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "float64",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsFloat64(3.14)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "bool",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsBool(true)),
 		},
 	})
 
-	buf.AddRuleset("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
 			regula.NewRule(regula.True(), regula.ReturnsString("3s")),

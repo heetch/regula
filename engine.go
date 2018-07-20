@@ -3,6 +3,7 @@ package regula
 import (
 	"context"
 	"strconv"
+	"sync"
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend"
@@ -12,6 +13,7 @@ import (
 // Engine is used to evaluate a ruleset against a group of parameters.
 // It provides a list of type safe methods to evaluate a ruleset and always returns the expected type to the caller.
 // The engine is stateless and relies on the given evaluator to evaluate a ruleset.
+// It is safe for concurrent use.
 type Engine struct {
 	evaluator Evaluator
 }
@@ -153,8 +155,17 @@ type EvalResult struct {
 }
 
 // RulesetBuffer can hold a group of rulesets in memory and can be used as an evaluator.
+// It is safe for concurrent use.
 type RulesetBuffer struct {
+	rw       sync.RWMutex
 	rulesets map[string][]*rulesetInfo
+}
+
+// NewRulesetBuffer creates a ready to use RulesetBuffer.
+func NewRulesetBuffer() *RulesetBuffer {
+	return &RulesetBuffer{
+		rulesets: make(map[string][]*rulesetInfo),
+	}
 }
 
 type rulesetInfo struct {
@@ -162,21 +173,44 @@ type rulesetInfo struct {
 	r             *Ruleset
 }
 
-// AddRuleset adds the given ruleset version to a list for a specific path.
+// Add adds the given ruleset version to a list for a specific path.
 // The last added ruleset is treated as the latest version.
-func (b *RulesetBuffer) AddRuleset(path, version string, r *Ruleset) {
-	if b.rulesets == nil {
-		b.rulesets = make(map[string][]*rulesetInfo)
+func (b *RulesetBuffer) Add(path, version string, r *Ruleset) {
+	b.rw.Lock()
+	b.rulesets[path] = append(b.rulesets[path], &rulesetInfo{path, version, r})
+	b.rw.Unlock()
+}
+
+// Latest returns the latest version of a ruleset.
+func (b *RulesetBuffer) Latest(path string) (*Ruleset, string, error) {
+	b.rw.RLock()
+	defer b.rw.RUnlock()
+
+	l, ok := b.rulesets[path]
+	if !ok || len(l) == 0 {
+		return nil, "", ErrRulesetNotFound
 	}
 
-	b.rulesets[path] = append(b.rulesets[path], &rulesetInfo{path, version, r})
+	return l[len(l)-1].r, l[len(l)-1].version, nil
+}
+
+// GetVersion returns a ruleset associated with the given path and version.
+func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
+	b.rw.RLock()
+	defer b.rw.RUnlock()
+
+	ri, err := b.getVersion(path, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return ri.r, nil
 }
 
 // Eval evaluates the latest added ruleset or returns ErrRulesetNotFound if not found.
 func (b *RulesetBuffer) Eval(ctx context.Context, path string, params ParamGetter) (*EvalResult, error) {
-	if b.rulesets == nil {
-		b.rulesets = make(map[string][]*rulesetInfo)
-	}
+	b.rw.RLock()
+	defer b.rw.RUnlock()
 
 	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
@@ -195,12 +229,7 @@ func (b *RulesetBuffer) Eval(ctx context.Context, path string, params ParamGette
 	}, nil
 }
 
-// EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) EvalVersion(ctx context.Context, path string, version string, params ParamGetter) (*EvalResult, error) {
-	if b.rulesets == nil {
-		b.rulesets = make(map[string][]*rulesetInfo)
-	}
-
+func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
 		return nil, ErrRulesetNotFound
@@ -208,17 +237,30 @@ func (b *RulesetBuffer) EvalVersion(ctx context.Context, path string, version st
 
 	for _, ri := range l {
 		if ri.version == version {
-			v, err := ri.r.Eval(params)
-			if err != nil {
-				return nil, err
-			}
-
-			return &EvalResult{
-				Value:   v,
-				Version: ri.version,
-			}, nil
+			return ri, nil
 		}
 	}
 
 	return nil, ErrRulesetNotFound
+}
+
+// EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
+func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params ParamGetter) (*EvalResult, error) {
+	b.rw.RLock()
+	defer b.rw.RUnlock()
+
+	ri, err := b.getVersion(path, version)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := ri.r.Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EvalResult{
+		Value:   v,
+		Version: ri.version,
+	}, nil
 }

@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/version"
 	"github.com/rs/zerolog"
@@ -19,14 +18,13 @@ import (
 
 const (
 	userAgent  = "RulesEngine/" + version.Version + " Go"
-	timeout    = 5 * time.Second
 	watchDelay = 1 * time.Second
 )
 
 // A Client manages communication with the Rules Engine API using HTTP.
 type Client struct {
 	Logger     zerolog.Logger
-	WatchDelay time.Duration // Time between failed watch requests. Defaults to 1s
+	WatchDelay time.Duration // Time between failed watch requests. Defaults to 1s.
 
 	baseURL    *url.URL
 	userAgent  string
@@ -145,22 +143,4 @@ func UserAgent(userAgent string) Option {
 		c.userAgent = userAgent
 		return nil
 	}
-}
-
-// NewEvaluator uses the given client to fetch all the rulesets from the server
-// and returns an evaluator that holds the results in memory.
-// No subsequent round trips are performed after this function returns.
-func NewEvaluator(ctx context.Context, client *Client, prefix string) (*regula.RulesetBuffer, error) {
-	ls, err := client.Rulesets.List(ctx, prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf regula.RulesetBuffer
-
-	for _, re := range ls.Rulesets {
-		buf.AddRuleset(re.Path, re.Version, re.Ruleset)
-	}
-
-	return &buf, nil
 }
