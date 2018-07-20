@@ -1,0 +1,146 @@
+package client
+
+import (
+	"context"
+	"net/http"
+	ppath "path"
+	"time"
+
+	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
+	"github.com/pkg/errors"
+)
+
+// RulesetService handles communication with the ruleset related
+// methods of the Regula API.
+type RulesetService struct {
+	client *Client
+}
+
+// List fetches all the rulesets starting with the given prefix.
+func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets, error) {
+	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("list", "")
+	req.URL.RawQuery = q.Encode()
+
+	var rl api.Rulesets
+
+	_, err = s.client.do(ctx, req, &rl)
+	return &rl, err
+}
+
+// Eval evaluates the given ruleset with the given params.
+// Each parameter must be encoded to string before being passed to the params map.
+func (s *RulesetService) Eval(ctx context.Context, path string, params map[string]string) (*api.Value, error) {
+	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", path), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("eval", "")
+	for k, v := range params {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	var resp api.Value
+
+	_, err = s.client.do(ctx, req, &resp)
+	return &resp, err
+}
+
+// Put creates a ruleset version on the given path.
+func (s *RulesetService) Put(ctx context.Context, path string, rs *regula.Ruleset) (*api.Ruleset, error) {
+	req, err := s.client.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp api.Ruleset
+
+	_, err = s.client.do(ctx, req, &resp)
+	return &resp, err
+}
+
+// WatchResponse contains a list of events occured on a group of rulesets.
+// If an error occurs during the watching, the Err field will be populated.
+type WatchResponse struct {
+	Events *api.Events
+	Err    error
+}
+
+// Watch watchs the given path for changes and sends the events in the returned channel.
+// The given context must be used to stop the watcher.
+func (s *RulesetService) Watch(ctx context.Context, prefix string) <-chan WatchResponse {
+	ch := make(chan WatchResponse)
+
+	go func() {
+		defer close(ch)
+
+		var revision string
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
+			if err != nil {
+				ch <- WatchResponse{Err: errors.Wrap(err, "failed to create watch request")}
+				return
+			}
+
+			q := req.URL.Query()
+			q.Add("watch", "")
+			if revision != "" {
+				q.Add("revision", revision)
+			}
+			req.URL.RawQuery = q.Encode()
+
+			var events api.Events
+			_, err = s.client.do(ctx, req, &events)
+			if err != nil {
+				if e, ok := err.(*api.Error); ok {
+					switch e.Response.StatusCode {
+					case http.StatusNotFound:
+						ch <- WatchResponse{Err: err}
+						return
+					case http.StatusRequestTimeout:
+						s.client.Logger.Debug().Err(err).Msg("watch request timed out")
+					case http.StatusInternalServerError:
+						s.client.Logger.Debug().Err(err).Msg("watch request failed: internal server error")
+					default:
+						s.client.Logger.Error().Err(err).Int("status", e.Response.StatusCode).Msg("watch request returned unexpected status")
+					}
+				} else {
+					switch err {
+					case context.Canceled:
+						fallthrough
+					case context.DeadlineExceeded:
+						s.client.Logger.Debug().Msg("watch context done")
+						return
+					default:
+						s.client.Logger.Error().Err(err).Msg("watch request failed")
+					}
+				}
+
+				// avoid too many requests on errors.
+				time.Sleep(s.client.WatchDelay)
+				continue
+			}
+
+			ch <- WatchResponse{Events: &events}
+			revision = events.Revision
+		}
+	}()
+
+	return ch
+}

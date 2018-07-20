@@ -8,13 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	ppath "path"
 	"time"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/version"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -33,7 +31,8 @@ type Client struct {
 	baseURL    *url.URL
 	userAgent  string
 	httpClient *http.Client
-	// TODO add a rulesets client type that would implement the regula.Evaluator interface
+
+	Rulesets *RulesetService
 }
 
 // New creates an HTTP client that uses a base url to communicate with the api server.
@@ -61,135 +60,11 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	c.WatchDelay = watchDelay
 
+	c.Rulesets = &RulesetService{
+		client: &c,
+	}
+
 	return &c, nil
-}
-
-// ListRulesets fetches all the rulesets starting with the given prefix.
-func (c *Client) ListRulesets(ctx context.Context, prefix string) (*api.Rulesets, error) {
-	req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	q := req.URL.Query()
-	q.Add("list", "")
-	req.URL.RawQuery = q.Encode()
-
-	var rl api.Rulesets
-
-	_, err = c.do(ctx, req, &rl)
-	return &rl, err
-}
-
-// EvalRuleset evaluates the given ruleset with the given params.
-// Each parameter must be encoded to string before being passed to the params map.
-func (c *Client) EvalRuleset(ctx context.Context, path string, params map[string]string) (*api.Value, error) {
-	req, err := c.newRequest("GET", ppath.Join("/rulesets/", path), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	q := req.URL.Query()
-	q.Add("eval", "")
-	for k, v := range params {
-		q.Add(k, v)
-	}
-	req.URL.RawQuery = q.Encode()
-
-	var resp api.Value
-
-	_, err = c.do(ctx, req, &resp)
-	return &resp, err
-}
-
-// PutRuleset creates a ruleset version on the given path.
-func (c *Client) PutRuleset(ctx context.Context, path string, rs *regula.Ruleset) (*api.Ruleset, error) {
-	req, err := c.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp api.Ruleset
-
-	_, err = c.do(ctx, req, &resp)
-	return &resp, err
-}
-
-// WatchResponse contains a list of events occured on a group of rulesets.
-// If an error occurs during the watching, the Err field will be populated.
-type WatchResponse struct {
-	Events *api.Events
-	Err    error
-}
-
-// WatchRulesets watchs the given path for changes and sends the events in the returned channel.
-// The given context must be used to stop the watcher.
-func (c *Client) WatchRulesets(ctx context.Context, prefix string) <-chan WatchResponse {
-	ch := make(chan WatchResponse)
-
-	go func() {
-		defer close(ch)
-
-		var revision string
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			req, err := c.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
-			if err != nil {
-				ch <- WatchResponse{Err: errors.Wrap(err, "failed to create watch request")}
-				return
-			}
-
-			q := req.URL.Query()
-			q.Add("watch", "")
-			if revision != "" {
-				q.Add("revision", revision)
-			}
-			req.URL.RawQuery = q.Encode()
-
-			var events api.Events
-			_, err = c.do(ctx, req, &events)
-			if err != nil {
-				if e, ok := err.(*api.Error); ok {
-					switch e.Response.StatusCode {
-					case http.StatusNotFound:
-						ch <- WatchResponse{Err: err}
-						return
-					case http.StatusRequestTimeout:
-						c.Logger.Debug().Err(err).Msg("watch request timed out")
-					case http.StatusInternalServerError:
-						c.Logger.Debug().Err(err).Msg("watch request failed: internal server error")
-					default:
-						c.Logger.Error().Err(err).Int("status", e.Response.StatusCode).Msg("watch request returned unexpected status")
-					}
-				} else {
-					switch err {
-					case context.Canceled:
-						fallthrough
-					case context.DeadlineExceeded:
-						c.Logger.Debug().Msg("watch context done")
-						return
-					default:
-						c.Logger.Error().Err(err).Msg("watch request failed")
-					}
-				}
-
-				// avoid too many requests on errors.
-				time.Sleep(c.WatchDelay)
-				continue
-			}
-
-			ch <- WatchResponse{Events: &events}
-			revision = events.Revision
-		}
-	}()
-
-	return ch
 }
 
 func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
@@ -276,7 +151,7 @@ func UserAgent(userAgent string) Option {
 // and returns an evaluator that holds the results in memory.
 // No subsequent round trips are performed after this function returns.
 func NewEvaluator(ctx context.Context, client *Client, prefix string) (*regula.RulesetBuffer, error) {
-	ls, err := client.ListRulesets(ctx, prefix)
+	ls, err := client.Rulesets.List(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}

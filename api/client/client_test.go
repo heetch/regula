@@ -19,13 +19,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleClient_ListRulesets() {
+func ExampleRulesetService_List() {
 	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	list, err := c.ListRulesets(context.Background(), "prefix")
+	list, err := c.Rulesets.List(context.Background(), "prefix")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func ExampleClient_ListRulesets() {
 	}
 }
 
-func ExampleClient_EvalRuleset() {
+func ExampleRulesetService_Eval() {
 	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
@@ -46,7 +46,7 @@ func ExampleClient_EvalRuleset() {
 		"baz": "42",
 	}
 
-	resp, err := c.EvalRuleset(context.Background(), "path/to/ruleset", p)
+	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", p)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		_, err = cli.ListRulesets(context.Background(), "")
+		_, err = cli.Rulesets.List(context.Background(), "")
 		aerr := err.(*api.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
@@ -86,7 +86,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := cli.ListRulesets(context.Background(), "prefix")
+		rs, err := cli.Rulesets.List(context.Background(), "prefix")
 		require.NoError(t, err)
 		require.Len(t, rs.Rulesets, 1)
 	})
@@ -115,7 +115,7 @@ func TestClient(t *testing.T) {
 			Type: "string",
 		}
 
-		resp, err := cli.EvalRuleset(context.Background(), "path/to/ruleset", p)
+		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", p)
 		require.NoError(t, err)
 		require.Equal(t, &exp, resp)
 	})
@@ -137,7 +137,7 @@ func TestClient(t *testing.T) {
 		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.ReturnsInt64(1)))
 		require.NoError(t, err)
 
-		ars, err := cli.PutRuleset(context.Background(), "a", rs)
+		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)
@@ -159,7 +159,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a")
 		evs := <-ch
 		require.NoError(t, evs.Err)
 	})
@@ -177,7 +177,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a")
 		evs := <-ch
 		require.Error(t, evs.Err)
 	})
@@ -209,7 +209,7 @@ func TestClient(t *testing.T) {
 			cli.Logger = zerolog.New(ioutil.Discard)
 			cli.WatchDelay = 1 * time.Millisecond
 
-			ch := cli.WatchRulesets(ctx, "a")
+			ch := cli.Rulesets.Watch(ctx, "a")
 			evs := <-ch
 			require.NoError(t, evs.Err)
 		}
@@ -231,7 +231,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a")
 		cancel()
 		evs := <-ch
 		require.Zero(t, evs)
