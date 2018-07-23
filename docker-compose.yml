@@ -1,16 +1,6 @@
 version: "3"
 
 services:
-  re:
-    build: .
-    ports:
-      - "5331:5331"
-    links:
-      - etcd
-    environment:
-      - ETCD_NAMESPACE=ns
-      - ETCD_ENDPOINTS=etcd:2379
-
   etcd:
     image: "quay.io/coreos/etcd:latest"
     ports:

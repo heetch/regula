@@ -9,7 +9,8 @@ import (
 
 // Errors.
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound    = errors.New("not found")
+	ErrNotModified = errors.New("not modified")
 )
 
 // Store manages the storage of rulesets.

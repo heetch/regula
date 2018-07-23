@@ -378,6 +378,10 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
 		})
 
+		t.Run("NotModified", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusOK, &e1, store.ErrNotModified)
+		})
+
 		t.Run("EmptyPath", func(t *testing.T) {
 			call(t, "/rulesets/", http.StatusNotFound, &e1, nil)
 		})

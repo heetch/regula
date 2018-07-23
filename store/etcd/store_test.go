@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var _ store.Store = new(etcd.Store)
+
 var (
 	dialTimeout = 5 * time.Second
 	endpoints   = []string{"localhost:2379", "etcd:2379"}
@@ -46,9 +48,12 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) {
-	_, err := s.Put(context.Background(), path, r)
-	require.NoError(t, err)
+func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) *store.RulesetEntry {
+	e, err := s.Put(context.Background(), path, r)
+	if err != nil && err != store.ErrNotModified {
+		require.NoError(t, err)
+	}
+	return e
 }
 
 func TestList(t *testing.T) {
@@ -64,7 +69,7 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "b", nil)
 		createRuleset(t, s, "a", nil)
 
-		paths := []string{"a/1", "a", "a", "b", "c"}
+		paths := []string{"a/1", "a", "b", "c"}
 
 		entries, err := s.List(context.Background(), "")
 		require.NoError(t, err)
@@ -234,11 +239,33 @@ func TestPut(t *testing.T) {
 		require.NotEmpty(t, entry.Version)
 		require.Equal(t, rs, entry.Ruleset)
 
-		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, path), clientv3.WithPrefix())
+		// verify ruleset creation
+		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", path), clientv3.WithPrefix())
 		require.NoError(t, err)
-		require.EqualValues(t, resp.Count, 1)
+		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "a")+"/"))
+
+		// verify checksum creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "checksums", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		// create new version with same ruleset
+		entry2, err := s.Put(context.Background(), path, rs)
+		require.Equal(t, err, store.ErrNotModified)
+		require.Equal(t, entry, entry2)
+
+		// create new version with different ruleset
+		rs, _ = regula.NewBoolRuleset(
+			regula.NewRule(
+				regula.True(),
+				regula.BoolValue(false),
+			),
+		)
+		entry2, err = s.Put(context.Background(), path, rs)
+		require.NoError(t, err)
+		require.NotEqual(t, entry.Version, entry2.Version)
 	})
 }
 

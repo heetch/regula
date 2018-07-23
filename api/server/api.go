@@ -163,7 +163,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 	}
 
 	entry, err := s.store.Put(r.Context(), path, &rs)
-	if err != nil {
+	if err != nil && err != store.ErrNotModified {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
