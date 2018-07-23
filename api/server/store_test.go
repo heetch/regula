@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 )
 
@@ -60,7 +60,7 @@ func (s *mockStore) Watch(ctx context.Context, prefix, revision string) (*store.
 	return nil, nil
 }
 
-func (s *mockStore) Put(ctx context.Context, path string, ruleset *rule.Ruleset) (*store.RulesetEntry, error) {
+func (s *mockStore) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	s.PutCount++
 
 	if s.PutFn != nil {

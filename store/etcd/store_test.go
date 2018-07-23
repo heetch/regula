@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
 )
+
+var _ store.Store = new(etcd.Store)
 
 var (
 	dialTimeout = 5 * time.Second
@@ -46,9 +48,12 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createRuleset(t *testing.T, s *etcd.Store, path string, r *rule.Ruleset) {
-	_, err := s.Put(context.Background(), path, r)
-	require.NoError(t, err)
+func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) *store.RulesetEntry {
+	e, err := s.Put(context.Background(), path, r)
+	if err != nil && err != store.ErrNotModified {
+		require.NoError(t, err)
+	}
+	return e
 }
 
 func TestList(t *testing.T) {
@@ -64,7 +69,7 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "b", nil)
 		createRuleset(t, s, "a", nil)
 
-		paths := []string{"a/1", "a", "a", "b", "c"}
+		paths := []string{"a/1", "a", "b", "c"}
 
 		entries, err := s.List(context.Background(), "")
 		require.NoError(t, err)
@@ -99,17 +104,17 @@ func TestLatest(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	oldRse, _ := rule.NewBoolRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsBool(true),
+	oldRse, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.BoolValue(true),
 		),
 	)
 
-	newRse, _ := rule.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsString("success"),
+	newRse, _ := regula.NewStringRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.StringValue("success"),
 		),
 	)
 
@@ -145,8 +150,14 @@ func TestLatest(t *testing.T) {
 		path := "aa"
 
 		_, err := s.Latest(context.Background(), path)
-		require.Error(t, err)
-		require.EqualError(t, err, store.ErrNotFound.Error())
+		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("NOK - empty path", func(t *testing.T) {
+		path := ""
+
+		_, err := s.Latest(context.Background(), path)
+		require.Equal(t, err, store.ErrNotFound)
 	})
 
 	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
@@ -154,7 +165,7 @@ func TestLatest(t *testing.T) {
 
 		_, err := s.Latest(context.Background(), path)
 		require.Error(t, err)
-		require.EqualError(t, err, store.ErrNotFound.Error())
+		require.Equal(t, err, store.ErrNotFound)
 	})
 }
 
@@ -164,17 +175,17 @@ func TestOneByVersion(t *testing.T) {
 	s, cleanup := newEtcdStore(t)
 	defer cleanup()
 
-	oldRse, _ := rule.NewBoolRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsBool(true),
+	oldRse, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.BoolValue(true),
 		),
 	)
 
-	newRse, _ := rule.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.ReturnsString("success"),
+	newRse, _ := regula.NewStringRuleset(
+		regula.NewRule(
+			regula.True(),
+			regula.StringValue("success"),
 		),
 	)
 
@@ -196,20 +207,17 @@ func TestOneByVersion(t *testing.T) {
 		require.Equal(t, oldRse, entry.Ruleset)
 	})
 
-	t.Run("NOK - path doesn't exist", func(t *testing.T) {
-		path := "a"
+	t.Run("NOK", func(t *testing.T) {
+		paths := []string{
+			"a",  // doesn't exist
+			"ab", // exists but not a ruleset
+			"",   // empty path
+		}
 
-		_, err := s.OneByVersion(context.Background(), path, "123version")
-		require.Error(t, err)
-		require.EqualError(t, err, store.ErrNotFound.Error())
-	})
-
-	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
-		path := "ab"
-
-		_, err := s.OneByVersion(context.Background(), path, "123version")
-		require.Error(t, err)
-		require.EqualError(t, err, store.ErrNotFound.Error())
+		for _, path := range paths {
+			_, err := s.OneByVersion(context.Background(), path, "123version")
+			require.Equal(t, err, store.ErrNotFound)
+		}
 	})
 }
 
@@ -221,10 +229,10 @@ func TestPut(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
-		rs, _ := rule.NewBoolRuleset(
-			rule.New(
-				rule.True(),
-				rule.ReturnsBool(true),
+		rs, _ := regula.NewBoolRuleset(
+			regula.NewRule(
+				regula.True(),
+				regula.BoolValue(true),
 			),
 		)
 
@@ -234,11 +242,33 @@ func TestPut(t *testing.T) {
 		require.NotEmpty(t, entry.Version)
 		require.Equal(t, rs, entry.Ruleset)
 
-		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, path), clientv3.WithPrefix())
+		// verify ruleset creation
+		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", path), clientv3.WithPrefix())
 		require.NoError(t, err)
-		require.EqualValues(t, resp.Count, 1)
+		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "a")+"/"))
+
+		// verify checksum creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "checksums", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		// create new version with same ruleset
+		entry2, err := s.Put(context.Background(), path, rs)
+		require.Equal(t, err, store.ErrNotModified)
+		require.Equal(t, entry, entry2)
+
+		// create new version with different ruleset
+		rs, _ = regula.NewBoolRuleset(
+			regula.NewRule(
+				regula.True(),
+				regula.BoolValue(false),
+			),
+		)
+		entry2, err = s.Put(context.Background(), path, rs)
+		require.NoError(t, err)
+		require.NotEqual(t, entry.Version, entry2.Version)
 	})
 }
 

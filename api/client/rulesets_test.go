@@ -11,22 +11,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/heetch/regula/rule"
-	"github.com/rs/zerolog"
-
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleClient_ListRulesets() {
+var ev regula.Evaluator = new(client.RulesetService)
+
+func ExampleRulesetService_List() {
 	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	list, err := c.ListRulesets(context.Background(), "prefix")
+	list, err := c.Rulesets.List(context.Background(), "prefix")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,27 +37,45 @@ func ExampleClient_ListRulesets() {
 	}
 }
 
-func ExampleClient_EvalRuleset() {
+func ExampleRulesetService_Eval() {
 	c, err := client.New("http://127.0.0.1:5331")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	p := map[string]string{
+	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
 		"foo": "bar",
-		"baz": "42",
-	}
-
-	resp, err := c.EvalRuleset(context.Background(), "path/to/ruleset", p)
+		"baz": int64(42),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(resp.Data)
-	fmt.Println(resp.Type)
+	fmt.Println(resp.Value.Data)
+	fmt.Println(resp.Value.Type)
+	fmt.Println(resp.Version)
 }
 
-func TestClient(t *testing.T) {
+func ExampleRulesetService_EvalVersion() {
+	c, err := client.New("http://127.0.0.1:5331")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := c.Rulesets.EvalVersion(context.Background(), "path/to/ruleset", "xyzabc", regula.Params{
+		"foo": "bar",
+		"baz": int64(42),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resp.Value.Data)
+	fmt.Println(resp.Value.Type)
+	fmt.Println(resp.Version)
+}
+
+func TestRulesetService(t *testing.T) {
 	t.Run("Error", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
@@ -68,7 +87,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		_, err = cli.ListRulesets(context.Background(), "")
+		_, err = cli.Rulesets.List(context.Background(), "")
 		aerr := err.(*api.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
@@ -87,7 +106,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := cli.ListRulesets(context.Background(), "prefix")
+		rs, err := cli.Rulesets.List(context.Background(), "prefix")
 		require.NoError(t, err)
 		require.Len(t, rs.Rulesets, 1)
 	})
@@ -99,7 +118,7 @@ func TestClient(t *testing.T) {
 			assert.Contains(t, r.URL.Query(), "eval")
 			assert.Contains(t, r.URL.Query(), "foo")
 			assert.Equal(t, "/rulesets/path/to/ruleset", r.URL.Path)
-			fmt.Fprintf(w, `{"data": "baz", "type": "string"}]`)
+			fmt.Fprintf(w, `{"value": {"data": "baz", "type": "string", "kind": "value"}, "version": "1234"}`)
 		}))
 		defer ts.Close()
 
@@ -107,16 +126,11 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		p := map[string]string{
+		exp := regula.EvalResult{Value: regula.StringValue("baz"), Version: "1234"}
+
+		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
 			"foo": "bar",
-		}
-
-		exp := api.Value{
-			Data: "baz",
-			Type: "string",
-		}
-
-		resp, err := cli.EvalRuleset(context.Background(), "path/to/ruleset", p)
+		})
 		require.NoError(t, err)
 		require.Equal(t, &exp, resp)
 	})
@@ -135,10 +149,10 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := rule.NewInt64Ruleset(rule.New(rule.True(), rule.ReturnsInt64(1)))
+		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.Int64Value(1)))
 		require.NoError(t, err)
 
-		ars, err := cli.PutRuleset(context.Background(), "a", rs)
+		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)
@@ -160,7 +174,29 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
+		evs := <-ch
+		require.NoError(t, evs.Err)
+	})
+
+	t.Run("WatchRuleset/Revision", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "rev", r.URL.Query().Get("revision"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			fmt.Fprintf(w, `{"events": [{"type": "PUT", "path": "a"}], "revision": "rev"}`)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		ch := cli.Rulesets.Watch(ctx, "a", "rev")
 		evs := <-ch
 		require.NoError(t, evs.Err)
 	})
@@ -178,7 +214,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
 		evs := <-ch
 		require.Error(t, evs.Err)
 	})
@@ -210,7 +246,7 @@ func TestClient(t *testing.T) {
 			cli.Logger = zerolog.New(ioutil.Discard)
 			cli.WatchDelay = 1 * time.Millisecond
 
-			ch := cli.WatchRulesets(ctx, "a")
+			ch := cli.Rulesets.Watch(ctx, "a", "")
 			evs := <-ch
 			require.NoError(t, evs.Err)
 		}
@@ -232,7 +268,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ch := cli.WatchRulesets(ctx, "a")
+		ch := cli.Rulesets.Watch(ctx, "a", "")
 		cancel()
 		evs := <-ch
 		require.Zero(t, evs)

@@ -1,119 +1,118 @@
-package rules_test
+package regula_test
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"testing"
 	"time"
 
-	rules "github.com/heetch/regula"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEngine(t *testing.T) {
 	ctx := context.Background()
 
-	var m rules.MemoryGetter
+	buf := regula.NewRulesetBuffer()
 
-	m.AddRuleset("match-string-a", "1", &rule.Ruleset{
+	buf.Add("match-string-a", "1", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a v1")),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.StringValue("matched a v1")),
 		},
 	})
-	m.AddRuleset("match-string-a", "2", &rule.Ruleset{
+	buf.Add("match-string-a", "2", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.ReturnsString("matched a v2")),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.StringValue("matched a v2")),
 		},
 	})
-	m.AddRuleset("match-string-b", "1", &rule.Ruleset{
+	buf.Add("match-string-b", "1", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsString("matched b")),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.StringValue("matched b")),
 		},
 	})
-	m.AddRuleset("type-mismatch", "1", &rule.Ruleset{
+	buf.Add("type-mismatch", "1", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), &regula.Value{Type: "int", Data: "5"}),
 		},
 	})
-	m.AddRuleset("no-match", "1", &rule.Ruleset{
+	buf.Add("no-match", "1", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.ReturnsString("matched d")),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.Eq(regula.StringValue("foo"), regula.StringValue("bar")), regula.StringValue("matched d")),
 		},
 	})
-	m.AddRuleset("match-bool", "1", &rule.Ruleset{
+	buf.Add("match-bool", "1", &regula.Ruleset{
 		Type: "bool",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), &regula.Value{Type: "bool", Data: "true"}),
 		},
 	})
-	m.AddRuleset("match-int64", "1", &rule.Ruleset{
+	buf.Add("match-int64", "1", &regula.Ruleset{
 		Type: "int64",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), &regula.Value{Type: "int64", Data: "-10"}),
 		},
 	})
-	m.AddRuleset("match-float64", "1", &rule.Ruleset{
+	buf.Add("match-float64", "1", &regula.Ruleset{
 		Type: "float64",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), &regula.Value{Type: "float64", Data: "-3.14"}),
 		},
 	})
-	m.AddRuleset("match-duration", "1", &rule.Ruleset{
+	buf.Add("match-duration", "1", &regula.Ruleset{
 		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsString("3s")),
+		Rules: []*regula.Rule{
+			regula.NewRule(regula.True(), regula.StringValue("3s")),
 		},
 	})
 
-	e := rules.NewEngine(&m)
+	e := regula.NewEngine(buf)
 
 	t.Run("LowLevel", func(t *testing.T) {
-		str, err := e.GetString(ctx, "match-string-a", rule.Params{
+		str, res, err := e.GetString(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
 		require.Equal(t, "matched a v2", str)
+		require.Equal(t, "2", res.Version)
 
-		str, err = e.GetString(ctx, "match-string-a", rule.Params{
+		str, res, err = e.GetString(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
-		}, rules.Version("1"))
+		}, regula.Version("1"))
 		require.NoError(t, err)
 		require.Equal(t, "matched a v1", str)
+		require.Equal(t, "1", res.Version)
 
-		str, err = e.GetString(ctx, "match-string-b", nil)
+		str, _, err = e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
 		require.Equal(t, "matched b", str)
 
-		b, err := e.GetBool(ctx, "match-bool", nil)
+		b, _, err := e.GetBool(ctx, "match-bool", nil)
 		require.NoError(t, err)
 		require.True(t, b)
 
-		i, err := e.GetInt64(ctx, "match-int64", nil)
+		i, _, err := e.GetInt64(ctx, "match-int64", nil)
 		require.NoError(t, err)
 		require.Equal(t, int64(-10), i)
 
-		f, err := e.GetFloat64(ctx, "match-float64", nil)
+		f, _, err := e.GetFloat64(ctx, "match-float64", nil)
 		require.NoError(t, err)
 		require.Equal(t, -3.14, f)
 
-		_, err = e.GetString(ctx, "match-bool", nil)
-		require.Equal(t, rules.ErrTypeMismatch, err)
+		_, _, err = e.GetString(ctx, "match-bool", nil)
+		require.Equal(t, regula.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "type-mismatch", nil)
-		require.Equal(t, rules.ErrTypeMismatch, err)
+		_, _, err = e.GetString(ctx, "type-mismatch", nil)
+		require.Equal(t, regula.ErrTypeMismatch, err)
 
-		_, err = e.GetString(ctx, "no-match", nil)
-		require.Equal(t, rule.ErrNoMatch, err)
+		_, _, err = e.GetString(ctx, "no-match", nil)
+		require.Equal(t, regula.ErrNoMatch, err)
 
-		_, err = e.GetString(ctx, "not-found", nil)
-		require.Equal(t, rules.ErrRulesetNotFound, err)
+		_, _, err = e.GetString(ctx, "not-found", nil)
+		require.Equal(t, regula.ErrRulesetNotFound, err)
 	})
 
 	t.Run("StructLoading", func(t *testing.T) {
@@ -125,7 +124,7 @@ func TestEngine(t *testing.T) {
 			Duration time.Duration `ruleset:"match-duration"`
 		}{}
 
-		err := e.LoadStruct(ctx, &to, rule.Params{
+		err := e.LoadStruct(ctx, &to, regula.Params{
 			"foo": "bar",
 		})
 
@@ -143,7 +142,7 @@ func TestEngine(t *testing.T) {
 			Wrong   string `ruleset:"no-exists,required"`
 		}{}
 
-		err := e.LoadStruct(ctx, &to, rule.Params{
+		err := e.LoadStruct(ctx, &to, regula.Params{
 			"foo": "bar",
 		})
 
@@ -159,161 +158,4 @@ func TestEngine(t *testing.T) {
 
 		require.Error(t, err)
 	})
-}
-
-var gt rules.Getter
-
-func init() {
-	var m rules.MemoryGetter
-	gt = &m
-
-	m.AddRuleset("/path/to/string/key", "1", &rule.Ruleset{
-		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsString("some-string")),
-		},
-	})
-
-	m.AddRuleset("/path/to/int64/key", "1", &rule.Ruleset{
-		Type: "int64",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsInt64(10)),
-		},
-	})
-
-	m.AddRuleset("/path/to/float64/key", "1", &rule.Ruleset{
-		Type: "float64",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsFloat64(3.14)),
-		},
-	})
-
-	m.AddRuleset("/path/to/bool/key", "1", &rule.Ruleset{
-		Type: "bool",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsBool(true)),
-		},
-	})
-
-	m.AddRuleset("/path/to/duration/key", "1", &rule.Ruleset{
-		Type: "string",
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.ReturnsString("3s")),
-		},
-	})
-}
-
-func ExampleEngine() {
-	engine := rules.NewEngine(gt)
-
-	_, err := engine.GetString(context.Background(), "/a/b/c", rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		switch err {
-		case rules.ErrRulesetNotFound:
-			// when the ruleset doesn't exist
-		case rules.ErrTypeMismatch:
-			// when the ruleset returns the bad type
-		case rule.ErrNoMatch:
-			// when the ruleset doesn't match
-		default:
-			// something unexpected happened
-		}
-	}
-}
-
-func ExampleEngine_GetBool() {
-	engine := rules.NewEngine(gt)
-
-	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(b)
-	// Output: true
-}
-
-func ExampleEngine_GetString() {
-	engine := rules.NewEngine(gt)
-
-	s, err := engine.GetString(context.Background(), "/path/to/string/key", rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(s)
-	// Output: some-string
-}
-
-func ExampleEngine_GetInt64() {
-	engine := rules.NewEngine(gt)
-
-	s, err := engine.GetInt64(context.Background(), "/path/to/int64/key", rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(s)
-	// Output: 10
-}
-
-func ExampleEngine_GetFloat64() {
-	engine := rules.NewEngine(gt)
-
-	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(f)
-	// Output: 3.14
-}
-
-func ExampleEngine_LoadStruct() {
-	type Values struct {
-		A string        `ruleset:"/path/to/string/key"`
-		B int64         `ruleset:"/path/to/int64/key,required"`
-		C time.Duration `ruleset:"/path/to/duration/key"`
-	}
-
-	var v Values
-
-	engine := rules.NewEngine(gt)
-
-	err := engine.LoadStruct(context.Background(), &v, rule.Params{
-		"product-id": "1234",
-		"user-id":    "5678",
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(v.A)
-	fmt.Println(v.B)
-	fmt.Println(v.C)
-	// Output:
-	// some-string
-	// 10
-	// 3s
 }

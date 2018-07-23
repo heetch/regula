@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
-	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 )
 
@@ -91,7 +91,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 	if err != nil {
 		if err == store.ErrNotFound {
-			s.writeError(w, fmt.Errorf("the path: '%s' doesn't exist", path), http.StatusNotFound)
+			s.writeError(w, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
 			return
 		}
 		s.writeError(w, err, http.StatusInternalServerError)
@@ -105,9 +105,9 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 	v, err := e.Ruleset.Eval(params)
 	if err != nil {
-		if err == rule.ErrParamNotFound ||
-			err == rule.ErrTypeParamMismatch ||
-			err == rule.ErrNoMatch {
+		if err == regula.ErrParamNotFound ||
+			err == regula.ErrParamTypeMismatch ||
+			err == regula.ErrNoMatch {
 			s.writeError(w, err, http.StatusBadRequest)
 			return
 		}
@@ -115,9 +115,9 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 		return
 	}
 
-	resp := api.Value{
-		Data: v.Data,
-		Type: v.Type,
+	resp := api.EvalResult{
+		Value:   v,
+		Version: e.Version,
 	}
 
 	s.encodeJSON(w, resp, http.StatusOK)
@@ -154,7 +154,7 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 
 // put creates a new version of a ruleset.
 func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string) {
-	var rs rule.Ruleset
+	var rs regula.Ruleset
 
 	err := json.NewDecoder(r.Body).Decode(&rs)
 	if err != nil {
@@ -163,7 +163,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 	}
 
 	entry, err := s.store.Put(r.Context(), path, &rs)
-	if err != nil {
+	if err != nil && err != store.ErrNotModified {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}

@@ -1,5 +1,4 @@
-// Package rule provides primitives for creating and evaluating logical rules.
-package rule
+package regula
 
 import (
 	"encoding/json"
@@ -9,19 +8,14 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var (
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
-	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
-)
-
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
 	Root   Node   `json:"root"`
 	Result *Value `json:"result"`
 }
 
-// New creates a rule with the given node and that returns the given result on evaluation.
-func New(node Node, result *Value) *Rule {
+// NewRule creates a rule with the given node and that returns the given result on evaluation.
+func NewRule(node Node, result *Value) *Rule {
 	return &Rule{
 		Root:   node,
 		Result: result,
@@ -78,26 +72,6 @@ func (r *Rule) Eval(params ParamGetter) (*Value, error) {
 	}
 
 	return r.Result, nil
-}
-
-// ReturnsString specifies the string result to be returned by the rule if matched.
-func ReturnsString(value string) *Value {
-	return StringValue(value)
-}
-
-// ReturnsBool specifies the bool result to be returned by the rule if matched.
-func ReturnsBool(value bool) *Value {
-	return BoolValue(value)
-}
-
-// ReturnsInt64 specifies the int64 result to be returned by the rule if matched.
-func ReturnsInt64(value int64) *Value {
-	return Int64Value(value)
-}
-
-// ReturnsFloat64 specifies the float64 result to be returned by the rule if matched.
-func ReturnsFloat64(value float64) *Value {
-	return Float64Value(value)
 }
 
 // A Ruleset is list of rules that must return the same type.
