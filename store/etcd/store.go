@@ -182,8 +182,6 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 				switch ev.Type {
 				case mvccpb.PUT:
 					events[i].Type = store.PutEvent
-				case mvccpb.DELETE:
-					events[i].Type = store.DeleteEvent
 				}
 
 				var e store.RulesetEntry

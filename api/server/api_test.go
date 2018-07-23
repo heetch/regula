@@ -293,7 +293,7 @@ func TestAPI(t *testing.T) {
 			Events: []store.Event{
 				{Type: store.PutEvent, Path: "a", Ruleset: r1},
 				{Type: store.PutEvent, Path: "b", Ruleset: r2},
-				{Type: store.DeleteEvent, Path: "a", Ruleset: r2},
+				{Type: store.PutEvent, Path: "a", Ruleset: r2},
 			},
 			Revision: "rev",
 		}
