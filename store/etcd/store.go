@@ -44,6 +44,10 @@ func (s *Store) List(ctx context.Context, prefix string) (*store.RulesetEntries,
 // Latest returns the latest version of the ruleset entry which corresponds to the given path.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
 func (s *Store) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
+	if path == "" {
+		return nil, store.ErrNotFound
+	}
+
 	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(path, "")+"/", clientv3.WithLastKey()...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
@@ -66,6 +70,10 @@ func (s *Store) Latest(ctx context.Context, path string) (*store.RulesetEntry, e
 // OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
 func (s *Store) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	if path == "" {
+		return nil, store.ErrNotFound
+	}
+
 	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(path, version))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)

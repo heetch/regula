@@ -150,7 +150,13 @@ func TestLatest(t *testing.T) {
 		path := "aa"
 
 		_, err := s.Latest(context.Background(), path)
-		require.Error(t, err)
+		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("NOK - empty path", func(t *testing.T) {
+		path := ""
+
+		_, err := s.Latest(context.Background(), path)
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
@@ -201,20 +207,17 @@ func TestOneByVersion(t *testing.T) {
 		require.Equal(t, oldRse, entry.Ruleset)
 	})
 
-	t.Run("NOK - path doesn't exist", func(t *testing.T) {
-		path := "a"
+	t.Run("NOK", func(t *testing.T) {
+		paths := []string{
+			"a",  // doesn't exist
+			"ab", // exists but not a ruleset
+			"",   // empty path
+		}
 
-		_, err := s.OneByVersion(context.Background(), path, "123version")
-		require.Error(t, err)
-		require.Equal(t, err, store.ErrNotFound)
-	})
-
-	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
-		path := "ab"
-
-		_, err := s.OneByVersion(context.Background(), path, "123version")
-		require.Error(t, err)
-		require.Equal(t, err, store.ErrNotFound)
+		for _, path := range paths {
+			_, err := s.OneByVersion(context.Background(), path, "123version")
+			require.Equal(t, err, store.ErrNotFound)
+		}
 	})
 }
 
