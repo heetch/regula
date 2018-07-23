@@ -47,12 +47,12 @@ the engine is stateless and simply deleguates the evaluation to the evaluator.
 
 	engine := NewEngine(evaluator)
 
-	s, err := engine.GetString("path/to/string/ruleset/key", rule.Params{
+	s, res, err := engine.GetString("path/to/string/ruleset/key", rule.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})
 
-	i, err := engine.GetInt64("path/to/int/ruleset/key", rule.Params{
+	i, res, err := engine.GetInt64("path/to/int/ruleset/key", rule.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})

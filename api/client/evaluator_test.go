@@ -1,13 +1,16 @@
-package client
+package client_test
 
 import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/heetch/regula"
+	"github.com/heetch/regula/api/client"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
@@ -27,11 +30,11 @@ func TestEvaluator(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cli, err := New(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ev, err := NewEvaluator(ctx, cli, "a", false)
+		ev, err := client.NewEvaluator(ctx, cli, "a", false)
 		require.NoError(t, err)
 
 		err = ev.Close()
@@ -66,11 +69,11 @@ func TestEvaluator(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cli, err := New(ts.URL)
+		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		ev, err := NewEvaluator(ctx, cli, "a", true)
+		ev, err := client.NewEvaluator(ctx, cli, "a", true)
 		require.NoError(t, err)
 
 		<-didWatch
@@ -81,4 +84,54 @@ func TestEvaluator(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "2", version)
 	})
+}
+
+var (
+	addr string
+)
+
+func ExampleEvaluator_withoutWatch() {
+	cli, err := client.New(addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ev, err := client.NewEvaluator(context.Background(), cli, "prefix", false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ng := regula.NewEngine(ev)
+	str, res, err := ng.GetString(context.Background(), "some/path", regula.Params{
+		"id": "123",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(str)
+	fmt.Println(res.Version)
+}
+
+func ExampleEvaluator_withWatch() {
+	cli, err := client.New(addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ev, err := client.NewEvaluator(context.Background(), cli, "prefix", true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// stopping the watcher
+	defer ev.Close()
+
+	ng := regula.NewEngine(ev)
+	str, res, err := ng.GetString(context.Background(), "some/path", regula.Params{
+		"id": "123",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(str)
+	fmt.Println(res.Version)
 }
