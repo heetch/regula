@@ -8,8 +8,8 @@ import (
 	"github.com/heetch/regula/api"
 )
 
-// Evaluator can cache rulesets in memory and be passed to a regula.Engine to evaluate rulesets without
-//  network round trips. If required, it can watch the server for changes and update its local cache.
+// Evaluator can cache rulesets in memory and can be passed to a regula.Engine to evaluate rulesets without
+// network round trips. If required, it can watch the server for changes and update its local cache.
 type Evaluator struct {
 	*regula.RulesetBuffer
 	cancel func()
