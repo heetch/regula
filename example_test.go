@@ -15,7 +15,7 @@ func ExampleRule() {
 			regula.StringValue("foo"),
 			regula.StringParam("bar"),
 		),
-		regula.ReturnsString("matched"),
+		regula.StringValue("matched"),
 	)
 
 	ret, err := r.Eval(regula.Params{
@@ -215,7 +215,7 @@ func ExampleRuleset() {
 				regula.StringParam("group"),
 				regula.StringValue("admin"),
 			),
-			regula.ReturnsString("first rule matched"),
+			regula.StringValue("first rule matched"),
 		),
 		regula.NewRule(
 			regula.In(
@@ -224,11 +224,11 @@ func ExampleRuleset() {
 				regula.Int64Value(20),
 				regula.Int64Value(30),
 			),
-			regula.ReturnsString("second rule matched"),
+			regula.StringValue("second rule matched"),
 		),
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsString("default rule matched"),
+			regula.StringValue("default rule matched"),
 		),
 	)
 	if err != nil {
@@ -257,42 +257,42 @@ func init() {
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
+			regula.NewRule(regula.True(), regula.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsString("some-string")),
+			regula.NewRule(regula.True(), regula.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "int64",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
+			regula.NewRule(regula.True(), regula.Int64Value(10)),
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "float64",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsFloat64(3.14)),
+			regula.NewRule(regula.True(), regula.Float64Value(3.14)),
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "bool",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsBool(true)),
+			regula.NewRule(regula.True(), regula.BoolValue(true)),
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
+			regula.NewRule(regula.True(), regula.StringValue("3s")),
 		},
 	})
 }

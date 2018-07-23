@@ -102,14 +102,14 @@ func TestLatest(t *testing.T) {
 	oldRse, _ := regula.NewBoolRuleset(
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsBool(true),
+			regula.BoolValue(true),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsString("success"),
+			regula.StringValue("success"),
 		),
 	)
 
@@ -167,14 +167,14 @@ func TestOneByVersion(t *testing.T) {
 	oldRse, _ := regula.NewBoolRuleset(
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsBool(true),
+			regula.BoolValue(true),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsString("success"),
+			regula.StringValue("success"),
 		),
 	)
 
@@ -224,7 +224,7 @@ func TestPut(t *testing.T) {
 		rs, _ := regula.NewBoolRuleset(
 			regula.NewRule(
 				regula.True(),
-				regula.ReturnsBool(true),
+				regula.BoolValue(true),
 			),
 		)
 

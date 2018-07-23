@@ -34,8 +34,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.ReturnsBool(true)))
-		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.ReturnsBool(true)))
+		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
+		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
 		l := store.RulesetEntries{
 			Entries: []store.RulesetEntry{
 				{Path: "aa", Ruleset: r1},
@@ -121,7 +121,7 @@ func TestAPI(t *testing.T) {
 						regula.StringParam("foo"),
 						regula.StringValue("bar"),
 					),
-					regula.ReturnsString("success"),
+					regula.StringValue("success"),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -144,7 +144,7 @@ func TestAPI(t *testing.T) {
 						regula.StringParam("foo"),
 						regula.StringValue("bar"),
 					),
-					regula.ReturnsString("success"),
+					regula.StringValue("success"),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -169,7 +169,7 @@ func TestAPI(t *testing.T) {
 						regula.BoolParam("foo"),
 						regula.BoolValue(true),
 					),
-					regula.ReturnsBool(true),
+					regula.BoolValue(true),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -191,7 +191,7 @@ func TestAPI(t *testing.T) {
 						regula.Int64Param("foo"),
 						regula.Int64Value(42),
 					),
-					regula.ReturnsInt64(42),
+					regula.Int64Value(42),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -213,7 +213,7 @@ func TestAPI(t *testing.T) {
 						regula.Float64Param("foo"),
 						regula.Float64Value(42.42),
 					),
-					regula.ReturnsFloat64(42.42),
+					regula.Float64Value(42.42),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -256,7 +256,7 @@ func TestAPI(t *testing.T) {
 						regula.BoolParam("foo"),
 						regula.BoolValue(true),
 					),
-					regula.ReturnsString("success"),
+					regula.StringValue("success"),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -274,7 +274,7 @@ func TestAPI(t *testing.T) {
 						regula.BoolParam("foo"),
 						regula.BoolValue(true),
 					),
-					regula.ReturnsString("success"),
+					regula.StringValue("success"),
 				),
 			)
 			rse := store.RulesetEntry{
@@ -287,8 +287,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.ReturnsBool(true)))
-		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.ReturnsBool(true)))
+		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
+		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
 		l := store.Events{
 			Events: []store.Event{
 				{Type: store.PutEvent, Path: "a", Ruleset: r1},
@@ -341,7 +341,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.ReturnsBool(true)))
+		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:    "a",
 			Version: "version",

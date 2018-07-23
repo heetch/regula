@@ -29,7 +29,7 @@ func TestLoadSnapshot(t *testing.T) {
 	defer ts.Close()
 
 	rs, err := regula.NewInt64Ruleset(
-		regula.NewRule(regula.True(), regula.ReturnsInt64(10)),
+		regula.NewRule(regula.True(), regula.Int64Value(10)),
 	)
 	require.NoError(t, err)
 	raw, err := json.Marshal(rs)

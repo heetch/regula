@@ -16,7 +16,7 @@ type Evaluator struct {
 	wg     sync.WaitGroup
 }
 
-// NewEvaluator uses the given client to fetch all the rulesets from the server
+// NewEvaluator uses the given client to fetch a list of rulesets starting with the given prefix
 // and returns an evaluator that holds the results in memory.
 // If watch is true, the evaluator will watch for changes on the server and automatically update
 // the underlying RulesetBuffer.

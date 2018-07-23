@@ -149,7 +149,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.ReturnsInt64(1)))
+		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.Int64Value(1)))
 		require.NoError(t, err)
 
 		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)

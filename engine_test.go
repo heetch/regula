@@ -17,19 +17,19 @@ func TestEngine(t *testing.T) {
 	buf.Add("match-string-a", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.ReturnsString("matched a v1")),
+			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.StringValue("matched a v1")),
 		},
 	})
 	buf.Add("match-string-a", "2", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.ReturnsString("matched a v2")),
+			regula.NewRule(regula.Eq(regula.StringParam("foo"), regula.StringValue("bar")), regula.StringValue("matched a v2")),
 		},
 	})
 	buf.Add("match-string-b", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsString("matched b")),
+			regula.NewRule(regula.True(), regula.StringValue("matched b")),
 		},
 	})
 	buf.Add("type-mismatch", "1", &regula.Ruleset{
@@ -41,7 +41,7 @@ func TestEngine(t *testing.T) {
 	buf.Add("no-match", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.Eq(regula.StringValue("foo"), regula.StringValue("bar")), regula.ReturnsString("matched d")),
+			regula.NewRule(regula.Eq(regula.StringValue("foo"), regula.StringValue("bar")), regula.StringValue("matched d")),
 		},
 	})
 	buf.Add("match-bool", "1", &regula.Ruleset{
@@ -65,7 +65,7 @@ func TestEngine(t *testing.T) {
 	buf.Add("match-duration", "1", &regula.Ruleset{
 		Type: "string",
 		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.ReturnsString("3s")),
+			regula.NewRule(regula.True(), regula.StringValue("3s")),
 		},
 	})
 

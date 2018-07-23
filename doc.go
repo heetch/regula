@@ -13,7 +13,7 @@ All the rules of a ruleset always return the same type.
 				regula.StringParam("group"),
 				regula.StringValue("admin"),
 			),
-			regula.ReturnsString("first rule matched"),
+			regula.StringValue("first rule matched"),
 		),
 		regula.NewRule(
 			regula.In(
@@ -22,11 +22,11 @@ All the rules of a ruleset always return the same type.
 				regula.Int64Value(20),
 				regula.Int64Value(30),
 			),
-			regula.ReturnsString("second rule matched"),
+			regula.StringValue("second rule matched"),
 		),
 		regula.NewRule(
 			regula.True(),
-			regula.ReturnsString("default rule matched"),
+			regula.StringValue("default rule matched"),
 		),
 	)
 	if err != nil {
