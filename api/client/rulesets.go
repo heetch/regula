@@ -51,7 +51,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	q := req.URL.Query()
 	q.Add("eval", "")
 	for _, k := range params.Keys() {
-		v, err := params.EncodeKey(k)
+		v, err := params.EncodeValue(k)
 		if err != nil {
 			return nil, err
 		}

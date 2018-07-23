@@ -14,7 +14,7 @@ type ParamGetter interface {
 	GetInt64(key string) (int64, error)
 	GetFloat64(key string) (float64, error)
 	Keys() []string
-	EncodeKey(key string) (string, error)
+	EncodeValue(key string) (string, error)
 }
 
 // Params is a map based ParamGetter implementation.
@@ -90,8 +90,8 @@ func (p Params) Keys() []string {
 	return keys
 }
 
-// EncodeKey returns the string representation of the given key.
-func (p Params) EncodeKey(key string) (string, error) {
+// EncodeValue returns the string representation of the selected value.
+func (p Params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
 		return "", ErrParamNotFound

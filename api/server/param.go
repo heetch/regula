@@ -75,8 +75,8 @@ func (p params) Keys() []string {
 	return keys
 }
 
-// EncodeKey returns the string representation of the given key.
-func (p params) EncodeKey(key string) (string, error) {
+// EncodeValue returns the string representation of a value.
+func (p params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
 		return "", regula.ErrParamNotFound
