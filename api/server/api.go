@@ -57,7 +57,7 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
-	entries, err := s.store.List(r.Context(), prefix)
+	entries, err := s.rulesets.List(r.Context(), prefix)
 	if err != nil {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
@@ -89,9 +89,9 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 	}
 
 	if v, ok := r.URL.Query()["version"]; ok {
-		res, err = s.store.EvalVersion(r.Context(), path, v[0], params)
+		res, err = s.rulesets.EvalVersion(r.Context(), path, v[0], params)
 	} else {
-		res, err = s.store.Eval(r.Context(), path, params)
+		res, err = s.rulesets.Eval(r.Context(), path, params)
 	}
 
 	if err != nil {
@@ -116,7 +116,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	events, err := s.store.Watch(r.Context(), prefix, r.Header.Get("revision"))
+	events, err := s.rulesets.Watch(r.Context(), prefix, r.Header.Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:
@@ -153,7 +153,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 		return
 	}
 
-	entry, err := s.store.Put(r.Context(), path, &rs)
+	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return

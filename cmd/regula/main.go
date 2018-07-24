@@ -39,12 +39,12 @@ func main() {
 	cli := etcdClient(cfg.Etcd.Endpoints)
 	defer cli.Close()
 
-	store := etcd.Store{
+	service := etcd.RulesetService{
 		Client:    cli,
 		Namespace: cfg.Etcd.Namespace,
 	}
 
-	srv := createServer(cli, cfg.Etcd.Namespace, &store, logger)
+	srv := createServer(cli, cfg.Etcd.Namespace, &service, logger)
 
 	runServer(srv, cfg.Server.Address, logger)
 }
@@ -97,12 +97,12 @@ func etcdClient(endpoints string) *clientv3.Client {
 	return cli
 }
 
-func createServer(cli *clientv3.Client, namespace string, store *etcd.Store, logger zerolog.Logger) *http.Server {
+func createServer(cli *clientv3.Client, namespace string, service *etcd.RulesetService, logger zerolog.Logger) *http.Server {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthCheckHandler(cli, namespace, logger))
-	mux.Handle("/", server.NewHandler(ctx, store, server.Config{
+	mux.Handle("/", server.NewHandler(ctx, service, server.Config{
 		Logger: &logger,
 	}))
 	srv := http.Server{

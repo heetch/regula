@@ -15,14 +15,14 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
-// Store manages the storage of rulesets in etcd.
-type Store struct {
+// RulesetService manages the rulesets using etcd.
+type RulesetService struct {
 	Client    *clientv3.Client
 	Namespace string
 }
 
 // List returns all the rulesets entries under the given prefix.
-func (s *Store) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
 	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(prefix, ""), clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
@@ -43,7 +43,7 @@ func (s *Store) List(ctx context.Context, prefix string) (*store.RulesetEntries,
 
 // Latest returns the latest version of the ruleset entry which corresponds to the given path.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
-func (s *Store) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
+func (s *RulesetService) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
 	if path == "" {
 		return nil, store.ErrNotFound
 	}
@@ -69,7 +69,7 @@ func (s *Store) Latest(ctx context.Context, path string) (*store.RulesetEntry, e
 
 // OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
 // It returns store.ErrNotFound if the path doesn't exist or if it's not a ruleset.
-func (s *Store) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+func (s *RulesetService) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
 	if path == "" {
 		return nil, store.ErrNotFound
 	}
@@ -94,7 +94,7 @@ func (s *Store) OneByVersion(ctx context.Context, path, version string) (*store.
 }
 
 // Put adds a version of the given ruleset using an uuid.
-func (s *Store) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	// generate checksum from the ruleset for comparison purpose
 	h := md5.New()
 	err := json.NewEncoder(h).Encode(ruleset)
@@ -163,7 +163,7 @@ func (s *Store) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (
 }
 
 // Watch the given prefix for anything new.
-func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*store.Events, error) {
+func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) (*store.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -185,11 +185,11 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 				continue
 			}
 
-			events := make([]store.Event, len(wresp.Events))
+			events := make([]store.RulesetEvent, len(wresp.Events))
 			for i, ev := range wresp.Events {
 				switch ev.Type {
 				case mvccpb.PUT:
-					events[i].Type = store.PutEvent
+					events[i].Type = store.RulesetPutEvent
 				}
 
 				var e store.RulesetEntry
@@ -202,7 +202,7 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 				events[i].Version = e.Version
 			}
 
-			return &store.Events{
+			return &store.RulesetEvents{
 				Events:   events,
 				Revision: strconv.FormatInt(wresp.Header.Revision, 10),
 			}, nil
@@ -214,7 +214,7 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 }
 
 // Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *Store) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
 	re, err := s.Latest(ctx, path)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -236,7 +236,7 @@ func (s *Store) Eval(ctx context.Context, path string, params regula.ParamGetter
 }
 
 // EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *Store) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
 	re, err := s.OneByVersion(ctx, path, version)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -257,10 +257,10 @@ func (s *Store) EvalVersion(ctx context.Context, path, version string, params re
 	}, nil
 }
 
-func (s *Store) rulesetPath(p, v string) string {
+func (s *RulesetService) rulesetPath(p, v string) string {
 	return path.Join(s.Namespace, "rulesets", p, v)
 }
 
-func (s *Store) checksumPath(p string) string {
+func (s *RulesetService) checksumPath(p string) string {
 	return path.Join(s.Namespace, "checksums", p)
 }

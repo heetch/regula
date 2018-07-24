@@ -19,7 +19,7 @@ import (
 )
 
 func TestAPI(t *testing.T) {
-	s := new(mockStore)
+	s := new(mockRulesetService)
 	log := zerolog.New(ioutil.Discard)
 	h := NewHandler(context.Background(), s, Config{
 		WatchTimeout: 1 * time.Second,
@@ -191,19 +191,19 @@ func TestAPI(t *testing.T) {
 	t.Run("Watch", func(t *testing.T) {
 		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
 		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
-		l := store.Events{
-			Events: []store.Event{
-				{Type: store.PutEvent, Path: "a", Ruleset: r1},
-				{Type: store.PutEvent, Path: "b", Ruleset: r2},
-				{Type: store.PutEvent, Path: "a", Ruleset: r2},
+		l := store.RulesetEvents{
+			Events: []store.RulesetEvent{
+				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r1},
+				{Type: store.RulesetPutEvent, Path: "b", Ruleset: r2},
+				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r2},
 			},
 			Revision: "rev",
 		}
 
-		call := func(t *testing.T, url string, code int, es *store.Events, err error) {
+		call := func(t *testing.T, url string, code int, es *store.RulesetEvents, err error) {
 			t.Helper()
 
-			s.WatchFn = func(context.Context, string, string) (*store.Events, error) {
+			s.WatchFn = func(context.Context, string, string) (*store.RulesetEvents, error) {
 				return es, err
 			}
 			defer func() { s.WatchFn = nil }()
@@ -215,7 +215,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res store.Events
+				var res store.RulesetEvents
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.Equal(t, len(l.Events), len(res.Events))
@@ -294,7 +294,7 @@ func TestAPI(t *testing.T) {
 	})
 }
 
-func resetStore(s *mockStore) {
+func resetStore(s *mockRulesetService) {
 	s.ListCount = 0
 	s.LatestCount = 0
 	s.OneByVersionCount = 0
