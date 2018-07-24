@@ -213,6 +213,50 @@ func (s *Store) Watch(ctx context.Context, prefix string, revision string) (*sto
 
 }
 
+// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
+func (s *Store) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+	re, err := s.Latest(ctx, path)
+	if err != nil {
+		if err == store.ErrNotFound {
+			return nil, regula.ErrRulesetNotFound
+		}
+
+		return nil, err
+	}
+
+	v, err := re.Ruleset.Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &regula.EvalResult{
+		Value:   v,
+		Version: re.Version,
+	}, nil
+}
+
+// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
+func (s *Store) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+	re, err := s.OneByVersion(ctx, path, version)
+	if err != nil {
+		if err == store.ErrNotFound {
+			return nil, regula.ErrRulesetNotFound
+		}
+
+		return nil, err
+	}
+
+	v, err := re.Ruleset.Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &regula.EvalResult{
+		Value:   v,
+		Version: re.Version,
+	}, nil
+}
+
 func (s *Store) rulesetPath(p, v string) string {
 	return path.Join(s.Namespace, "rulesets", p, v)
 }

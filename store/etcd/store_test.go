@@ -17,7 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ store.Store = new(etcd.Store)
+var (
+	_ store.Store      = new(etcd.Store)
+	_ regula.Evaluator = new(etcd.Store)
+)
 
 var (
 	dialTimeout = 5 * time.Second
@@ -310,4 +313,81 @@ func TestWatch(t *testing.T) {
 	require.Equal(t, "ab", events.Events[0].Path)
 	require.Equal(t, store.PutEvent, events.Events[1].Type)
 	require.Equal(t, "a/1", events.Events[1].Path)
+}
+
+func TestEval(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	rs, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.Eq(
+				regula.StringParam("id"),
+				regula.StringValue("123"),
+			),
+			regula.BoolValue(true),
+		),
+	)
+
+	entry := createRuleset(t, s, "a", rs)
+
+	t.Run("OK", func(t *testing.T) {
+		res, err := s.Eval(context.Background(), "a", regula.Params{
+			"id": "123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, regula.BoolValue(true), res.Value)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.Eval(context.Background(), "b", regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
+}
+
+func TestEvalVersion(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdStore(t)
+	defer cleanup()
+
+	rs, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.Eq(
+				regula.StringParam("id"),
+				regula.StringValue("123"),
+			),
+			regula.BoolValue(true),
+		),
+	)
+
+	entry := createRuleset(t, s, "a", rs)
+
+	t.Run("OK", func(t *testing.T) {
+		res, err := s.EvalVersion(context.Background(), "a", entry.Version, regula.Params{
+			"id": "123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, regula.BoolValue(true), res.Value)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.EvalVersion(context.Background(), "b", entry.Version, regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
+
+	t.Run("BadVersion", func(t *testing.T) {
+		_, err := s.EvalVersion(context.Background(), "a", "someversion", regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
 }

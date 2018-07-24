@@ -87,18 +87,18 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, rse *store.RulesetEntry, exp *api.EvalResult) {
+		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params regula.ParamGetter)) {
 			t.Helper()
+			resetStore(s)
 
-			s.LatestFn = func(context.Context, string) (*store.RulesetEntry, error) {
-				return rse, nil
+			s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+				testParamsFn(params)
+				return (*regula.EvalResult)(result), nil
 			}
-			defer func() { s.LatestFn = nil }()
 
-			s.OneByVersionFn = func(context.Context, string, string) (*store.RulesetEntry, error) {
-				return rse, nil
+			s.EvalVersionFn = func(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+				return (*regula.EvalResult)(result), nil
 			}
-			defer func() { s.OneByVersionFn = nil }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", url, nil)
@@ -110,129 +110,47 @@ func TestAPI(t *testing.T) {
 				var res api.EvalResult
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.EqualValues(t, exp, &res)
+				require.EqualValues(t, result, &res)
 			}
 		}
 
-		t.Run("String - OK", func(t *testing.T) {
-			rs, _ := regula.NewStringRuleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.StringParam("foo"),
-						regula.StringValue("bar"),
-					),
-					regula.StringValue("success"),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
-			}
-
-			exp := &api.EvalResult{
+		t.Run("OK", func(t *testing.T) {
+			exp := api.EvalResult{
 				Value: regula.StringValue("success"),
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusOK, &rse, exp)
-			require.Equal(t, 1, s.LatestCount)
+			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params regula.ParamGetter) {
+				s, err := params.GetString("str")
+				require.NoError(t, err)
+				require.Equal(t, "str", s)
+				i, err := params.GetInt64("nb")
+				require.NoError(t, err)
+				require.Equal(t, int64(10), i)
+				b, err := params.GetBool("boolean")
+				require.NoError(t, err)
+				require.True(t, b)
+			})
+			require.Equal(t, 1, s.EvalCount)
 		})
 
-		t.Run("String with version - OK", func(t *testing.T) {
-			rs, _ := regula.NewStringRuleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.StringParam("foo"),
-						regula.StringValue("bar"),
-					),
-					regula.StringValue("success"),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
-				Version: "123",
-			}
-
-			exp := &api.EvalResult{
+		t.Run("OK With version", func(t *testing.T) {
+			exp := api.EvalResult{
 				Value:   regula.StringValue("success"),
 				Version: "123",
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&foo=bar", http.StatusOK, &rse, exp)
-			require.Equal(t, 1, s.OneByVersionCount)
-		})
-
-		t.Run("Bool - OK", func(t *testing.T) {
-			rs, _ := regula.NewBoolRuleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.BoolParam("foo"),
-						regula.BoolValue(true),
-					),
-					regula.BoolValue(true),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
-			}
-
-			exp := &api.EvalResult{
-				Value: regula.BoolValue(true),
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&foo=true", http.StatusOK, &rse, exp)
-		})
-
-		t.Run("Int64 - OK", func(t *testing.T) {
-			rs, _ := regula.NewInt64Ruleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.Int64Param("foo"),
-						regula.Int64Value(42),
-					),
-					regula.Int64Value(42),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
-			}
-
-			exp := &api.EvalResult{
-				Value: regula.Int64Value(42),
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42", http.StatusOK, &rse, exp)
-		})
-
-		t.Run("Float64 - OK", func(t *testing.T) {
-			rs, _ := regula.NewFloat64Ruleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.Float64Param("foo"),
-						regula.Float64Value(42.42),
-					),
-					regula.Float64Value(42.42),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
-			}
-
-			exp := &api.EvalResult{
-				Value: regula.Float64Value(42.42),
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&foo=42.42", http.StatusOK, &rse, exp)
+			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params regula.ParamGetter) {
+				s, err := params.GetString("str")
+				require.NoError(t, err)
+				require.Equal(t, "str", s)
+			})
+			require.Equal(t, 1, s.EvalVersionCount)
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.LatestFn = func(context.Context, string) (*store.RulesetEntry, error) {
-				return nil, store.ErrNotFound
+			s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+				return nil, regula.ErrRulesetNotFound
 			}
-			defer func() { s.LatestFn = nil }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
@@ -249,40 +167,24 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, exp, resp)
 		})
 
-		t.Run("NOK - bad parameter type", func(t *testing.T) {
-			rs, _ := regula.NewStringRuleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.BoolParam("foo"),
-						regula.BoolValue(true),
-					),
-					regula.StringValue("success"),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
+		t.Run("NOK - errors", func(t *testing.T) {
+			errs := []error{
+				regula.ErrParamNotFound,
+				regula.ErrParamTypeMismatch,
+				regula.ErrNoMatch,
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&foo=bar", http.StatusBadRequest, &rse, nil)
-		})
+			for _, e := range errs {
+				s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+					return nil, e
+				}
 
-		t.Run("NOK - undefined parameter", func(t *testing.T) {
-			rs, _ := regula.NewStringRuleset(
-				regula.NewRule(
-					regula.Eq(
-						regula.BoolParam("foo"),
-						regula.BoolValue(true),
-					),
-					regula.StringValue("success"),
-				),
-			)
-			rse := store.RulesetEntry{
-				Path:    "path/to/my/ruleset",
-				Ruleset: rs,
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
+				h.ServeHTTP(w, r)
+
+				require.Equal(t, http.StatusBadRequest, w.Code)
 			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&bar=true", http.StatusBadRequest, &rse, nil)
 		})
 	})
 
@@ -390,4 +292,21 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
 		})
 	})
+}
+
+func resetStore(s *mockStore) {
+	s.ListCount = 0
+	s.LatestCount = 0
+	s.OneByVersionCount = 0
+	s.WatchCount = 0
+	s.PutCount = 0
+	s.EvalCount = 0
+	s.EvalVersionCount = 0
+	s.ListFn = nil
+	s.LatestFn = nil
+	s.OneByVersionFn = nil
+	s.WatchFn = nil
+	s.PutFn = nil
+	s.EvalFn = nil
+	s.EvalVersionFn = nil
 }

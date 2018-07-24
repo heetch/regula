@@ -20,6 +20,10 @@ type mockStore struct {
 	WatchFn           func(context.Context, string, string) (*store.Events, error)
 	PutCount          int
 	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
+	EvalCount         int
+	EvalFn            func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error)
+	EvalVersionCount  int
+	EvalVersionFn     func(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error)
 }
 
 func (s *mockStore) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
@@ -65,6 +69,24 @@ func (s *mockStore) Put(ctx context.Context, path string, ruleset *regula.Rulese
 
 	if s.PutFn != nil {
 		return s.PutFn(ctx, path)
+	}
+	return nil, nil
+}
+
+func (s *mockStore) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+	s.EvalCount++
+
+	if s.EvalFn != nil {
+		return s.EvalFn(ctx, path, params)
+	}
+	return nil, nil
+}
+
+func (s *mockStore) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+	s.EvalVersionCount++
+
+	if s.EvalVersionFn != nil {
+		return s.EvalVersionFn(ctx, path, version, params)
 	}
 	return nil, nil
 }

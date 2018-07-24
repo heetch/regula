@@ -25,6 +25,10 @@ type Store interface {
 	Watch(ctx context.Context, prefix string, revision string) (*Events, error)
 	// Put is used to store a ruleset version.
 	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
+	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
+	Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error)
+	// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
+	EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error)
 }
 
 // RulesetEntry holds a ruleset and its metadata.
