@@ -59,12 +59,12 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	entries, err := s.rulesets.List(r.Context(), prefix)
 	if err != nil {
-		s.writeError(w, err, http.StatusInternalServerError)
-		return
-	}
+		if err == store.ErrNotFound {
+			s.writeError(w, err, http.StatusNotFound)
+			return
+		}
 
-	if len(entries.Entries) == 0 && prefix != "" {
-		w.WriteHeader(http.StatusNotFound)
+		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -28,6 +28,12 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*store.Rulese
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
 
+	// if a prefix is provided it must always return results
+	// otherwise it doesn't exist.
+	if resp.Count == 0 && prefix != "" {
+		return nil, store.ErrNotFound
+	}
+
 	var entries store.RulesetEntries
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))

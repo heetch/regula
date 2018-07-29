@@ -5,24 +5,22 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/flags"
 	"github.com/heetch/regula/api/server"
-	"github.com/heetch/regula/store"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 )
 
+// Config holds the server configuration.
 type Config struct {
 	Etcd struct {
-		Endpoints string `config:"etcd-endpoints"`
-		Namespace string `config:"etcd-namespace,required"`
+		Endpoints []string `config:"etcd-endpoints"`
+		Namespace string   `config:"etcd-namespace,required"`
 	}
 	Server struct {
 		Address      string        `config:"addr"`
@@ -31,10 +29,11 @@ type Config struct {
 	LogLevel string `config:"log-level"`
 }
 
+// LoadConfig loads the configuration from the environment or command line flags.
 func LoadConfig() (*Config, error) {
 	var cfg Config
 	cfg.LogLevel = zerolog.DebugLevel.String()
-	cfg.Etcd.Endpoints = "127.0.0.1:2379"
+	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
 	cfg.Server.Address = "0.0.0.0:5331"
 	cfg.Server.WatchTimeout = 60 * time.Second
 
@@ -46,6 +45,7 @@ func LoadConfig() (*Config, error) {
 	return &cfg, nil
 }
 
+// CreateLogger returns a configured logger.
 func CreateLogger(level string) zerolog.Logger {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
@@ -68,25 +68,8 @@ func CreateLogger(level string) zerolog.Logger {
 	return logger
 }
 
-func EtcdClient(endpoints string) (*clientv3.Client, error) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   strings.Split(endpoints, ","),
-		DialTimeout: 5 * time.Second,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return cli, nil
-}
-
-func CreateServer(cfg *Config, service store.RulesetService, logger zerolog.Logger) *server.Server {
-	return server.NewServer(service, server.Config{
-		Logger:       &logger,
-		WatchTimeout: cfg.Server.WatchTimeout,
-	})
-}
-
+// RunServer runs the server and listens to SIGINT and SIGTERM
+// to stop the server gracefully.
 func RunServer(srv *server.Server, addr string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -44,11 +44,11 @@ func TestAPI(t *testing.T) {
 			Revision: "somerev",
 		}
 
-		call := func(t *testing.T, url string, code int, l *store.RulesetEntries) {
+		call := func(t *testing.T, url string, code int, l *store.RulesetEntries, err error) {
 			t.Helper()
 
 			s.ListFn = func(context.Context, string) (*store.RulesetEntries, error) {
-				return l, nil
+				return l, err
 			}
 			defer func() { s.ListFn = nil }()
 
@@ -70,19 +70,19 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l)
+			call(t, "/rulesets/?list", http.StatusOK, &l, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l)
+			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries))
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries))
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound)
 		})
 	})
 

@@ -12,13 +12,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Server is an HTTP server serving the Regula API.
 type Server struct {
-	Mux    *http.ServeMux
+	Mux    *http.ServeMux // Can be used to add handlers to the server.
 	logger zerolog.Logger
 	server *http.Server
 }
 
-func NewServer(rsService store.RulesetService, cfg Config) *Server {
+// New creates a Server instance.
+func New(service store.RulesetService, cfg Config) *Server {
 	srv := Server{
 		Mux: http.NewServeMux(),
 	}
@@ -36,11 +38,13 @@ func NewServer(rsService store.RulesetService, cfg Config) *Server {
 	// cancel context on shutdown to stop long running operations like watches.
 	srv.server.RegisterOnShutdown(cancel)
 
-	srv.Mux.Handle("/", NewHandler(ctx, rsService, cfg))
+	srv.Mux.Handle("/", NewHandler(ctx, service, cfg))
 
 	return &srv
 }
 
+// Run runs the server on the chosen address. The given context must be used to
+// gracefully stop the server.
 func (s *Server) Run(ctx context.Context, addr string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {

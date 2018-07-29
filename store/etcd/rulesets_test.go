@@ -99,6 +99,11 @@ func TestList(t *testing.T) {
 		}
 		require.NotEmpty(t, entries.Revision)
 	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.List(context.Background(), "doesntexist")
+		require.Equal(t, err, store.ErrNotFound)
+	})
 }
 
 func TestLatest(t *testing.T) {
