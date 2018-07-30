@@ -17,7 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ store.Store = new(etcd.Store)
+var (
+	_ store.RulesetService = new(etcd.RulesetService)
+	_ regula.Evaluator     = new(etcd.RulesetService)
+)
 
 var (
 	dialTimeout = 5 * time.Second
@@ -28,7 +31,7 @@ func Init() {
 	rand.Seed(time.Now().Unix())
 }
 
-func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
+func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 	t.Helper()
 
 	cli, err := clientv3.New(clientv3.Config{
@@ -37,7 +40,7 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	})
 	require.NoError(t, err)
 
-	s := etcd.Store{
+	s := etcd.RulesetService{
 		Client:    cli,
 		Namespace: fmt.Sprintf("regula-store-tests-%d", rand.Int()),
 	}
@@ -48,7 +51,7 @@ func newEtcdStore(t *testing.T) (*etcd.Store, func()) {
 	}
 }
 
-func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) *store.RulesetEntry {
+func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.Ruleset) *store.RulesetEntry {
 	e, err := s.Put(context.Background(), path, r)
 	if err != nil && err != store.ErrNotModified {
 		require.NoError(t, err)
@@ -59,7 +62,7 @@ func createRuleset(t *testing.T, s *etcd.Store, path string, r *regula.Ruleset) 
 func TestList(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdStore(t)
+	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
 	t.Run("Root", func(t *testing.T) {
@@ -96,12 +99,17 @@ func TestList(t *testing.T) {
 		}
 		require.NotEmpty(t, entries.Revision)
 	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.List(context.Background(), "doesntexist")
+		require.Equal(t, err, store.ErrNotFound)
+	})
 }
 
 func TestLatest(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdStore(t)
+	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
 	oldRse, _ := regula.NewBoolRuleset(
@@ -172,7 +180,7 @@ func TestLatest(t *testing.T) {
 func TestOneByVersion(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdStore(t)
+	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
 	oldRse, _ := regula.NewBoolRuleset(
@@ -224,7 +232,7 @@ func TestOneByVersion(t *testing.T) {
 func TestPut(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdStore(t)
+	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
 	t.Run("OK", func(t *testing.T) {
@@ -275,7 +283,7 @@ func TestPut(t *testing.T) {
 func TestWatch(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdStore(t)
+	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
 	var wg sync.WaitGroup
@@ -298,7 +306,7 @@ func TestWatch(t *testing.T) {
 	require.Len(t, events.Events, 1)
 	require.NotEmpty(t, events.Revision)
 	require.Equal(t, "aa", events.Events[0].Path)
-	require.Equal(t, store.PutEvent, events.Events[0].Type)
+	require.Equal(t, store.RulesetPutEvent, events.Events[0].Type)
 
 	wg.Wait()
 
@@ -306,8 +314,85 @@ func TestWatch(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, events.Events, 2)
 	require.NotEmpty(t, events.Revision)
-	require.Equal(t, store.PutEvent, events.Events[0].Type)
+	require.Equal(t, store.RulesetPutEvent, events.Events[0].Type)
 	require.Equal(t, "ab", events.Events[0].Path)
-	require.Equal(t, store.PutEvent, events.Events[1].Type)
+	require.Equal(t, store.RulesetPutEvent, events.Events[1].Type)
 	require.Equal(t, "a/1", events.Events[1].Path)
+}
+
+func TestEval(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdRulesetService(t)
+	defer cleanup()
+
+	rs, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.Eq(
+				regula.StringParam("id"),
+				regula.StringValue("123"),
+			),
+			regula.BoolValue(true),
+		),
+	)
+
+	entry := createRuleset(t, s, "a", rs)
+
+	t.Run("OK", func(t *testing.T) {
+		res, err := s.Eval(context.Background(), "a", regula.Params{
+			"id": "123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, regula.BoolValue(true), res.Value)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.Eval(context.Background(), "b", regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
+}
+
+func TestEvalVersion(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdRulesetService(t)
+	defer cleanup()
+
+	rs, _ := regula.NewBoolRuleset(
+		regula.NewRule(
+			regula.Eq(
+				regula.StringParam("id"),
+				regula.StringValue("123"),
+			),
+			regula.BoolValue(true),
+		),
+	)
+
+	entry := createRuleset(t, s, "a", rs)
+
+	t.Run("OK", func(t *testing.T) {
+		res, err := s.EvalVersion(context.Background(), "a", entry.Version, regula.Params{
+			"id": "123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, regula.BoolValue(true), res.Value)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.EvalVersion(context.Background(), "b", entry.Version, regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
+
+	t.Run("BadVersion", func(t *testing.T) {
+		_, err := s.EvalVersion(context.Background(), "a", "someversion", regula.Params{
+			"id": "123",
+		})
+		require.Equal(t, regula.ErrRulesetNotFound, err)
+	})
 }

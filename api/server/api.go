@@ -57,14 +57,14 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
-	entries, err := s.store.List(r.Context(), prefix)
+	entries, err := s.rulesets.List(r.Context(), prefix)
 	if err != nil {
-		s.writeError(w, err, http.StatusInternalServerError)
-		return
-	}
+		if err == store.ErrNotFound {
+			s.writeError(w, err, http.StatusNotFound)
+			return
+		}
 
-	if len(entries.Entries) == 0 && prefix != "" {
-		w.WriteHeader(http.StatusNotFound)
+		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -81,51 +81,42 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 
 func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {
 	var err error
-	var e *store.RulesetEntry
-
-	if v, ok := r.URL.Query()["version"]; ok {
-		e, err = s.store.OneByVersion(r.Context(), path, v[0])
-	} else {
-		e, err = s.store.Latest(r.Context(), path)
-	}
-
-	if err != nil {
-		if err == store.ErrNotFound {
-			s.writeError(w, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
-			return
-		}
-		s.writeError(w, err, http.StatusInternalServerError)
-		return
-	}
+	var res *regula.EvalResult
 
 	params := make(params)
 	for k, v := range r.URL.Query() {
 		params[k] = v[0]
 	}
 
-	v, err := e.Ruleset.Eval(params)
+	if v, ok := r.URL.Query()["version"]; ok {
+		res, err = s.rulesets.EvalVersion(r.Context(), path, v[0], params)
+	} else {
+		res, err = s.rulesets.Eval(r.Context(), path, params)
+	}
+
 	if err != nil {
+		if err == regula.ErrRulesetNotFound {
+			s.writeError(w, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
+			return
+		}
+
 		if err == regula.ErrParamNotFound ||
 			err == regula.ErrParamTypeMismatch ||
 			err == regula.ErrNoMatch {
 			s.writeError(w, err, http.StatusBadRequest)
 			return
 		}
-		s.writeError(w, errInternal, http.StatusInternalServerError)
+
+		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	resp := api.EvalResult{
-		Value:   v,
-		Version: e.Version,
-	}
-
-	s.encodeJSON(w, resp, http.StatusOK)
+	s.encodeJSON(w, (*api.EvalResult)(res), http.StatusOK)
 }
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	events, err := s.store.Watch(r.Context(), prefix, r.Header.Get("revision"))
+	events, err := s.rulesets.Watch(r.Context(), prefix, r.Header.Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:
@@ -162,7 +153,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 		return
 	}
 
-	entry, err := s.store.Put(r.Context(), path, &rs)
+	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return

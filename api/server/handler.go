@@ -26,9 +26,9 @@ type Config struct {
 }
 
 // NewHandler creates an http handler to serve the rules engine API.
-func NewHandler(ctx context.Context, store store.Store, cfg Config) http.Handler {
+func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config) http.Handler {
 	s := service{
-		store: store,
+		rulesets: rsService,
 	}
 
 	if cfg.Logger != nil {
@@ -80,8 +80,8 @@ func NewHandler(ctx context.Context, store store.Store, cfg Config) http.Handler
 }
 
 type service struct {
-	logger zerolog.Logger
-	store  store.Store
+	logger   zerolog.Logger
+	rulesets store.RulesetService
 }
 
 // encodeJSON encodes v to w in JSON format.
