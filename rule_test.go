@@ -45,11 +45,11 @@ func TestRuleUnmarshalling(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "string", rule.Result.Type)
 		require.Equal(t, "foo", rule.Result.Data)
-		require.IsType(t, new(nodeEq), rule.Root)
-		eq := rule.Root.(*nodeEq)
+		require.IsType(t, new(exprEq), rule.Root)
+		eq := rule.Root.(*exprEq)
 		require.Len(t, eq.Operands, 2)
 		require.IsType(t, new(Value), eq.Operands[0])
-		require.IsType(t, new(nodeEq), eq.Operands[1])
+		require.IsType(t, new(exprEq), eq.Operands[1])
 	})
 
 	t.Run("Missing result type", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 func TestRuleEval(t *testing.T) {
 	t.Run("Match", func(t *testing.T) {
 		tests := []struct {
-			node   Node
+			expr   Expr
 			params Params
 		}{
 			{Eq(StringValue("foo"), StringValue("foo")), nil},
@@ -95,7 +95,7 @@ func TestRuleEval(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			r := NewRule(test.node, StringValue("matched"))
+			r := NewRule(test.expr, StringValue("matched"))
 			res, err := r.Eval(test.params)
 			require.NoError(t, err)
 			require.Equal(t, "matched", res.Data)
@@ -105,7 +105,7 @@ func TestRuleEval(t *testing.T) {
 
 	t.Run("Invalid return", func(t *testing.T) {
 		tests := []struct {
-			node   Node
+			expr   Expr
 			params Params
 		}{
 			{StringValue("foo"), nil},
@@ -113,7 +113,7 @@ func TestRuleEval(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			r := NewRule(test.node, StringValue("matched"))
+			r := NewRule(test.expr, StringValue("matched"))
 			_, err := r.Eval(test.params)
 			require.Error(t, err)
 		}

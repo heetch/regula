@@ -9,55 +9,54 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// A Node is a piece of the AST that denotes a construct occurring in the rule source code.
-// Each node takes a set of params and evaluates to a value.
-type Node interface {
+// An Expr is a logical expression that can be evaluated to a value.
+type Expr interface {
 	Eval(ParamGetter) (*Value, error)
 }
 
-func parseNode(kind string, data []byte) (Node, error) {
-	var n Node
+func parseExpr(kind string, data []byte) (Expr, error) {
+	var e Expr
 	var err error
 
 	switch kind {
 	case "eq":
-		var eq nodeEq
-		n = &eq
+		var eq exprEq
+		e = &eq
 		err = eq.UnmarshalJSON(data)
 	case "in":
-		var in nodeIn
-		n = &in
+		var in exprIn
+		e = &in
 		err = in.UnmarshalJSON(data)
 	case "not":
-		var not nodeNot
-		n = &not
+		var not exprNot
+		e = &not
 		err = not.UnmarshalJSON(data)
 	case "and":
-		var and nodeAnd
-		n = &and
+		var and exprAnd
+		e = &and
 		err = and.UnmarshalJSON(data)
 	case "or":
-		var or nodeOr
-		n = &or
+		var or exprOr
+		e = &or
 		err = or.UnmarshalJSON(data)
 	case "value":
 		var v Value
-		n = &v
+		e = &v
 		err = json.Unmarshal(data, &v)
 	case "param":
-		var v nodeParam
-		n = &v
+		var v exprParam
+		e = &v
 		err = json.Unmarshal(data, &v)
 	default:
-		err = errors.New("unknown node kind")
+		err = errors.New("unknown expression kind")
 	}
 
-	return n, err
+	return e, err
 }
 
 type operands struct {
 	Ops   []json.RawMessage `json:"operands"`
-	Nodes []Node
+	Exprs []Expr
 }
 
 func (o *operands) UnmarshalJSON(data []byte) error {
@@ -68,12 +67,12 @@ func (o *operands) UnmarshalJSON(data []byte) error {
 
 	for _, op := range o.Ops {
 		r := gjson.Get(string(op), "kind")
-		n, err := parseNode(r.Str, []byte(op))
+		n, err := parseExpr(r.Str, []byte(op))
 		if err != nil {
 			return err
 		}
 
-		o.Nodes = append(o.Nodes, n)
+		o.Exprs = append(o.Exprs, n)
 	}
 
 	return nil
@@ -84,21 +83,21 @@ type nodeOps struct {
 	Operands operands `json:"operands"`
 }
 
-type nodeNot struct {
+type exprNot struct {
 	Kind     string `json:"kind"`
-	Operands []Node `json:"operands"`
+	Operands []Expr `json:"operands"`
 }
 
-// Not creates a node that evaluates the given node n and returns its opposite.
-// n must evaluate to a boolean.
-func Not(n Node) Node {
-	return &nodeNot{
+// Not creates an expression that evaluates the given operand e and returns its opposite.
+// e must evaluate to a boolean.
+func Not(e Expr) Expr {
+	return &exprNot{
 		Kind:     "not",
-		Operands: []Node{n},
+		Operands: []Expr{e},
 	}
 }
 
-func (n *nodeNot) Eval(params ParamGetter) (*Value, error) {
+func (n *exprNot) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 1 {
 		return nil, errors.New("invalid number of operands in Not func")
 	}
@@ -120,7 +119,7 @@ func (n *nodeNot) Eval(params ParamGetter) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *nodeNot) UnmarshalJSON(data []byte) error {
+func (n *exprNot) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -128,31 +127,31 @@ func (n *nodeNot) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if len(node.Operands.Nodes) < 1 {
+	if len(node.Operands.Exprs) < 1 {
 		return errors.New("invalid number of operands in Not func")
 	}
 
-	n.Operands = node.Operands.Nodes
+	n.Operands = node.Operands.Exprs
 	n.Kind = "not"
 
 	return nil
 }
 
-type nodeOr struct {
+type exprOr struct {
 	Kind     string `json:"kind"`
-	Operands []Node `json:"operands"`
+	Operands []Expr `json:"operands"`
 }
 
-// Or creates a node that takes at least two nodes and evaluates to true if one of the nodes evaluates to true.
-// All the given nodes must evaluate to a boolean.
-func Or(v1, v2 Node, vN ...Node) Node {
-	return &nodeOr{
+// Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
+// All the given operands must evaluate to a boolean.
+func Or(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprOr{
 		Kind:     "or",
-		Operands: append([]Node{v1, v2}, vN...),
+		Operands: append([]Expr{v1, v2}, vN...),
 	}
 }
 
-func (n *nodeOr) Eval(params ParamGetter) (*Value, error) {
+func (n *exprOr) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in Or func")
 	}
@@ -187,7 +186,7 @@ func (n *nodeOr) Eval(params ParamGetter) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-func (n *nodeOr) UnmarshalJSON(data []byte) error {
+func (n *exprOr) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -195,30 +194,30 @@ func (n *nodeOr) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if len(node.Operands.Nodes) < 2 {
+	if len(node.Operands.Exprs) < 2 {
 		return errors.New("invalid number of operands in Or func")
 	}
 
-	or := Or(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
-	*n = *(or.(*nodeOr))
+	or := Or(node.Operands.Exprs[0], node.Operands.Exprs[1], node.Operands.Exprs[2:]...)
+	*n = *(or.(*exprOr))
 	return nil
 }
 
-type nodeAnd struct {
+type exprAnd struct {
 	Kind     string `json:"kind"`
-	Operands []Node `json:"operands"`
+	Operands []Expr `json:"operands"`
 }
 
-// And creates a node that takes at least two nodes and evaluates to true if all the nodes evaluate to true.
-// All the given nodes must evaluate to a boolean.
-func And(v1, v2 Node, vN ...Node) Node {
-	return &nodeAnd{
+// And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
+// All the given operands must evaluate to a boolean.
+func And(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprAnd{
 		Kind:     "and",
-		Operands: append([]Node{v1, v2}, vN...),
+		Operands: append([]Expr{v1, v2}, vN...),
 	}
 }
 
-func (n *nodeAnd) Eval(params ParamGetter) (*Value, error) {
+func (n *exprAnd) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in And func")
 	}
@@ -253,7 +252,7 @@ func (n *nodeAnd) Eval(params ParamGetter) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *nodeAnd) UnmarshalJSON(data []byte) error {
+func (n *exprAnd) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -261,29 +260,29 @@ func (n *nodeAnd) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if len(node.Operands.Nodes) < 2 {
+	if len(node.Operands.Exprs) < 2 {
 		return errors.New("invalid number of operands in And func")
 	}
 
-	and := And(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
-	*n = *(and.(*nodeAnd))
+	and := And(node.Operands.Exprs[0], node.Operands.Exprs[1], node.Operands.Exprs[2:]...)
+	*n = *(and.(*exprAnd))
 	return nil
 }
 
-type nodeEq struct {
+type exprEq struct {
 	Kind     string `json:"kind"`
-	Operands []Node `json:"operands"`
+	Operands []Expr `json:"operands"`
 }
 
-// Eq creates a node that takes at least two nodes and evaluates to true if all the nodes are equal.
-func Eq(v1, v2 Node, vN ...Node) Node {
-	return &nodeEq{
+// Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
+func Eq(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprEq{
 		Kind:     "eq",
-		Operands: append([]Node{v1, v2}, vN...),
+		Operands: append([]Expr{v1, v2}, vN...),
 	}
 }
 
-func (n *nodeEq) Eval(params ParamGetter) (*Value, error) {
+func (n *exprEq) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in Eq func")
 	}
@@ -308,7 +307,7 @@ func (n *nodeEq) Eval(params ParamGetter) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *nodeEq) UnmarshalJSON(data []byte) error {
+func (n *exprEq) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -316,29 +315,29 @@ func (n *nodeEq) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if len(node.Operands.Nodes) < 2 {
+	if len(node.Operands.Exprs) < 2 {
 		return errors.New("invalid number of operands in Eq func")
 	}
 
-	eq := Eq(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
-	*n = *(eq.(*nodeEq))
+	eq := Eq(node.Operands.Exprs[0], node.Operands.Exprs[1], node.Operands.Exprs[2:]...)
+	*n = *(eq.(*exprEq))
 	return nil
 }
 
-type nodeIn struct {
+type exprIn struct {
 	Kind     string `json:"kind"`
-	Operands []Node `json:"operands"`
+	Operands []Expr `json:"operands"`
 }
 
-// In creates a node that takes at least two nodes and evaluates to true if the first one is equal to one of the others.
-func In(v, e1 Node, eN ...Node) Node {
-	return &nodeIn{
+// In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
+func In(v, e1 Expr, eN ...Expr) Expr {
+	return &exprIn{
 		Kind:     "in",
-		Operands: append([]Node{v, e1}, eN...),
+		Operands: append([]Expr{v, e1}, eN...),
 	}
 }
 
-func (n *nodeIn) Eval(params ParamGetter) (*Value, error) {
+func (n *exprIn) Eval(params ParamGetter) (*Value, error) {
 	if len(n.Operands) < 2 {
 		return nil, errors.New("invalid number of operands in In func")
 	}
@@ -363,7 +362,7 @@ func (n *nodeIn) Eval(params ParamGetter) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-func (n *nodeIn) UnmarshalJSON(data []byte) error {
+func (n *exprIn) UnmarshalJSON(data []byte) error {
 	var node nodeOps
 
 	err := json.Unmarshal(data, &node)
@@ -371,68 +370,68 @@ func (n *nodeIn) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if len(node.Operands.Nodes) < 2 {
+	if len(node.Operands.Exprs) < 2 {
 		return errors.New("invalid number of operands in In func")
 	}
 
-	in := In(node.Operands.Nodes[0], node.Operands.Nodes[1], node.Operands.Nodes[2:]...)
+	in := In(node.Operands.Exprs[0], node.Operands.Exprs[1], node.Operands.Exprs[2:]...)
 
-	*n = *(in.(*nodeIn))
+	*n = *(in.(*exprIn))
 
 	return nil
 }
 
-type nodeParam struct {
+type exprParam struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// StringParam creates a node that looks up in the set of params passed during evaluation and returns the value
+// StringParam creates an expression that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
-func StringParam(name string) Node {
-	return &nodeParam{
+func StringParam(name string) Expr {
+	return &exprParam{
 		Kind: "param",
 		Type: "string",
 		Name: name,
 	}
 }
 
-// BoolParam creates a node that looks up in the set of params passed during evaluation and returns the value
+// BoolParam creates an expression that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a boolean. If not found it returns an error.
-func BoolParam(name string) Node {
-	return &nodeParam{
+func BoolParam(name string) Expr {
+	return &exprParam{
 		Kind: "param",
 		Type: "bool",
 		Name: name,
 	}
 }
 
-// Int64Param creates a node that looks up in the set of params passed during evaluation and returns the value
+// Int64Param creates an expression that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be an int64. If not found it returns an error.
-func Int64Param(name string) Node {
-	return &nodeParam{
+func Int64Param(name string) Expr {
+	return &exprParam{
 		Kind: "param",
 		Type: "int64",
 		Name: name,
 	}
 }
 
-// Float64Param creates a node that looks up in the set of params passed during evaluation and returns the value
+// Float64Param creates an expression that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a float64. If not found it returns an error.
-func Float64Param(name string) Node {
-	return &nodeParam{
+func Float64Param(name string) Expr {
+	return &exprParam{
 		Kind: "param",
 		Type: "float64",
 		Name: name,
 	}
 }
 
-func (n *nodeParam) Eval(params ParamGetter) (*Value, error) {
+func (n *exprParam) Eval(params ParamGetter) (*Value, error) {
 	if params == nil {
 		return nil, errors.New("params is nil")
 	}
@@ -467,12 +466,12 @@ func (n *nodeParam) Eval(params ParamGetter) (*Value, error) {
 	return nil, errors.New("unsupported param type")
 }
 
-// True creates a node that always evaluates to true.
-func True() Node {
+// True creates an expression that always evaluates to true.
+func True() Expr {
 	return BoolValue(true)
 }
 
-// A Value is the result of a Node evaluation.
+// A Value is the result of the evaluation of an expression.
 type Value struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`

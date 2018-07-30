@@ -10,14 +10,14 @@ import (
 
 // A Rule represents a logical expression that evaluates to a result.
 type Rule struct {
-	Root   Node   `json:"root"`
+	Root   Expr   `json:"root"`
 	Result *Value `json:"result"`
 }
 
-// NewRule creates a rule with the given node and that returns the given result on evaluation.
-func NewRule(node Node, result *Value) *Rule {
+// NewRule creates a rule with the given expression and that returns the given result on evaluation.
+func NewRule(expr Expr, result *Value) *Rule {
 	return &Rule{
-		Root:   node,
+		Root:   expr,
 		Result: result,
 	}
 }
@@ -39,7 +39,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	}
 
 	res := gjson.Get(string(tree.Root), "kind")
-	n, err := parseNode(res.Str, []byte(tree.Root))
+	n, err := parseExpr(res.Str, []byte(tree.Root))
 	if err != nil {
 		return err
 	}
