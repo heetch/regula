@@ -218,6 +218,57 @@ func TestParam(t *testing.T) {
 		_, err := v.Eval(nil)
 		require.Error(t, err)
 	})
+
+	t.Run("Good format", func(t *testing.T) {
+		p := rule.StringParam("abc")
+		v, _ := p.(rule.Validator)
+		err := v.Validate()
+		require.NoError(t, err)
+
+		p = rule.StringParam("abc-xyz")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.NoError(t, err)
+
+		p = rule.StringParam("abc-123")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.NoError(t, err)
+
+		p = rule.StringParam("abc-123-xyz")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.NoError(t, err)
+
+	})
+
+	t.Run("Bad format", func(t *testing.T) {
+		p := rule.StringParam("ABC")
+		v, _ := p.(rule.Validator)
+		err := v.Validate()
+		require.Equal(t, rule.ErrParameterBadFormat, err)
+
+		p = rule.StringParam("abc-")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.Equal(t, rule.ErrParameterBadFormat, err)
+
+		p = rule.StringParam("abc--xyz")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.Equal(t, rule.ErrParameterBadFormat, err)
+
+		p = rule.StringParam("abc_xyz")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.Equal(t, rule.ErrParameterBadFormat, err)
+
+		p = rule.StringParam("0abc")
+		v, _ = p.(rule.Validator)
+		err = v.Validate()
+		require.Equal(t, rule.ErrParameterBadFormat, err)
+
+	})
 }
 
 func TestValue(t *testing.T) {

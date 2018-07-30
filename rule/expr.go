@@ -3,6 +3,7 @@ package rule
 import (
 	"errors"
 	"go/token"
+	"regexp"
 	"strconv"
 )
 
@@ -241,6 +242,22 @@ type exprParam struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
+}
+
+// Validator validates the name of the parameter.
+type Validator interface {
+	Validate() error
+}
+
+// regex used to validate name parameters.
+var rgx = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
+
+func (n *exprParam) Validate() error {
+	if ok := rgx.MatchString(n.Name); !ok {
+		return ErrParameterBadFormat
+	}
+
+	return nil
 }
 
 // StringParam creates an expression that looks up in the set of params passed during evaluation and returns the value
