@@ -3,18 +3,18 @@ package server
 import (
 	"strconv"
 
-	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 )
 
 // params represents the parameters computed from the query string.
-// It implements the regula.ParamGetter interface.
+// It implements the rule.Params interface.
 type params map[string]string
 
 // GetString extracts a string parameter which corresponds to the given key.
 func (p params) GetString(key string) (string, error) {
 	s, ok := p[key]
 	if !ok {
-		return "", regula.ErrParamNotFound
+		return "", rule.ErrParamNotFound
 	}
 
 	return s, nil
@@ -24,12 +24,12 @@ func (p params) GetString(key string) (string, error) {
 func (p params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
-		return false, regula.ErrParamNotFound
+		return false, rule.ErrParamNotFound
 	}
 
 	b, err := strconv.ParseBool(v)
 	if err != nil {
-		return false, regula.ErrParamTypeMismatch
+		return false, rule.ErrParamTypeMismatch
 	}
 
 	return b, nil
@@ -39,12 +39,12 @@ func (p params) GetBool(key string) (bool, error) {
 func (p params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, regula.ErrParamNotFound
+		return 0, rule.ErrParamNotFound
 	}
 
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
-		return 0, regula.ErrParamTypeMismatch
+		return 0, rule.ErrParamTypeMismatch
 	}
 
 	return i, nil
@@ -54,12 +54,12 @@ func (p params) GetInt64(key string) (int64, error) {
 func (p params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, regula.ErrParamNotFound
+		return 0, rule.ErrParamNotFound
 	}
 
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		return 0, regula.ErrParamTypeMismatch
+		return 0, rule.ErrParamTypeMismatch
 	}
 
 	return f, err
@@ -79,7 +79,7 @@ func (p params) Keys() []string {
 func (p params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", regula.ErrParamNotFound
+		return "", rule.ErrParamNotFound
 	}
 
 	return v, nil

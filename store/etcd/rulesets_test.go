@@ -12,6 +12,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
 	"github.com/stretchr/testify/require"
@@ -113,16 +114,16 @@ func TestLatest(t *testing.T) {
 	defer cleanup()
 
 	oldRse, _ := regula.NewBoolRuleset(
-		regula.NewRule(
-			regula.True(),
-			regula.BoolValue(true),
+		rule.New(
+			rule.True(),
+			rule.BoolValue(true),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
-		regula.NewRule(
-			regula.True(),
-			regula.StringValue("success"),
+		rule.New(
+			rule.True(),
+			rule.StringValue("success"),
 		),
 	)
 
@@ -184,16 +185,16 @@ func TestOneByVersion(t *testing.T) {
 	defer cleanup()
 
 	oldRse, _ := regula.NewBoolRuleset(
-		regula.NewRule(
-			regula.True(),
-			regula.BoolValue(true),
+		rule.New(
+			rule.True(),
+			rule.BoolValue(true),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
-		regula.NewRule(
-			regula.True(),
-			regula.StringValue("success"),
+		rule.New(
+			rule.True(),
+			rule.StringValue("success"),
 		),
 	)
 
@@ -238,9 +239,9 @@ func TestPut(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
 		rs, _ := regula.NewBoolRuleset(
-			regula.NewRule(
-				regula.True(),
-				regula.BoolValue(true),
+			rule.New(
+				rule.True(),
+				rule.BoolValue(true),
 			),
 		)
 
@@ -269,9 +270,9 @@ func TestPut(t *testing.T) {
 
 		// create new version with different ruleset
 		rs, _ = regula.NewBoolRuleset(
-			regula.NewRule(
-				regula.True(),
-				regula.BoolValue(false),
+			rule.New(
+				rule.True(),
+				rule.BoolValue(false),
 			),
 		)
 		entry2, err = s.Put(context.Background(), path, rs)
@@ -327,12 +328,12 @@ func TestEval(t *testing.T) {
 	defer cleanup()
 
 	rs, _ := regula.NewBoolRuleset(
-		regula.NewRule(
-			regula.Eq(
-				regula.StringParam("id"),
-				regula.StringValue("123"),
+		rule.New(
+			rule.Eq(
+				rule.StringParam("id"),
+				rule.StringValue("123"),
 			),
-			regula.BoolValue(true),
+			rule.BoolValue(true),
 		),
 	)
 
@@ -344,7 +345,7 @@ func TestEval(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, entry.Version, res.Version)
-		require.Equal(t, regula.BoolValue(true), res.Value)
+		require.Equal(t, rule.BoolValue(true), res.Value)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
@@ -362,12 +363,12 @@ func TestEvalVersion(t *testing.T) {
 	defer cleanup()
 
 	rs, _ := regula.NewBoolRuleset(
-		regula.NewRule(
-			regula.Eq(
-				regula.StringParam("id"),
-				regula.StringValue("123"),
+		rule.New(
+			rule.Eq(
+				rule.StringParam("id"),
+				rule.StringValue("123"),
 			),
-			regula.BoolValue(true),
+			rule.BoolValue(true),
 		),
 	)
 
@@ -379,7 +380,7 @@ func TestEvalVersion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, entry.Version, res.Version)
-		require.Equal(t, regula.BoolValue(true), res.Value)
+		require.Equal(t, rule.BoolValue(true), res.Value)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {

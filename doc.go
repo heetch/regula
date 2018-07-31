@@ -8,25 +8,25 @@ Each rule is evaluated in order and if one matches with the given parameters it 
 All the rules of a ruleset always return the same type.
 
 	rs, err := regula.NewStringRuleset(
-		regula.NewRule(
-			regula.Eq(
-				regula.StringParam("group"),
-				regula.StringValue("admin"),
+		rule.New(
+			rule.Eq(
+				rule.StringParam("group"),
+				rule.StringValue("admin"),
 			),
-			regula.StringValue("first rule matched"),
+			rule.StringValue("first rule matched"),
 		),
-		regula.NewRule(
-			regula.In(
-				regula.Int64Param("score"),
-				regula.Int64Value(10),
-				regula.Int64Value(20),
-				regula.Int64Value(30),
+		rule.New(
+			rule.In(
+				rule.Int64Param("score"),
+				rule.Int64Value(10),
+				rule.Int64Value(20),
+				rule.Int64Value(30),
 			),
-			regula.StringValue("second rule matched"),
+			rule.StringValue("second rule matched"),
 		),
-		regula.NewRule(
-			regula.True(),
-			regula.StringValue("default rule matched"),
+		rule.New(
+			rule.True(),
+			rule.StringValue("default rule matched"),
 		),
 	)
 	if err != nil {
@@ -45,14 +45,14 @@ and return it to the caller.
 While the evaluator is stateful and can hold rulesets in-memory, fetch them over the network or read them from a file,
 the engine is stateless and simply deleguates the evaluation to the evaluator.
 
-	engine := NewEngine(evaluator)
+	engine := regula.NewEngine(evaluator)
 
-	s, res, err := engine.GetString("path/to/string/ruleset/key", rule.Params{
+	s, res, err := engine.GetString("path/to/string/ruleset/key", regula.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})
 
-	i, res, err := engine.GetInt64("path/to/int/ruleset/key", rule.Params{
+	i, res, err := engine.GetInt64("path/to/int/ruleset/key", regula.Params{
 		"user-id": 123,
 		"email": "example@provider.com",
 	})

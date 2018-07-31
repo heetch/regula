@@ -11,6 +11,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api/client"
+	"github.com/heetch/regula/rule"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func TestLoadSnapshot(t *testing.T) {
 	defer ts.Close()
 
 	rs, err := regula.NewInt64Ruleset(
-		regula.NewRule(regula.True(), regula.Int64Value(10)),
+		rule.New(rule.True(), rule.Int64Value(10)),
 	)
 	require.NoError(t, err)
 	raw, err := json.Marshal(rs)

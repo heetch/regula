@@ -3,33 +3,23 @@ package regula
 import (
 	"strconv"
 
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
-// A ParamGetter is a set of parameters passed on rule evaluation.
-// It provides type safe methods to query params.
-type ParamGetter interface {
-	GetString(key string) (string, error)
-	GetBool(key string) (bool, error)
-	GetInt64(key string) (int64, error)
-	GetFloat64(key string) (float64, error)
-	Keys() []string
-	EncodeValue(key string) (string, error)
-}
-
-// Params is a map based ParamGetter implementation.
+// Params is a map based rule.Params implementation.
 type Params map[string]interface{}
 
 // GetString extracts a string parameter corresponding to the given key.
 func (p Params) GetString(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", ErrParamNotFound
+		return "", rule.ErrParamNotFound
 	}
 
 	s, ok := v.(string)
 	if !ok {
-		return "", ErrParamTypeMismatch
+		return "", rule.ErrParamTypeMismatch
 	}
 
 	return s, nil
@@ -39,12 +29,12 @@ func (p Params) GetString(key string) (string, error) {
 func (p Params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
-		return false, ErrParamNotFound
+		return false, rule.ErrParamNotFound
 	}
 
 	b, ok := v.(bool)
 	if !ok {
-		return false, ErrParamTypeMismatch
+		return false, rule.ErrParamTypeMismatch
 	}
 
 	return b, nil
@@ -54,12 +44,12 @@ func (p Params) GetBool(key string) (bool, error) {
 func (p Params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, ErrParamNotFound
+		return 0, rule.ErrParamNotFound
 	}
 
 	i, ok := v.(int64)
 	if !ok {
-		return 0, ErrParamTypeMismatch
+		return 0, rule.ErrParamTypeMismatch
 	}
 
 	return i, nil
@@ -69,12 +59,12 @@ func (p Params) GetInt64(key string) (int64, error) {
 func (p Params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, ErrParamNotFound
+		return 0, rule.ErrParamNotFound
 	}
 
 	f, ok := v.(float64)
 	if !ok {
-		return 0, ErrParamTypeMismatch
+		return 0, rule.ErrParamTypeMismatch
 	}
 
 	return f, nil
@@ -94,7 +84,7 @@ func (p Params) Keys() []string {
 func (p Params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", ErrParamNotFound
+		return "", rule.ErrParamNotFound
 	}
 
 	switch t := v.(type) {
