@@ -6,229 +6,32 @@ import (
 	"log"
 	"time"
 
+	"github.com/heetch/regula/rule"
+
 	"github.com/heetch/regula"
 )
 
-func ExampleRule() {
-	r := regula.NewRule(
-		regula.Eq(
-			regula.StringValue("foo"),
-			regula.StringParam("bar"),
-		),
-		regula.StringValue("matched"),
-	)
-
-	ret, err := r.Eval(regula.Params{
-		"bar": "foo",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(ret.Data)
-	// Output
-	// matched
-}
-
-func ExampleAnd() {
-	tree := regula.And(
-		regula.Eq(
-			regula.Int64Value(10),
-			regula.Int64Param("foo"),
-		),
-		regula.Not(
-			regula.Eq(
-				regula.Float64Value(1.5),
-				regula.Float64Param("bar"),
-			),
-		),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": int64(10),
-		"bar": 1.6,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleOr() {
-	tree := regula.Or(
-		regula.Eq(
-			regula.Float64Value(1.2),
-			regula.Float64Param("foo"),
-		),
-		regula.Eq(
-			regula.Float64Value(3.14),
-			regula.Float64Param("foo"),
-		),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": 3.14,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleEq_string() {
-	tree := regula.Eq(
-		regula.StringValue("bar"),
-		regula.StringValue("bar"),
-		regula.StringParam("foo"),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": "bar",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleEq_bool() {
-	tree := regula.Eq(
-		regula.BoolValue(false),
-		regula.Not(regula.BoolValue(true)),
-		regula.Eq(
-			regula.StringValue("bar"),
-			regula.StringValue("baz"),
-		),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": "bar",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleEq_int64() {
-	tree := regula.Eq(
-		regula.Int64Value(10),
-		regula.Int64Param("foo"),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": int64(10),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleEq_float64() {
-	tree := regula.Eq(
-		regula.Float64Value(3.14),
-		regula.Float64Param("foo"),
-	)
-
-	val, err := tree.Eval(regula.Params{
-		"foo": 3.14,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleIn() {
-	tree := regula.In(
-		regula.StringValue("c"),
-		regula.StringValue("a"),
-		regula.StringValue("b"),
-		regula.StringValue("c"),
-		regula.StringValue("d"),
-	)
-
-	val, err := tree.Eval(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleNot() {
-	tree := regula.Not(regula.BoolValue(false))
-
-	val, err := tree.Eval(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
-func ExampleStringParam() {
-	tree := regula.StringParam("foo")
-
-	val, err := tree.Eval(regula.Params{
-		"foo": "bar",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: bar
-}
-
-func ExampleTrue() {
-	tree := regula.True()
-
-	val, err := tree.Eval(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(val.Data)
-	// Output: true
-}
-
 func ExampleRuleset() {
 	rs, err := regula.NewStringRuleset(
-		regula.NewRule(
-			regula.Eq(
-				regula.StringParam("group"),
-				regula.StringValue("admin"),
+		rule.New(
+			rule.Eq(
+				rule.StringParam("group"),
+				rule.StringValue("admin"),
 			),
-			regula.StringValue("first rule matched"),
+			rule.StringValue("first rule matched"),
 		),
-		regula.NewRule(
-			regula.In(
-				regula.Int64Param("score"),
-				regula.Int64Value(10),
-				regula.Int64Value(20),
-				regula.Int64Value(30),
+		rule.New(
+			rule.In(
+				rule.Int64Param("score"),
+				rule.Int64Value(10),
+				rule.Int64Value(20),
+				rule.Int64Value(30),
 			),
-			regula.StringValue("second rule matched"),
+			rule.StringValue("second rule matched"),
 		),
-		regula.NewRule(
-			regula.True(),
-			regula.StringValue("default rule matched"),
+		rule.New(
+			rule.True(),
+			rule.StringValue("default rule matched"),
 		),
 	)
 	if err != nil {
@@ -256,43 +59,43 @@ func init() {
 
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.StringValue("some-string")),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.StringValue("some-string")),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "int64",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.Int64Value(10)),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.Int64Value(10)),
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "float64",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.Float64Value(3.14)),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.Float64Value(3.14)),
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "bool",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.BoolValue(true)),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.BoolValue(true)),
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
 		Type: "string",
-		Rules: []*regula.Rule{
-			regula.NewRule(regula.True(), regula.StringValue("3s")),
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("3s")),
 		},
 	})
 }
@@ -311,7 +114,7 @@ func ExampleEngine() {
 			// when the ruleset doesn't exist
 		case regula.ErrTypeMismatch:
 			// when the ruleset returns the bad type
-		case regula.ErrNoMatch:
+		case rule.ErrNoMatch:
 			// when the ruleset doesn't match
 		default:
 			// something unexpected happened

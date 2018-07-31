@@ -5,12 +5,13 @@ import (
 	"net/http"
 
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 )
 
 // EvalResult is the response sent to the client after an eval.
 type EvalResult struct {
-	Value   *regula.Value `json:"value"`
-	Version string        `json:"version"`
+	Value   *rule.Value `json:"value"`
+	Version string      `json:"version"`
 }
 
 // Error is a generic error response.

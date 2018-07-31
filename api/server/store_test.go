@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 
+	"github.com/heetch/regula/rule"
+
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 )
@@ -21,9 +23,9 @@ type mockRulesetService struct {
 	PutCount          int
 	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
 	EvalCount         int
-	EvalFn            func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error)
+	EvalFn            func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	EvalVersionCount  int
-	EvalVersionFn     func(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error)
+	EvalVersionFn     func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
 func (s *mockRulesetService) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
@@ -73,7 +75,7 @@ func (s *mockRulesetService) Put(ctx context.Context, path string, ruleset *regu
 	return nil, nil
 }
 
-func (s *mockRulesetService) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *mockRulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalCount++
 
 	if s.EvalFn != nil {
@@ -82,7 +84,7 @@ func (s *mockRulesetService) Eval(ctx context.Context, path string, params regul
 	return nil, nil
 }
 
-func (s *mockRulesetService) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *mockRulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalVersionCount++
 
 	if s.EvalVersionFn != nil {

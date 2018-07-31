@@ -8,6 +8,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
@@ -36,13 +37,13 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets
 
 // Eval evaluates the given ruleset with the given params.
 // It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
-func (s *RulesetService) Eval(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 	return s.EvalVersion(ctx, path, "", params)
 }
 
 // EvalVersion evaluates the given ruleset version with the given params.
 // It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", path), nil)
 	if err != nil {
 		return nil, err

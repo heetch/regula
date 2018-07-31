@@ -12,6 +12,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -34,8 +35,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
-		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
+		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEntries{
 			Entries: []store.RulesetEntry{
 				{Path: "aa", Ruleset: r1},
@@ -87,16 +88,16 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params regula.ParamGetter)) {
+		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params rule.Params)) {
 			t.Helper()
 			resetStore(s)
 
-			s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 				testParamsFn(params)
 				return (*regula.EvalResult)(result), nil
 			}
 
-			s.EvalVersionFn = func(ctx context.Context, path, version string, params regula.ParamGetter) (*regula.EvalResult, error) {
+			s.EvalVersionFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				return (*regula.EvalResult)(result), nil
 			}
 
@@ -116,10 +117,10 @@ func TestAPI(t *testing.T) {
 
 		t.Run("OK", func(t *testing.T) {
 			exp := api.EvalResult{
-				Value: regula.StringValue("success"),
+				Value: rule.StringValue("success"),
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params regula.ParamGetter) {
+			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
@@ -135,11 +136,11 @@ func TestAPI(t *testing.T) {
 
 		t.Run("OK With version", func(t *testing.T) {
 			exp := api.EvalResult{
-				Value:   regula.StringValue("success"),
+				Value:   rule.StringValue("success"),
 				Version: "123",
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params regula.ParamGetter) {
+			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
@@ -148,7 +149,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 				return nil, regula.ErrRulesetNotFound
 			}
 
@@ -169,13 +170,13 @@ func TestAPI(t *testing.T) {
 
 		t.Run("NOK - errors", func(t *testing.T) {
 			errs := []error{
-				regula.ErrParamNotFound,
-				regula.ErrParamTypeMismatch,
-				regula.ErrNoMatch,
+				rule.ErrParamNotFound,
+				rule.ErrParamTypeMismatch,
+				rule.ErrNoMatch,
 			}
 
 			for _, e := range errs {
-				s.EvalFn = func(ctx context.Context, path string, params regula.ParamGetter) (*regula.EvalResult, error) {
+				s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 					return nil, e
 				}
 
@@ -189,8 +190,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
-		r2, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
+		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEvents{
 			Events: []store.RulesetEvent{
 				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r1},
@@ -243,7 +244,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(regula.NewRule(regula.True(), regula.BoolValue(true)))
+		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:    "a",
 			Version: "version",

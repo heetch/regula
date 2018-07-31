@@ -14,6 +14,7 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/api/client"
+	"github.com/heetch/regula/rule"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -126,7 +127,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		exp := regula.EvalResult{Value: regula.StringValue("baz"), Version: "1234"}
+		exp := regula.EvalResult{Value: rule.StringValue("baz"), Version: "1234"}
 
 		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
 			"foo": "bar",
@@ -149,7 +150,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := regula.NewInt64Ruleset(regula.NewRule(regula.True(), regula.Int64Value(1)))
+		rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(1)))
 		require.NoError(t, err)
 
 		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)

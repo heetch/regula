@@ -10,6 +10,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 )
 
@@ -100,9 +101,9 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 			return
 		}
 
-		if err == regula.ErrParamNotFound ||
-			err == regula.ErrParamTypeMismatch ||
-			err == regula.ErrNoMatch {
+		if err == rule.ErrParamNotFound ||
+			err == rule.ErrParamTypeMismatch ||
+			err == rule.ErrNoMatch {
 			s.writeError(w, err, http.StatusBadRequest)
 			return
 		}
