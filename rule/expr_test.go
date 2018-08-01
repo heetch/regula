@@ -239,35 +239,33 @@ func TestParam(t *testing.T) {
 		v, _ = p.(rule.Validator)
 		err = v.Validate()
 		require.NoError(t, err)
-
 	})
 
 	t.Run("Bad format", func(t *testing.T) {
 		p := rule.StringParam("ABC")
 		v, _ := p.(rule.Validator)
 		err := v.Validate()
-		require.Equal(t, rule.ErrParameterBadFormat, err)
+		require.Equal(t, rule.ErrBadParameterName, err)
 
 		p = rule.StringParam("abc-")
 		v, _ = p.(rule.Validator)
 		err = v.Validate()
-		require.Equal(t, rule.ErrParameterBadFormat, err)
+		require.Equal(t, rule.ErrBadParameterName, err)
 
 		p = rule.StringParam("abc--xyz")
 		v, _ = p.(rule.Validator)
 		err = v.Validate()
-		require.Equal(t, rule.ErrParameterBadFormat, err)
+		require.Equal(t, rule.ErrBadParameterName, err)
 
 		p = rule.StringParam("abc_xyz")
 		v, _ = p.(rule.Validator)
 		err = v.Validate()
-		require.Equal(t, rule.ErrParameterBadFormat, err)
+		require.Equal(t, rule.ErrBadParameterName, err)
 
 		p = rule.StringParam("0abc")
 		v, _ = p.(rule.Validator)
 		err = v.Validate()
-		require.Equal(t, rule.ErrParameterBadFormat, err)
-
+		require.Equal(t, rule.ErrBadParameterName, err)
 	})
 }
 

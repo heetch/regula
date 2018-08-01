@@ -60,6 +60,10 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+func (n *exprNot) Operands() []Expr {
+	return n.operands
+}
+
 type exprOr struct {
 	operator
 }
@@ -108,6 +112,10 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
+}
+
+func (n *exprOr) Operands() []Expr {
+	return n.operands
 }
 
 type exprAnd struct {
@@ -160,6 +168,10 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+func (n *exprAnd) Operands() []Expr {
+	return n.operands
+}
+
 type exprEq struct {
 	operator
 }
@@ -197,6 +209,10 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(true), nil
+}
+
+func (n *exprEq) Operands() []Expr {
+	return n.operands
 }
 
 type exprIn struct {
@@ -238,6 +254,10 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
+func (n *exprIn) Operands() []Expr {
+	return n.operands
+}
+
 type exprParam struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
@@ -249,12 +269,12 @@ type Validator interface {
 	Validate() error
 }
 
-// regex used to validate name parameters.
+// regex used to validate parameters name.
 var rgx = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
 
 func (n *exprParam) Validate() error {
 	if ok := rgx.MatchString(n.Name); !ok {
-		return ErrParameterBadFormat
+		return ErrBadParameterName
 	}
 
 	return nil
