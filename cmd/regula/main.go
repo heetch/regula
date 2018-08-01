@@ -24,7 +24,7 @@ func main() {
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Err(err).Msg("Failed to connect to etcd cluster")
 	}
 	defer etcdCli.Close()
 

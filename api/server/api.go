@@ -61,11 +61,11 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	entries, err := s.rulesets.List(r.Context(), prefix)
 	if err != nil {
 		if err == store.ErrNotFound {
-			s.writeError(w, err, http.StatusNotFound)
+			s.writeError(w, r, err, http.StatusNotFound)
 			return
 		}
 
-		s.writeError(w, err, http.StatusInternalServerError)
+		s.writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	}
 	rl.Revision = entries.Revision
 
-	s.encodeJSON(w, &rl, http.StatusOK)
+	s.encodeJSON(w, r, &rl, http.StatusOK)
 }
 
 func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {
@@ -97,22 +97,22 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 	if err != nil {
 		if err == regula.ErrRulesetNotFound {
-			s.writeError(w, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
+			s.writeError(w, r, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
 			return
 		}
 
 		if err == rule.ErrParamNotFound ||
 			err == rule.ErrParamTypeMismatch ||
 			err == rule.ErrNoMatch {
-			s.writeError(w, err, http.StatusBadRequest)
+			s.writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		s.writeError(w, err, http.StatusInternalServerError)
+		s.writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	s.encodeJSON(w, (*api.EvalResult)(res), http.StatusOK)
+	s.encodeJSON(w, r, (*api.EvalResult)(res), http.StatusOK)
 }
 
 // watch watches a prefix for change and returns anything newer.
@@ -127,7 +127,7 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 			w.WriteHeader(http.StatusNotFound)
 			return
 		default:
-			s.writeError(w, err, http.StatusInternalServerError)
+			s.writeError(w, r, err, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -141,7 +141,7 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 		el.Events[i] = api.Event(events.Events[i])
 	}
 
-	s.encodeJSON(w, el, http.StatusOK)
+	s.encodeJSON(w, r, el, http.StatusOK)
 }
 
 // put creates a new version of a ruleset.
@@ -150,19 +150,19 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 
 	err := json.NewDecoder(r.Body).Decode(&rs)
 	if err != nil {
-		s.writeError(w, err, http.StatusBadRequest)
+		s.writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
-		s.writeError(w, err, http.StatusInternalServerError)
+		s.writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode((*api.Ruleset)(entry))
 	if err != nil {
-		s.writeError(w, err, http.StatusInternalServerError)
+		s.writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 }

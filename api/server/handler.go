@@ -31,10 +31,12 @@ func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config)
 		rulesets: rsService,
 	}
 
+	var logger zerolog.Logger
+
 	if cfg.Logger != nil {
-		s.logger = *cfg.Logger
+		logger = *cfg.Logger
 	} else {
-		s.logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+		logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	}
 
 	rs := rulesetService{
@@ -49,7 +51,7 @@ func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config)
 
 	// middlewares
 	chain := []func(http.Handler) http.Handler{
-		hlog.NewHandler(s.logger),
+		hlog.NewHandler(logger),
 		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
 			hlog.FromRequest(r).Info().
 				Str("method", r.Method).
@@ -80,24 +82,34 @@ func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config)
 }
 
 type service struct {
-	logger   zerolog.Logger
 	rulesets store.RulesetService
 }
 
 // encodeJSON encodes v to w in JSON format.
-func (s *service) encodeJSON(w http.ResponseWriter, v interface{}, status int) {
+func (s *service) encodeJSON(w http.ResponseWriter, r *http.Request, v interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		s.logger.Error().Err(err).Interface("value", v).Msg("failed to encode value to http response")
+		loggerFromRequest(r).Error().Err(err).Interface("value", v).Msg("failed to encode value to http response")
 	}
 }
 
+func loggerFromRequest(r *http.Request) *zerolog.Logger {
+	logger := hlog.FromRequest(r).With().
+		Str("method", r.Method).
+		Str("url", r.URL.String()).
+		Logger()
+	return &logger
+}
+
 // writeError writes an error to the http response in JSON format.
-func (s *service) writeError(w http.ResponseWriter, err error, code int) {
+func (s *service) writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
 	// Prepare log.
-	logger := s.logger.With().Err(err).Int("code", code).Logger()
+	logger := loggerFromRequest(r).With().
+		Err(err).
+		Int("status", code).
+		Logger()
 
 	// Hide error from client if it's internal.
 	if code == http.StatusInternalServerError {
@@ -107,5 +119,5 @@ func (s *service) writeError(w http.ResponseWriter, err error, code int) {
 		logger.Debug().Msg("http error")
 	}
 
-	s.encodeJSON(w, &api.Error{Err: err.Error()}, code)
+	s.encodeJSON(w, r, &api.Error{Err: err.Error()}, code)
 }
