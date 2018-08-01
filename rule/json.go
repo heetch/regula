@@ -44,6 +44,10 @@ func (o *operator) Eval(params Params) (*Value, error) {
 	return nil, nil
 }
 
+func (o *operator) Operands() []Expr {
+	return o.operands
+}
+
 type operands struct {
 	Ops   []json.RawMessage `json:"operands"`
 	Exprs []Expr
