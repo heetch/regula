@@ -23,6 +23,9 @@ func main() {
 		Endpoints:   cfg.Etcd.Endpoints,
 		DialTimeout: 5 * time.Second,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer etcdCli.Close()
 
 	service := etcd.RulesetService{
