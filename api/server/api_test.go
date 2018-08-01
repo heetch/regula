@@ -411,6 +411,9 @@ func TestValidation(t *testing.T) {
 	})
 
 	t.Run("NOK - params name", func(t *testing.T) {
+		// For the following tests, we are just testing if the recursion and the type assertion work well.
+		// The validation is already tested on the rule package.
+
 		rs, _ := regula.NewBoolRuleset(
 			rule.New(
 				rule.BoolParam("foo_"),
@@ -433,8 +436,6 @@ func TestValidation(t *testing.T) {
 
 		err = namingValidator("path", rs)
 		require.Equal(t, rule.ErrBadParameterName, err)
-
-		// For the following tests, we are just testing if the recursion works well.
 
 		rs, _ = regula.NewBoolRuleset(
 			rule.New(
