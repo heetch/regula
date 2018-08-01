@@ -157,7 +157,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 
 	err = namingValidator(path, &rs)
 	if err != nil {
-		s.writeError(w, err, http.StatusBadRequest)
+		s.writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
