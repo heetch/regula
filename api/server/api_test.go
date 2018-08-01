@@ -235,7 +235,28 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("WithRevision", func(t *testing.T) {
-			call(t, "/rulesets/a?watch&revision=somerev", http.StatusOK, &l, nil)
+			t.Helper()
+
+			s.WatchFn = func(ctx context.Context, prefix string, revision string) (*store.RulesetEvents, error) {
+				require.Equal(t, "a", prefix)
+				require.Equal(t, "somerev", revision)
+				return &l, nil
+			}
+			defer func() { s.WatchFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/rulesets/a?watch&revision=somerev", nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, http.StatusOK, w.Code)
+
+			var res store.RulesetEvents
+			err := json.NewDecoder(w.Body).Decode(&res)
+			require.NoError(t, err)
+			require.Equal(t, len(l.Events), len(res.Events))
+			for i := range l.Events {
+				require.Equal(t, l.Events[i], res.Events[i])
+			}
 		})
 
 		t.Run("Timeout", func(t *testing.T) {

@@ -117,7 +117,7 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	events, err := s.rulesets.Watch(r.Context(), prefix, r.Header.Get("revision"))
+	events, err := s.rulesets.Watch(r.Context(), prefix, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:
