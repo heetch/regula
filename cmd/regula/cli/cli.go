@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -46,8 +47,8 @@ func LoadConfig() (*Config, error) {
 }
 
 // CreateLogger returns a configured logger.
-func CreateLogger(level string) zerolog.Logger {
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+func CreateLogger(level string, w io.Writer) zerolog.Logger {
+	logger := zerolog.New(w).With().Timestamp().Logger()
 
 	lvl, err := zerolog.ParseLevel(level)
 	if err != nil {
@@ -57,8 +58,10 @@ func CreateLogger(level string) zerolog.Logger {
 	logger = logger.Level(lvl)
 
 	// pretty print during development
-	if isatty.IsTerminal(os.Stdout.Fd()) {
-		logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	if f, ok := w.(*os.File); ok {
+		if isatty.IsTerminal(f.Fd()) {
+			logger = logger.Output(zerolog.ConsoleWriter{Out: f})
+		}
 	}
 
 	// replace standard logger with zerolog

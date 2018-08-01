@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -16,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger := cli.CreateLogger(cfg.LogLevel)
+	logger := cli.CreateLogger(cfg.LogLevel, os.Stderr)
 
 	etcdCli, err := clientv3.New(clientv3.Config{
 		Endpoints:   cfg.Etcd.Endpoints,
