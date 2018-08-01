@@ -194,6 +194,8 @@ func namingValidator(path string, rs *regula.Ruleset) error {
 	return nil
 }
 
+// operandsGetter is used to check if a type implements it,
+// if so, we can retrieve the operands.
 type operandsGetter interface {
 	Operands() []rule.Expr
 }
