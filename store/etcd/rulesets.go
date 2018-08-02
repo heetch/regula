@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"path"
+	"regexp"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
@@ -102,9 +103,14 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+	err := NamingValidator(path, ruleset)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail during validation")
+	}
+
 	// generate checksum from the ruleset for comparison purpose
 	h := md5.New()
-	err := json.NewEncoder(h).Encode(ruleset)
+	err = json.NewEncoder(h).Encode(ruleset)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +173,66 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	}
 
 	return &re, nil
+}
+
+// regex used to validate ruleset name.
+var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
+
+// NamingValidator validates the format of the ruleset name and
+// the parameters name.
+func NamingValidator(path string, rs *regula.Ruleset) error {
+	if rs == nil {
+		return nil
+	}
+
+	if ok := rgxRuleset.MatchString(path); !ok {
+		return regula.ErrBadRulesetName
+	}
+
+	for _, r := range rs.Rules {
+		err := paramsNameValidator(r.Expr)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// operandsGetter is used to check if a type implements it,
+// if so, we can retrieve the operands.
+type operandsGetter interface {
+	Operands() []rule.Expr
+}
+
+// regex used to validate parameters name.
+var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
+
+func paramsNameValidator(expr rule.Expr) error {
+	if r, ok := expr.(*rule.Rule); ok {
+		err := paramsNameValidator(r.Expr)
+		if err != nil {
+			return err
+		}
+	}
+
+	if o, ok := expr.(operandsGetter); ok {
+		ops := o.Operands()
+		for _, op := range ops {
+			err := paramsNameValidator(op)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if p, ok := expr.(*rule.Param); ok {
+		if ok := rgxParam.MatchString(p.Name); !ok {
+			return store.ErrBadParameterName
+		}
+	}
+
+	return nil
 }
 
 // Watch the given prefix for anything new.

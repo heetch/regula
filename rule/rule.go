@@ -23,9 +23,6 @@ var (
 
 	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
-
-	// ErrBadParameterName is returned if the name of the parameter is badly formatted.
-	ErrBadParameterName = errors.New("bad parameter name")
 )
 
 // A Rule represents a logical boolean expression that evaluates to a result.

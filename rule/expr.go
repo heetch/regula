@@ -3,7 +3,6 @@ package rule
 import (
 	"errors"
 	"go/token"
-	"regexp"
 	"strconv"
 )
 
@@ -258,98 +257,84 @@ func (n *exprIn) Operands() []Expr {
 	return n.operands
 }
 
-type exprParam struct {
+// Param represents a rule parameter to retrieve in the set of params passed during evaluation.
+type Param struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// Validator validates the name of the parameter.
-type Validator interface {
-	Validate() error
-}
-
-// regex used to validate parameters name.
-var rgx = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
-
-func (n *exprParam) Validate() error {
-	if ok := rgx.MatchString(n.Name); !ok {
-		return ErrBadParameterName
-	}
-
-	return nil
-}
-
-// StringParam creates an expression that looks up in the set of params passed during evaluation and returns the value
+// StringParam creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
-func StringParam(name string) Expr {
-	return &exprParam{
+func StringParam(name string) *Param {
+	return &Param{
 		Kind: "param",
 		Type: "string",
 		Name: name,
 	}
 }
 
-// BoolParam creates an expression that looks up in the set of params passed during evaluation and returns the value
+// BoolParam creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a boolean. If not found it returns an error.
-func BoolParam(name string) Expr {
-	return &exprParam{
+func BoolParam(name string) *Param {
+	return &Param{
 		Kind: "param",
 		Type: "bool",
 		Name: name,
 	}
 }
 
-// Int64Param creates an expression that looks up in the set of params passed during evaluation and returns the value
+// Int64Param creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be an int64. If not found it returns an error.
-func Int64Param(name string) Expr {
-	return &exprParam{
+func Int64Param(name string) *Param {
+	return &Param{
 		Kind: "param",
 		Type: "int64",
 		Name: name,
 	}
 }
 
-// Float64Param creates an expression that looks up in the set of params passed during evaluation and returns the value
+// Float64Param creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a float64. If not found it returns an error.
-func Float64Param(name string) Expr {
-	return &exprParam{
+func Float64Param(name string) *Param {
+	return &Param{
 		Kind: "param",
 		Type: "float64",
 		Name: name,
 	}
 }
 
-func (n *exprParam) Eval(params Params) (*Value, error) {
+// Eval extract from the Params the Value which corresponds to p.
+func (p *Param) Eval(params Params) (*Value, error) {
 	if params == nil {
 		return nil, errors.New("params is nil")
 	}
 
-	switch n.Type {
+	switch p.Type {
 	case "string":
-		v, err := params.GetString(n.Name)
+		v, err := params.GetString(p.Name)
 		if err != nil {
 			return nil, err
 		}
 		return StringValue(v), nil
 	case "bool":
-		v, err := params.GetBool(n.Name)
+		v, err := params.GetBool(p.Name)
 		if err != nil {
 			return nil, err
 		}
 		return BoolValue(v), nil
 	case "int64":
-		v, err := params.GetInt64(n.Name)
+		v, err := params.GetInt64(p.Name)
 		if err != nil {
 			return nil, err
 		}
 		return Int64Value(v), nil
 	case "float64":
-		v, err := params.GetFloat64(n.Name)
+		v, err := params.GetFloat64(p.Name)
 		if err != nil {
 			return nil, err
 		}

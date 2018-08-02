@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -155,12 +154,6 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 		return
 	}
 
-	err = namingValidator(path, &rs)
-	if err != nil {
-		s.writeError(w, r, err, http.StatusBadRequest)
-		return
-	}
-
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
 		s.writeError(w, r, err, http.StatusInternalServerError)
@@ -172,58 +165,4 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 		s.writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
-}
-
-// regex used to validate ruleset name.
-var rgx = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
-
-// namingValidator validates the format of the ruleset name and
-// the parameters name.
-func namingValidator(path string, rs *regula.Ruleset) error {
-	if ok := rgx.MatchString(path); !ok {
-		return regula.ErrBadRulesetName
-	}
-
-	for _, r := range rs.Rules {
-		err := paramsNameValidator(r.Expr)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// operandsGetter is used to check if a type implements it,
-// if so, we can retrieve the operands.
-type operandsGetter interface {
-	Operands() []rule.Expr
-}
-
-func paramsNameValidator(expr rule.Expr) error {
-	if r, ok := expr.(*rule.Rule); ok {
-		err := paramsNameValidator(r.Expr)
-		if err != nil {
-			return err
-		}
-	}
-
-	if o, ok := expr.(operandsGetter); ok {
-		ops := o.Operands()
-		for _, op := range ops {
-			err := paramsNameValidator(op)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if v, ok := expr.(rule.Validator); ok {
-		err := v.Validate()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

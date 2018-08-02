@@ -82,9 +82,9 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		e = &v
 		err = json.Unmarshal(data, &v)
 	case "param":
-		var v exprParam
-		e = &v
-		err = json.Unmarshal(data, &v)
+		var p Param
+		e = &p
+		err = json.Unmarshal(data, &p)
 	case "eq":
 		var eq exprEq
 		e = &eq
