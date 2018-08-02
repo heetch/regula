@@ -59,10 +59,6 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *exprNot) Operands() []Expr {
-	return n.operands
-}
-
 type exprOr struct {
 	operator
 }
@@ -111,10 +107,6 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
-}
-
-func (n *exprOr) Operands() []Expr {
-	return n.operands
 }
 
 type exprAnd struct {
@@ -167,10 +159,6 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *exprAnd) Operands() []Expr {
-	return n.operands
-}
-
 type exprEq struct {
 	operator
 }
@@ -210,10 +198,6 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-func (n *exprEq) Operands() []Expr {
-	return n.operands
-}
-
 type exprIn struct {
 	operator
 }
@@ -251,10 +235,6 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
-}
-
-func (n *exprIn) Operands() []Expr {
-	return n.operands
 }
 
 // Param represents a rule parameter to retrieve in the set of params passed during evaluation.
