@@ -201,10 +201,6 @@ type operandsGetter interface {
 var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
 
 func validateParamNames(rs *regula.Ruleset) error {
-	if rs == nil {
-		return nil
-	}
-
 	// fn will run recursively through the tree of Expr until it finds a rule.Param to validate it.
 	var fn func(expr rule.Expr) error
 
