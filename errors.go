@@ -11,7 +11,4 @@ var (
 
 	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
-
-	// ErrBadRulesetName is returned if the name of the ruleset is badly formatted.
-	ErrBadRulesetName = errors.New("bad ruleset name")
 )

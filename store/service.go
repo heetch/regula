@@ -12,6 +12,8 @@ import (
 var (
 	ErrNotFound    = errors.New("not found")
 	ErrNotModified = errors.New("not modified")
+	// ErrBadRulesetName is returned if the name of the ruleset is badly formatted.
+	ErrBadRulesetName = errors.New("bad ruleset name")
 	// ErrBadParameterName is returned if the name of the parameter is badly formatted.
 	ErrBadParameterName = errors.New("bad parameter name")
 )

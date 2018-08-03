@@ -237,7 +237,7 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-// Param represents a rule parameter to retrieve in the set of params passed during evaluation.
+// Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
@@ -288,7 +288,7 @@ func Float64Param(name string) *Param {
 	}
 }
 
-// Eval extract from the Params the Value which corresponds to p.
+// Eval extracts a value from the given parameters.
 func (p *Param) Eval(params Params) (*Value, error) {
 	if params == nil {
 		return nil, errors.New("params is nil")

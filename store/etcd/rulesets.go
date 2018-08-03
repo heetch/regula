@@ -103,9 +103,14 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
-	err := NamingValidator(path, ruleset)
+	err := validateRulesetName(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail during validation")
+		return nil, err
+	}
+
+	err = validateParamNames(ruleset)
+	if err != nil {
+		return nil, err
 	}
 
 	// generate checksum from the ruleset for comparison purpose
@@ -178,22 +183,9 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 // regex used to validate ruleset name.
 var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
 
-// NamingValidator validates the format of the ruleset name and
-// the parameters name.
-func NamingValidator(path string, rs *regula.Ruleset) error {
-	if rs == nil {
-		return nil
-	}
-
+func validateRulesetName(path string) error {
 	if ok := rgxRuleset.MatchString(path); !ok {
-		return regula.ErrBadRulesetName
-	}
-
-	for _, r := range rs.Rules {
-		err := paramsNameValidator(r.Expr)
-		if err != nil {
-			return err
-		}
+		return store.ErrBadRulesetName
 	}
 
 	return nil
@@ -208,27 +200,45 @@ type operandsGetter interface {
 // regex used to validate parameters name.
 var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
 
-func paramsNameValidator(expr rule.Expr) error {
-	if r, ok := expr.(*rule.Rule); ok {
-		err := paramsNameValidator(r.Expr)
-		if err != nil {
-			return err
-		}
+func validateParamNames(rs *regula.Ruleset) error {
+	if rs == nil {
+		return nil
 	}
 
-	if o, ok := expr.(operandsGetter); ok {
-		ops := o.Operands()
-		for _, op := range ops {
-			err := paramsNameValidator(op)
+	// fn will run recursively through the tree of Expr until it finds a rule.Param to validate it.
+	var fn func(expr rule.Expr) error
+
+	fn = func(expr rule.Expr) error {
+		if r, ok := expr.(*rule.Rule); ok {
+			err := fn(r.Expr)
 			if err != nil {
 				return err
 			}
 		}
+
+		if o, ok := expr.(operandsGetter); ok {
+			ops := o.Operands()
+			for _, op := range ops {
+				err := fn(op)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if p, ok := expr.(*rule.Param); ok {
+			if ok := rgxParam.MatchString(p.Name); !ok {
+				return store.ErrBadParameterName
+			}
+		}
+
+		return nil
 	}
 
-	if p, ok := expr.(*rule.Param); ok {
-		if ok := rgxParam.MatchString(p.Name); !ok {
-			return store.ErrBadParameterName
+	for _, r := range rs.Rules {
+		err := fn(r.Expr)
+		if err != nil {
+			return err
 		}
 	}
 
