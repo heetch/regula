@@ -313,6 +313,14 @@ func TestAPI(t *testing.T) {
 		t.Run("StoreError", func(t *testing.T) {
 			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
 		})
+
+		t.Run("Bad ruleset name", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, store.ErrBadRulesetName)
+		})
+
+		t.Run("Bad param name", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, store.ErrBadParameterName)
+		})
 	})
 }
 

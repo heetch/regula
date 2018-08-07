@@ -66,12 +66,15 @@ func TestList(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
+	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+
 	t.Run("Root", func(t *testing.T) {
-		createRuleset(t, s, "c", nil)
-		createRuleset(t, s, "a", nil)
-		createRuleset(t, s, "a/1", nil)
-		createRuleset(t, s, "b", nil)
-		createRuleset(t, s, "a", nil)
+
+		createRuleset(t, s, "c", rs)
+		createRuleset(t, s, "a", rs)
+		createRuleset(t, s, "a/1", rs)
+		createRuleset(t, s, "b", rs)
+		createRuleset(t, s, "a", rs)
 
 		paths := []string{"a/1", "a", "b", "c"}
 
@@ -85,10 +88,10 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("Prefix", func(t *testing.T) {
-		createRuleset(t, s, "x", nil)
-		createRuleset(t, s, "xx", nil)
-		createRuleset(t, s, "x/1", nil)
-		createRuleset(t, s, "x/2", nil)
+		createRuleset(t, s, "x", rs)
+		createRuleset(t, s, "xx", rs)
+		createRuleset(t, s, "x/1", rs)
+		createRuleset(t, s, "x/2", rs)
 
 		paths := []string{"x/1", "x", "x/2", "xx"}
 
@@ -131,10 +134,12 @@ func TestLatest(t *testing.T) {
 	// sleep 1 second because ksuid doesn't guarantee the order within the same second since it's based on a 32 bits timestamp (second).
 	time.Sleep(time.Second)
 	createRuleset(t, s, "a", newRse)
-	createRuleset(t, s, "b", nil)
-	createRuleset(t, s, "c", nil)
-	createRuleset(t, s, "abc", nil)
-	createRuleset(t, s, "abcd", nil)
+
+	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+	createRuleset(t, s, "b", rs)
+	createRuleset(t, s, "c", rs)
+	createRuleset(t, s, "abc", rs)
+	createRuleset(t, s, "abcd", rs)
 
 	t.Run("OK - several versions of a ruleset", func(t *testing.T) {
 		path := "a"
@@ -146,13 +151,12 @@ func TestLatest(t *testing.T) {
 	})
 
 	t.Run("OK - only one version of a ruleset", func(t *testing.T) {
-		var exp store.RulesetEntry
 		path := "b"
 
 		entry, err := s.Latest(context.Background(), path)
 		require.NoError(t, err)
 		require.Equal(t, path, entry.Path)
-		require.Equal(t, exp.Ruleset, entry.Ruleset)
+		require.Equal(t, rs, entry.Ruleset)
 	})
 
 	t.Run("NOK - path doesn't exist", func(t *testing.T) {
@@ -204,7 +208,9 @@ func TestOneByVersion(t *testing.T) {
 	version := entry.Version
 
 	createRuleset(t, s, "a", newRse)
-	createRuleset(t, s, "abc", nil)
+
+	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+	createRuleset(t, s, "abc", rs)
 
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
@@ -294,9 +300,12 @@ func TestWatch(t *testing.T) {
 		defer wg.Done()
 
 		time.Sleep(time.Second)
-		createRuleset(t, s, "aa", nil)
-		createRuleset(t, s, "ab", nil)
-		createRuleset(t, s, "a/1", nil)
+
+		rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+
+		createRuleset(t, s, "aa", rs)
+		createRuleset(t, s, "ab", rs)
+		createRuleset(t, s, "a/1", rs)
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -349,7 +358,7 @@ func TestEval(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.Eval(context.Background(), "b", regula.Params{
+		_, err := s.Eval(context.Background(), "notexists", regula.Params{
 			"id": "123",
 		})
 		require.Equal(t, regula.ErrRulesetNotFound, err)

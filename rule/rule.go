@@ -21,7 +21,7 @@ var (
 	// ErrNoMatch is returned when the rule doesn't match the given params.
 	ErrNoMatch = errors.New("rule doesn't match the given params")
 
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
+	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 

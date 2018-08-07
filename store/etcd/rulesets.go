@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"path"
+	"regexp"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
@@ -102,9 +103,19 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+	err := validateRulesetName(path)
+	if err != nil {
+		return nil, err
+	}
+
+	err = validateParamNames(ruleset)
+	if err != nil {
+		return nil, err
+	}
+
 	// generate checksum from the ruleset for comparison purpose
 	h := md5.New()
-	err := json.NewEncoder(h).Encode(ruleset)
+	err = json.NewEncoder(h).Encode(ruleset)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +178,67 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	}
 
 	return &re, nil
+}
+
+// regex used to validate ruleset name.
+var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
+
+func validateRulesetName(path string) error {
+	if ok := rgxRuleset.MatchString(path); !ok {
+		return store.ErrBadRulesetName
+	}
+
+	return nil
+}
+
+// operandsGetter is used to check if a type implements it,
+// if so, we can retrieve the operands.
+type operandsGetter interface {
+	Operands() []rule.Expr
+}
+
+// regex used to validate parameters name.
+var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
+
+func validateParamNames(rs *regula.Ruleset) error {
+	// fn will run recursively through the tree of Expr until it finds a rule.Param to validate it.
+	var fn func(expr rule.Expr) error
+
+	fn = func(expr rule.Expr) error {
+		if r, ok := expr.(*rule.Rule); ok {
+			err := fn(r.Expr)
+			if err != nil {
+				return err
+			}
+		}
+
+		if o, ok := expr.(operandsGetter); ok {
+			ops := o.Operands()
+			for _, op := range ops {
+				err := fn(op)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if p, ok := expr.(*rule.Param); ok {
+			if ok := rgxParam.MatchString(p.Name); !ok {
+				return store.ErrBadParameterName
+			}
+		}
+
+		return nil
+	}
+
+	for _, r := range rs.Rules {
+		err := fn(r.Expr)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Watch the given prefix for anything new.
