@@ -315,11 +315,11 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("Bad ruleset name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, store.ErrBadRulesetName)
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
 		})
 
 		t.Run("Bad param name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, store.ErrBadParameterName)
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
 		})
 	})
 }

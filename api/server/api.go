@@ -156,7 +156,7 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
-		if err == store.ErrBadRulesetName || err == store.ErrBadParameterName {
+		if store.IsValidationError(err) {
 			s.writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
