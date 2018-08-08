@@ -184,8 +184,12 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
 
 func validateRulesetName(path string) error {
-	if ok := rgxRuleset.MatchString(path); !ok {
-		return store.ErrBadRulesetName
+	if !rgxRuleset.MatchString(path) {
+		return &store.ValidationError{
+			Field:  "path",
+			Value:  path,
+			Reason: "invalid format",
+		}
 	}
 
 	return nil
@@ -199,6 +203,15 @@ type operandsGetter interface {
 
 // regex used to validate parameters name.
 var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
+
+// list of reserved words that shouldn't be used as parameters.
+var reservedWords = []string{
+	"version",
+	"list",
+	"eval",
+	"watch",
+	"revision",
+}
 
 func validateParamNames(rs *regula.Ruleset) error {
 	// fn will run recursively through the tree of Expr until it finds a rule.Param to validate it.
@@ -223,8 +236,22 @@ func validateParamNames(rs *regula.Ruleset) error {
 		}
 
 		if p, ok := expr.(*rule.Param); ok {
-			if ok := rgxParam.MatchString(p.Name); !ok {
-				return store.ErrBadParameterName
+			if !rgxParam.MatchString(p.Name) {
+				return &store.ValidationError{
+					Field:  "param",
+					Value:  p.Name,
+					Reason: "invalid format",
+				}
+			}
+
+			for _, w := range reservedWords {
+				if p.Name == w {
+					return &store.ValidationError{
+						Field:  "param",
+						Value:  p.Name,
+						Reason: "forbidden value",
+					}
+				}
 			}
 		}
 

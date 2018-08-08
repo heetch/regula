@@ -37,7 +37,7 @@ func TestValidation(t *testing.T) {
 
 		for _, n := range names {
 			err := validateRulesetName(n)
-			require.Equal(t, store.ErrBadRulesetName, err)
+			require.True(t, store.IsValidationError(err))
 		}
 	})
 
@@ -73,6 +73,8 @@ func TestValidation(t *testing.T) {
 			"0abc",
 		}
 
+		names = append(names, reservedWords...)
+
 		for _, n := range names {
 			rs, _ := regula.NewBoolRuleset(
 				rule.New(
@@ -82,7 +84,7 @@ func TestValidation(t *testing.T) {
 			)
 
 			err := validateParamNames(rs)
-			require.Equal(t, store.ErrBadParameterName, err)
+			require.True(t, store.IsValidationError(err))
 		}
 
 		// For the following tests, we are just testing if the recursion and the type assertion work well.
@@ -98,7 +100,7 @@ func TestValidation(t *testing.T) {
 		)
 
 		err := validateParamNames(rs)
-		require.Equal(t, store.ErrBadParameterName, err)
+		require.True(t, store.IsValidationError(err))
 
 		rs, _ = regula.NewBoolRuleset(
 			rule.New(
@@ -118,7 +120,7 @@ func TestValidation(t *testing.T) {
 		)
 
 		err = validateParamNames(rs)
-		require.Equal(t, store.ErrBadParameterName, err)
+		require.True(t, store.IsValidationError(err))
 
 		rs, _ = regula.NewBoolRuleset(
 			rule.New(
@@ -144,6 +146,6 @@ func TestValidation(t *testing.T) {
 		)
 
 		err = validateParamNames(rs)
-		require.Equal(t, store.ErrBadParameterName, err)
+		require.True(t, store.IsValidationError(err))
 	})
 }

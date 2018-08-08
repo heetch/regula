@@ -3,20 +3,34 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 )
 
-// Errors.
+// Common errors.
 var (
 	ErrNotFound    = errors.New("not found")
 	ErrNotModified = errors.New("not modified")
-	// ErrBadRulesetName is returned if the name of the ruleset is badly formatted.
-	ErrBadRulesetName = errors.New("bad ruleset name")
-	// ErrBadParameterName is returned if the name of the parameter is badly formatted.
-	ErrBadParameterName = errors.New("bad parameter name")
 )
+
+// ValidationError gives informations about the reason of failed validation.
+type ValidationError struct {
+	Field  string
+	Value  string
+	Reason string
+}
+
+func (v *ValidationError) Error() string {
+	return fmt.Sprintf("invalid %s with value '%s': %s", v.Field, v.Value, v.Reason)
+}
+
+// IsValidationError indicates if the given error is a ValidationError pointer.
+func IsValidationError(err error) bool {
+	_, ok := err.(*ValidationError)
+	return ok
+}
 
 // RulesetService manages rulesets.
 type RulesetService interface {
