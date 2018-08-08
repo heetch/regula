@@ -2,9 +2,11 @@ package client_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -91,6 +93,79 @@ func TestRulesetService(t *testing.T) {
 		_, err = cli.Rulesets.List(context.Background(), "")
 		aerr := err.(*api.Error)
 		require.Equal(t, "some err", aerr.Err)
+	})
+
+	t.Run("Retries/Success", func(t *testing.T) {
+		i := 0
+
+		rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(1)))
+		require.NoError(t, err)
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			i++
+
+			var body regula.Ruleset
+			err := json.NewDecoder(r.Body).Decode(&body)
+			assert.NoError(t, err)
+			assert.Equal(t, rs, &body)
+
+			if i < 2 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"error": "some err"}`)
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+		cli.RetryDelay = 10 * time.Millisecond
+
+		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		aerr := err.(*api.Error)
+		require.Equal(t, "some err", aerr.Err)
+	})
+
+	t.Run("Retries/Failure", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+		cli.RetryDelay = 10 * time.Millisecond
+
+		rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(1)))
+		require.NoError(t, err)
+
+		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		aerr := err.(*api.Error)
+		require.Equal(t, http.StatusInternalServerError, aerr.Response.StatusCode)
+	})
+
+	t.Run("Retries/NetworkError", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		// close immediately
+		ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+		cli.RetryDelay = 10 * time.Millisecond
+
+		rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(1)))
+		require.NoError(t, err)
+
+		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		_, ok := err.(net.Error)
+		require.True(t, ok)
 	})
 
 	t.Run("ListRulesets", func(t *testing.T) {

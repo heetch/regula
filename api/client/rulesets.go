@@ -31,7 +31,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets
 
 	var rl api.Rulesets
 
-	_, err = s.client.do(ctx, req, &rl)
+	_, err = s.client.try(ctx, req, &rl)
 	return &rl, err
 }
 
@@ -66,7 +66,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 
 	var resp api.EvalResult
 
-	_, err = s.client.do(ctx, req, &resp)
+	_, err = s.client.try(ctx, req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, rs *regula.Rulese
 
 	var resp api.Ruleset
 
-	_, err = s.client.do(ctx, req, &resp)
+	_, err = s.client.try(ctx, req, &resp)
 	return &resp, err
 }
 
