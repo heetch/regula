@@ -2,6 +2,7 @@
 
 
 [[projects]]
+  digest = "1:a3f13ebdec7f801a6572eae483564d9ea41775408dac1730da681b2f2ca60955"
   name = "github.com/coreos/etcd"
   packages = [
     "auth/authpb",
@@ -9,121 +10,151 @@
     "etcdserver/api/v3rpc/rpctypes",
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
-    "pkg/types"
+    "pkg/types",
   ]
+  pruneopts = "UT"
   revision = "33245c6b5b49130ca99280408fadfab01aac0e48"
   version = "v3.3.8"
 
 [[projects]]
+  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "UT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:bfc758d5a03d57d97226fac6934551c01bd76612adb119c177395b057a0a46db"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
     "proto",
-    "protoc-gen-gogo/descriptor"
+    "protoc-gen-gogo/descriptor",
   ]
+  pruneopts = "UT"
   revision = "7d68e886eac4f7e34d0d82241a6273d6c304c5cf"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:17fe264ee908afc795734e8c4e63db2accabaf57326dbf21763a7d6b86096260"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
+  pruneopts = "UT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:2b7795576f6f15c68487b332fcdd723ef52df627fa34a57d62255d6d1349482d"
   name = "github.com/heetch/confita"
   packages = [
     ".",
     "backend",
     "backend/env",
-    "backend/flags"
+    "backend/flags",
   ]
+  pruneopts = "UT"
   revision = "67096f89cfbe7bfed88e320a8bf4399f50a29667"
   version = "v0.5.1"
 
 [[projects]]
+  digest = "1:d4d17353dbd05cb52a2a52b7fe1771883b682806f68db442b436294926bbfafb"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
+  pruneopts = "UT"
   revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
   version = "v0.0.3"
 
 [[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:757b110984b77e820e01c60d3ac03a376a0fdb05c990dd9d6bd4f9ba0d606261"
   name = "github.com/rs/xid"
   packages = ["."]
+  pruneopts = "UT"
   revision = "2c7e97ce663ff82c49656bca3048df0fdd83c5f9"
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:457d5b167aa0d8091470fe8d54babdd40c26a4feefd40d3cb301438369689960"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
     "hlog",
     "internal/cbor",
     "internal/json",
-    "log"
+    "log",
   ]
+  pruneopts = "UT"
   revision = "77db4b4f350e31be66a57c332acb7721cf9ff9bb"
   version = "v1.8.0"
 
 [[projects]]
+  digest = "1:8a3e7525dc0cf0236b163166800ecbc78d6c8c5d7ac956996e7b3bef8cfadc41"
   name = "github.com/segmentio/ksuid"
   packages = ["."]
+  pruneopts = "UT"
   revision = "112f929a3020abfcd06b77c963ec919130796a35"
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:c40d65817cdd41fac9aa7af8bed56927bb2d6d47e4fea566a74880f5c2b1c41e"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "require"
+    "require",
   ]
+  pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
 [[projects]]
+  digest = "1:91870c28d6e9f90353bc5541189023ce36de5a703af3991d4378a068c42e4b8d"
   name = "github.com/tidwall/gjson"
   packages = ["."]
+  pruneopts = "UT"
   revision = "f123b340873a0084cb27267eddd8ff615115fbff"
   version = "v1.1.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:d3f968e2a2c9f8506ed44b01b605ade0176ba6cf73ff679073e77cfdef2c0d55"
   name = "github.com/tidwall/match"
   packages = ["."]
+  pruneopts = "UT"
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
 
 [[projects]]
+  digest = "1:f23222558887a5919f8e9021ecb205395de463f031dd0c049e6e8e547b57c3f4"
   name = "github.com/zenazn/goji"
   packages = ["web/mutil"]
+  pruneopts = "UT"
   revision = "64eb34159fe53473206c2b3e70fe396a639452f2"
   version = "v1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:9d3be524f32f54d9b279d9bf274885a7cf33051470d15a0a948708a7375ab8f2"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -133,20 +164,24 @@
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "trace"
+    "trace",
   ]
+  pruneopts = "UT"
   revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
 [[projects]]
   branch = "master"
+  digest = "1:3364d01296ce7eeca363e3d530ae63a2092d6f8efb85fb3d101e8f6d7de83452"
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows"
+    "windows",
   ]
+  pruneopts = "UT"
   revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
 
 [[projects]]
+  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -162,18 +197,22 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:601e63e7d4577f907118bec825902505291918859d223bce015539e79f1160e3"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
+  pruneopts = "UT"
   revision = "e92b116572682a5b432ddd840aeaba2a559eeff1"
 
 [[projects]]
+  digest = "1:3a98314fd2e43bbd905b33125dad80b10111ba6e5e541db8ed2a953fe01fbb31"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -201,14 +240,31 @@
     "stats",
     "status",
     "tap",
-    "transport"
+    "transport",
   ]
+  pruneopts = "UT"
   revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
   version = "v1.13.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d1c6a9cf66fbbfa88f29ca641726878ab4197de10d46721691a47cd3e0c6e21b"
+  input-imports = [
+    "github.com/coreos/etcd/clientv3",
+    "github.com/coreos/etcd/mvcc/mvccpb",
+    "github.com/heetch/confita",
+    "github.com/heetch/confita/backend",
+    "github.com/heetch/confita/backend/env",
+    "github.com/heetch/confita/backend/flags",
+    "github.com/mattn/go-isatty",
+    "github.com/pkg/errors",
+    "github.com/rs/zerolog",
+    "github.com/rs/zerolog/hlog",
+    "github.com/segmentio/ksuid",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "github.com/tidwall/gjson",
+    "golang.org/x/net/context/ctxhttp",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
