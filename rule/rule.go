@@ -27,8 +27,8 @@ var (
 
 // A Rule represents a logical boolean expression that evaluates to a result.
 type Rule struct {
-	Expr   Expr
-	Result *Value
+	Expr   Expr   `json:"expr"`
+	Result *Value `json:"result"`
 }
 
 // New creates a rule with the given expression and that returns the given result on evaluation.
