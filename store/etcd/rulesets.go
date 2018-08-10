@@ -25,7 +25,7 @@ type RulesetService struct {
 
 // List returns all the rulesets entries under the given prefix.
 func (s *RulesetService) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(prefix, ""), clientv3.WithPrefix())
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(prefix, ""), clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
@@ -56,7 +56,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(path, "")+"/", clientv3.WithLastKey()...)
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -82,7 +82,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetPath(path, version))
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, version))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -141,20 +141,20 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	resp, err := s.Client.KV.Txn(ctx).
 		If(
 			// if last stored checksum equal the current one
-			clientv3.Compare(clientv3.Value(s.checksumPath(path)), "=", checksum),
+			clientv3.Compare(clientv3.Value(s.checksumsPath(path)), "=", checksum),
 		).
 		Then(
 			// the latest ruleset is the same as this one
 			// we fetch the latest ruleset entry
-			clientv3.OpGet(s.rulesetPath(path, "")+"/", clientv3.WithLastKey()...),
+			clientv3.OpGet(s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...),
 		).
 		Else(
 			// if the checksum is different from the last one OR
 			// if the checksum doesn't exist (first time we create a ruleset for this path)
 			// we create a new version
-			clientv3.OpPut(s.rulesetPath(path, v), string(raw)),
+			clientv3.OpPut(s.rulesetsPath(path, v), string(raw)),
 			// we create/update the checksum for the last ruleset version
-			clientv3.OpPut(s.checksumPath(path), checksum),
+			clientv3.OpPut(s.checksumsPath(path), checksum),
 		).
 		Commit()
 	if err != nil {
@@ -279,7 +279,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 		opts = append(opts, clientv3.WithRev(i+1))
 	}
 
-	wc := s.Client.Watch(ctx, s.rulesetPath(prefix, ""), opts...)
+	wc := s.Client.Watch(ctx, s.rulesetsPath(prefix, ""), opts...)
 	for {
 		select {
 		case wresp := <-wc:
@@ -363,10 +363,14 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
-func (s *RulesetService) rulesetPath(p, v string) string {
-	return path.Join(s.Namespace, "rulesets", p, v)
+func (s *RulesetService) rulesetsPath(p, v string) string {
+	return path.Join(s.Namespace, "rulesets", "entries", p, v)
 }
 
-func (s *RulesetService) checksumPath(p string) string {
-	return path.Join(s.Namespace, "checksums", p)
+func (s *RulesetService) checksumsPath(p string) string {
+	return path.Join(s.Namespace, "rulesets", "checksums", p)
+}
+
+func (s *RulesetService) signaturesPath(p string) string {
+	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
