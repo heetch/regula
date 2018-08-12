@@ -58,8 +58,11 @@ func TestValidation(t *testing.T) {
 				),
 			)
 
-			err := validateParamNames(rs)
-			require.NoError(t, err)
+			for _, r := range rs.Rules {
+				params := r.Params()
+				err := validateParamNames(params)
+				require.NoError(t, err)
+			}
 		}
 	})
 
@@ -83,69 +86,11 @@ func TestValidation(t *testing.T) {
 				),
 			)
 
-			err := validateParamNames(rs)
-			require.True(t, store.IsValidationError(err))
+			for _, r := range rs.Rules {
+				params := r.Params()
+				err := validateParamNames(params)
+				require.True(t, store.IsValidationError(err))
+			}
 		}
-
-		// For the following tests, we are just testing if the recursion and the type assertion work well.
-		// The validation is already tested on the rule package.
-		rs, _ := regula.NewBoolRuleset(
-			rule.New(
-				rule.Eq(
-					rule.True(),
-					rule.BoolParam("foo_"),
-				),
-				rule.BoolValue(true),
-			),
-		)
-
-		err := validateParamNames(rs)
-		require.True(t, store.IsValidationError(err))
-
-		rs, _ = regula.NewBoolRuleset(
-			rule.New(
-				rule.Eq(
-					rule.True(),
-					rule.New(
-						rule.Eq(
-							rule.BoolParam("foo"),
-							rule.BoolParam("1baz"), // bad param name
-						),
-						rule.BoolValue(true),
-					),
-					rule.BoolParam("foo"),
-				),
-				rule.BoolValue(true),
-			),
-		)
-
-		err = validateParamNames(rs)
-		require.True(t, store.IsValidationError(err))
-
-		rs, _ = regula.NewBoolRuleset(
-			rule.New(
-				rule.Eq(
-					rule.True(),
-					rule.New(
-						rule.Eq(
-							rule.New(
-								rule.Eq(
-									rule.BoolParam("foo"),
-									rule.BoolParam("foo--bar"), // bad param name
-									rule.True(),
-								),
-								rule.BoolValue(true),
-							),
-							rule.True(),
-						),
-						rule.BoolValue(true),
-					),
-				),
-				rule.BoolValue(true),
-			),
-		)
-
-		err = validateParamNames(rs)
-		require.True(t, store.IsValidationError(err))
 	})
 }

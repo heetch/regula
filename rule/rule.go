@@ -92,10 +92,10 @@ func (r *Rule) Eval(params Params) (*Value, error) {
 }
 
 // Params returns a list of all the parameters expected by this rule.
-func (r *Rule) Params() ([]Param, error) {
+func (r *Rule) Params() []Param {
 	var list []Param
 
-	err := walk(r.Expr, func(e Expr) error {
+	walk(r.Expr, func(e Expr) error {
 		if p, ok := e.(*Param); ok {
 			list = append(list, *p)
 		}
@@ -103,9 +103,5 @@ func (r *Rule) Params() ([]Param, error) {
 		return nil
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	return list, nil
+	return list
 }

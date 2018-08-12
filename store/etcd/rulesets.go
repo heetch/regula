@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"path"
 	"regexp"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
@@ -103,84 +105,165 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+	sig, err := validateRuleset(path, ruleset)
+	if err != nil {
+		return nil, err
+	}
+
+	var entry store.RulesetEntry
+
+	txfn := func(stm concurrency.STM) error {
+		// generate a checksum from the ruleset for comparison purpose
+		h := md5.New()
+		err = json.NewEncoder(h).Encode(ruleset)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate checksum")
+		}
+		checksum := string(h.Sum(nil))
+
+		// if nothing changed return latest ruleset
+		if stm.Get(s.checksumsPath(path)) == checksum {
+			v := stm.Get(stm.Get(s.latestRulesetPath(path)))
+
+			err = json.Unmarshal([]byte(v), &entry)
+			if err != nil {
+				return errors.Wrap(err, "failed to unmarshal entry")
+			}
+
+			return store.ErrNotModified
+		}
+
+		// make sure signature didn't change
+		rawSig := stm.Get(s.signaturesPath(path))
+		if rawSig != "" {
+			var curSig signature
+			err := json.Unmarshal([]byte(rawSig), &curSig)
+			if err != nil {
+				return errors.Wrap(err, "failed to decode ruleset signature")
+			}
+
+			err = curSig.matchWith(sig)
+			if err != nil {
+				return err
+			}
+		}
+
+		// if no signature found, create one
+		if rawSig == "" {
+			v, err := json.Marshal(&sig)
+			if err != nil {
+				return errors.Wrap(err, "failed to encode updated signature")
+			}
+
+			stm.Put(s.signaturesPath(path), string(v))
+		}
+
+		// update checksum
+		stm.Put(s.checksumsPath(path), checksum)
+
+		// create a new ruleset version
+		k, err := ksuid.NewRandom()
+		if err != nil {
+			return errors.Wrap(err, "failed to generate ruleset version")
+		}
+		version := k.String()
+
+		re := store.RulesetEntry{
+			Path:    path,
+			Version: version,
+			Ruleset: ruleset,
+		}
+
+		raw, err := json.Marshal(&re)
+		if err != nil {
+			return errors.Wrap(err, "failed to encode entry")
+		}
+
+		stm.Put(s.rulesetsPath(path, version), string(raw))
+
+		// update the pointer to the latest ruleset
+		stm.Put(s.latestRulesetPath(path), s.rulesetsPath(path, version))
+
+		entry = re
+		return nil
+	}
+
+	_, err = concurrency.NewSTM(s.Client, txfn, concurrency.WithAbortContext(ctx))
+	if err != nil && err != store.ErrNotModified && !store.IsValidationError(err) {
+		return nil, errors.Wrap(err, "failed to put ruleset")
+	}
+
+	return &entry, err
+}
+
+type signature struct {
+	ReturnType string
+	ParamTypes map[string]string
+}
+
+func newSignature(rs *regula.Ruleset) *signature {
+	pt := make(map[string]string)
+	for _, p := range rs.Params() {
+		pt[p.Name] = p.Type
+	}
+
+	return &signature{
+		ParamTypes: pt,
+		ReturnType: rs.Type,
+	}
+}
+
+func (s *signature) matchWith(other *signature) error {
+	if s.ReturnType != other.ReturnType {
+		return &store.ValidationError{
+			Field:  "return type",
+			Value:  other.ReturnType,
+			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", s.ReturnType),
+		}
+	}
+
+	for name, tp := range other.ParamTypes {
+		stp, ok := s.ParamTypes[name]
+		if !ok {
+			return &store.ValidationError{
+				Field:  "param",
+				Value:  name,
+				Reason: "signature mismatch: unknown parameter",
+			}
+		}
+
+		if tp != stp {
+			return &store.ValidationError{
+				Field:  "param type",
+				Value:  tp,
+				Reason: fmt.Sprintf("signature mismatch: param must be of type %s", stp),
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateRuleset(path string, rs *regula.Ruleset) (*signature, error) {
 	err := validateRulesetName(path)
 	if err != nil {
 		return nil, err
 	}
 
-	err = validateParamNames(ruleset)
-	if err != nil {
-		return nil, err
-	}
+	sig := newSignature(rs)
 
-	// generate checksum from the ruleset for comparison purpose
-	h := md5.New()
-	err = json.NewEncoder(h).Encode(ruleset)
-	if err != nil {
-		return nil, err
-	}
-	checksum := string(h.Sum(nil))
-
-	k, err := ksuid.NewRandom()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate version")
-	}
-	v := k.String()
-
-	re := store.RulesetEntry{
-		Path:    path,
-		Version: v,
-		Ruleset: ruleset,
-	}
-
-	raw, err := json.Marshal(&re)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode entry")
-	}
-
-	resp, err := s.Client.KV.Txn(ctx).
-		If(
-			// if last stored checksum equal the current one
-			clientv3.Compare(clientv3.Value(s.checksumsPath(path)), "=", checksum),
-		).
-		Then(
-			// the latest ruleset is the same as this one
-			// we fetch the latest ruleset entry
-			clientv3.OpGet(s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...),
-		).
-		Else(
-			// if the checksum is different from the last one OR
-			// if the checksum doesn't exist (first time we create a ruleset for this path)
-			// we create a new version
-			clientv3.OpPut(s.rulesetsPath(path, v), string(raw)),
-			// we create/update the checksum for the last ruleset version
-			clientv3.OpPut(s.checksumsPath(path), checksum),
-		).
-		Commit()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to put entry")
-	}
-
-	// the checksum is the same as the last ruleset saved, we return an error
-	// and the entry
-	if resp.Succeeded {
-		if len(resp.Responses) == 0 || resp.Responses[0].GetResponseRange().Count == 0 {
-			return nil, errors.New("succeeded txn response not received")
-		}
-
-		var entry store.RulesetEntry
-		err = json.Unmarshal(resp.Responses[0].GetResponseRange().Kvs[0].Value, &entry)
+	for _, r := range rs.Rules {
+		params := r.Params()
+		err = validateParamNames(params)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal entry")
+			return nil, err
 		}
-
-		return &entry, store.ErrNotModified
 	}
 
-	return &re, nil
+	return sig, nil
 }
 
-// regex used to validate ruleset name.
+// regex used to validate ruleset names.
 var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
 
 func validateRulesetName(path string) error {
@@ -195,12 +278,6 @@ func validateRulesetName(path string) error {
 	return nil
 }
 
-// operandsGetter is used to check if a type implements it,
-// if so, we can retrieve the operands.
-type operandsGetter interface {
-	Operands() []rule.Expr
-}
-
 // regex used to validate parameters name.
 var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
 
@@ -213,55 +290,24 @@ var reservedWords = []string{
 	"revision",
 }
 
-func validateParamNames(rs *regula.Ruleset) error {
-	// fn will run recursively through the tree of Expr until it finds a rule.Param to validate it.
-	var fn func(expr rule.Expr) error
-
-	fn = func(expr rule.Expr) error {
-		if r, ok := expr.(*rule.Rule); ok {
-			err := fn(r.Expr)
-			if err != nil {
-				return err
+func validateParamNames(params []rule.Param) error {
+	for i := range params {
+		if !rgxParam.MatchString(params[i].Name) {
+			return &store.ValidationError{
+				Field:  "param",
+				Value:  params[i].Name,
+				Reason: "invalid format",
 			}
 		}
 
-		if o, ok := expr.(operandsGetter); ok {
-			ops := o.Operands()
-			for _, op := range ops {
-				err := fn(op)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		if p, ok := expr.(*rule.Param); ok {
-			if !rgxParam.MatchString(p.Name) {
+		for _, w := range reservedWords {
+			if params[i].Name == w {
 				return &store.ValidationError{
 					Field:  "param",
-					Value:  p.Name,
-					Reason: "invalid format",
+					Value:  params[i].Name,
+					Reason: "forbidden value",
 				}
 			}
-
-			for _, w := range reservedWords {
-				if p.Name == w {
-					return &store.ValidationError{
-						Field:  "param",
-						Value:  p.Name,
-						Reason: "forbidden value",
-					}
-				}
-			}
-		}
-
-		return nil
-	}
-
-	for _, r := range rs.Rules {
-		err := fn(r.Expr)
-		if err != nil {
-			return err
 		}
 	}
 
@@ -373,4 +419,8 @@ func (s *RulesetService) checksumsPath(p string) string {
 
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
+}
+
+func (s *RulesetService) latestRulesetPath(p string) string {
+	return path.Join(s.Namespace, "rulesets", "latest", p)
 }

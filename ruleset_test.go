@@ -83,3 +83,17 @@ func TestRulesetEncDec(t *testing.T) {
 
 	require.Equal(t, r1, &r2)
 }
+
+func TestRulesetParams(t *testing.T) {
+	r1, err := NewStringRuleset(
+		rule.New(rule.Eq(rule.StringParam("foo"), rule.Int64Param("bar")), rule.StringValue("first")),
+		rule.New(rule.Eq(rule.StringParam("foo"), rule.Float64Param("baz")), rule.StringValue("second")),
+		rule.New(rule.True(), rule.StringValue("default")),
+	)
+	require.NoError(t, err)
+	require.Equal(t, []rule.Param{
+		*rule.StringParam("foo"),
+		*rule.Int64Param("bar"),
+		*rule.Float64Param("baz"),
+	}, r1.Params())
+}

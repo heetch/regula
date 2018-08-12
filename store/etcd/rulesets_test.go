@@ -43,7 +43,7 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 
 	s := etcd.RulesetService{
 		Client:    cli,
-		Namespace: fmt.Sprintf("regula-store-tests-%d", rand.Int()),
+		Namespace: fmt.Sprintf("regula-store-tests-%d/", rand.Int()),
 	}
 
 	return &s, func() {
@@ -116,17 +116,17 @@ func TestLatest(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	oldRse, _ := regula.NewBoolRuleset(
+	oldRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.BoolValue(true),
+			rule.StringValue("a"),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.StringValue("success"),
+			rule.StringValue("b"),
 		),
 	)
 
@@ -188,17 +188,17 @@ func TestOneByVersion(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	oldRse, _ := regula.NewBoolRuleset(
+	oldRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.BoolValue(true),
+			rule.StringValue("a"),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.StringValue("success"),
+			rule.StringValue("b"),
 		),
 	)
 
@@ -269,6 +269,11 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
+		// verify latest pointer creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "latest", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
 		require.Equal(t, err, store.ErrNotModified)
@@ -284,6 +289,120 @@ func TestPut(t *testing.T) {
 		entry2, err = s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
 		require.NotEqual(t, entry.Version, entry2.Version)
+	})
+
+	t.Run("Signatures", func(t *testing.T) {
+		path := "b"
+		rs1, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs1)
+		require.NoError(t, err)
+
+		// same params, different return type
+		rs2, err := regula.NewStringRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+				),
+				rule.StringValue("true"),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs2)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new params
+		rs3, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs3)
+		require.True(t, store.IsValidationError(err))
+
+		// changing param types
+		rs4, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs4)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new rule with different param types
+		rs5, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+
+		_, err = s.Put(context.Background(), path, rs5)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new rule with correct param types but less
+		rs6, _ := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+				),
+				rule.BoolValue(true),
+			),
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+
+		_, err = s.Put(context.Background(), path, rs6)
+		require.NoError(t, err)
 	})
 }
 

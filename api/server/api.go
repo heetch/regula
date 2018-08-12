@@ -165,9 +165,5 @@ func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string
 		return
 	}
 
-	err = json.NewEncoder(w).Encode((*api.Ruleset)(entry))
-	if err != nil {
-		s.writeError(w, r, err, http.StatusInternalServerError)
-		return
-	}
+	s.encodeJSON(w, r, (*api.Ruleset)(entry), http.StatusOK)
 }

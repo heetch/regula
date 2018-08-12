@@ -74,8 +74,7 @@ func TestRuleParams(t *testing.T) {
 	}
 
 	for _, tt := range tc {
-		params, err := tt.rule.Params()
-		require.NoError(t, err)
+		params := tt.rule.Params()
 		require.Equal(t, tt.params, params)
 	}
 }
