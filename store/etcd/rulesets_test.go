@@ -120,21 +120,21 @@ func TestList(t *testing.T) {
 		require.Len(t, entries.Entries, 2)
 		require.Equal(t, "y/1", entries.Entries[0].Path)
 		require.Equal(t, "y", entries.Entries[1].Path)
-		require.NotEmpty(t, entries.NextPageToken)
+		require.NotEmpty(t, entries.Continue)
 
-		token := entries.NextPageToken
-		entries, err = s.List(context.Background(), "y", 2, entries.NextPageToken)
+		token := entries.Continue
+		entries, err = s.List(context.Background(), "y", 2, entries.Continue)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
 		require.Equal(t, "y/2", entries.Entries[0].Path)
 		require.Equal(t, "y/3", entries.Entries[1].Path)
-		require.NotEmpty(t, entries.NextPageToken)
+		require.NotEmpty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 2, entries.NextPageToken)
+		entries, err = s.List(context.Background(), "y", 2, entries.Continue)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 1)
 		require.Equal(t, "yy", entries.Entries[0].Path)
-		require.Empty(t, entries.NextPageToken)
+		require.Empty(t, entries.Continue)
 
 		entries, err = s.List(context.Background(), "y", 3, token)
 		require.NoError(t, err)
@@ -142,7 +142,10 @@ func TestList(t *testing.T) {
 		require.Equal(t, "y/2", entries.Entries[0].Path)
 		require.Equal(t, "y/3", entries.Entries[1].Path)
 		require.Equal(t, "yy", entries.Entries[2].Path)
-		require.Empty(t, entries.NextPageToken)
+		require.Empty(t, entries.Continue)
+
+		entries, err = s.List(context.Background(), "y", 3, "some token")
+		require.Equal(t, store.ErrInvalidContinueToken, err)
 	})
 }
 

@@ -22,6 +22,7 @@ var (
 // Config contains the API configuration.
 type Config struct {
 	Logger       *zerolog.Logger
+	Timeout      time.Duration
 	WatchTimeout time.Duration
 }
 
@@ -39,10 +40,18 @@ func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config)
 		logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	}
 
+	if cfg.Timeout == 0 {
+		cfg.Timeout = 5 * time.Second
+	}
+
+	if cfg.WatchTimeout == 0 {
+		cfg.WatchTimeout = 30 * time.Second
+	}
+
 	rs := rulesetService{
 		service:      &s,
-		watchTimeout: 60 * time.Second,
-		timeout:      5 * time.Second,
+		timeout:      cfg.Timeout,
+		watchTimeout: cfg.WatchTimeout,
 	}
 
 	// router

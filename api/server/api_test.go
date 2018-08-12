@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,18 +46,29 @@ func TestAPI(t *testing.T) {
 				{Path: "bb", Ruleset: r2},
 			},
 			Revision: "somerev",
+			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, url string, code int, l *store.RulesetEntries, err error) {
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
 			t.Helper()
 
-			s.ListFn = func(context.Context, string) (*store.RulesetEntries, error) {
+			uu, uerr := url.Parse(u)
+			require.NoError(t, uerr)
+			limit := uu.Query().Get("limit")
+			if limit == "" {
+				limit = "50"
+			}
+			token := uu.Query().Get("page-token")
+
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(lm))
+				assert.Equal(t, token, tk)
 				return l, err
 			}
 			defer func() { s.ListFn = nil }()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", url, nil)
+			r := httptest.NewRequest("GET", u, nil)
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, code, w.Code)
@@ -66,6 +80,9 @@ func TestAPI(t *testing.T) {
 				require.Equal(t, len(l.Entries), len(res.Rulesets))
 				for i := range l.Entries {
 					require.EqualValues(t, l.Entries[i], res.Rulesets[i])
+				}
+				if len(l.Entries) > 0 {
+					require.Equal(t, "sometoken", res.Continue)
 				}
 			}
 		}
@@ -84,6 +101,18 @@ func TestAPI(t *testing.T) {
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
 			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound)
+		})
+
+		t.Run("InvalidToken", func(t *testing.T) {
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), store.ErrInvalidContinueToken)
+		})
+
+		t.Run("UnexpectedError", func(t *testing.T) {
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), errors.New("unexpected error"))
+		})
+
+		t.Run("InvalidLimit", func(t *testing.T) {
+			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil)
 		})
 	})
 

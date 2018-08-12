@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
+	"github.com/pkg/errors"
 )
 
 type rulesetService struct {
@@ -58,10 +60,27 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
-	entries, err := s.rulesets.List(r.Context(), prefix)
+	var err error
+
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		limit, err = strconv.Atoi(l)
+		if err != nil {
+			s.writeError(w, r, errors.New("invalid limit"), http.StatusBadRequest)
+			return
+		}
+	}
+
+	token := r.URL.Query().Get("page-token")
+	entries, err := s.rulesets.List(r.Context(), prefix, limit, token)
 	if err != nil {
 		if err == store.ErrNotFound {
 			s.writeError(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		if err == store.ErrInvalidContinueToken {
+			s.writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
@@ -76,6 +95,7 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 		rl.Rulesets[i] = api.Ruleset(entries.Entries[i])
 	}
 	rl.Revision = entries.Revision
+	rl.Continue = entries.Continue
 
 	s.encodeJSON(w, r, &rl, http.StatusOK)
 }

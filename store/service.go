@@ -11,8 +11,9 @@ import (
 
 // Common errors.
 var (
-	ErrNotFound    = errors.New("not found")
-	ErrNotModified = errors.New("not modified")
+	ErrNotFound             = errors.New("not found")
+	ErrNotModified          = errors.New("not modified")
+	ErrInvalidContinueToken = errors.New("invalid continue token")
 )
 
 // ValidationError gives informations about the reason of failed validation.
@@ -35,7 +36,7 @@ func IsValidationError(err error) bool {
 // RulesetService manages rulesets.
 type RulesetService interface {
 	// List returns all the rulesets entries under the given prefix.
-	List(ctx context.Context, prefix string, limit int, token string) (*RulesetEntries, error)
+	List(ctx context.Context, prefix string, limit int, continueToken string) (*RulesetEntries, error)
 	// Latest returns the latest version of the ruleset entry which corresponds to the given path.
 	Latest(ctx context.Context, path string) (*RulesetEntry, error)
 	// OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
@@ -59,9 +60,9 @@ type RulesetEntry struct {
 
 // RulesetEntries holds a list of ruleset entries.
 type RulesetEntries struct {
-	Entries       []RulesetEntry
-	Revision      string // revision when the request was applied
-	NextPageToken string // token of the next page, if any
+	Entries  []RulesetEntry
+	Revision string // revision when the request was applied
+	Continue string // token of the next page, if any
 }
 
 // List of possible events executed against a ruleset.

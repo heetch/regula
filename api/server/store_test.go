@@ -13,7 +13,7 @@ var _ store.RulesetService = new(mockRulesetService)
 
 type mockRulesetService struct {
 	ListCount         int
-	ListFn            func(context.Context, string) (*store.RulesetEntries, error)
+	ListFn            func(context.Context, string, int, string) (*store.RulesetEntries, error)
 	LatestCount       int
 	LatestFn          func(context.Context, string) (*store.RulesetEntry, error)
 	OneByVersionCount int
@@ -28,11 +28,11 @@ type mockRulesetService struct {
 	EvalVersionFn     func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
-func (s *mockRulesetService) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
+func (s *mockRulesetService) List(ctx context.Context, prefix string, limit int, token string) (*store.RulesetEntries, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
-		return s.ListFn(ctx, prefix)
+		return s.ListFn(ctx, prefix, limit, token)
 	}
 
 	return nil, nil

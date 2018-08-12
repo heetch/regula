@@ -27,15 +27,15 @@ type RulesetService struct {
 }
 
 // List returns all the rulesets entries under the given prefix.
-func (s *RulesetService) List(ctx context.Context, prefix string, limit int, token string) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 2)
 
 	var key string
 
-	if token != "" {
-		lastPath, err := base64.URLEncoding.DecodeString(token)
+	if continueToken != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode token %v", token)
+			return nil, store.ErrInvalidContinueToken
 		}
 
 		key = string(lastPath)
@@ -77,7 +77,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, tok
 	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	// we want to start immediately after the last key
-	entries.NextPageToken = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
 
 	return &entries, nil
 }
