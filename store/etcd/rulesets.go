@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -26,8 +27,29 @@ type RulesetService struct {
 }
 
 // List returns all the rulesets entries under the given prefix.
-func (s *RulesetService) List(ctx context.Context, prefix string) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(prefix, ""), clientv3.WithPrefix())
+func (s *RulesetService) List(ctx context.Context, prefix string, limit int, token string) (*store.RulesetEntries, error) {
+	options := make([]clientv3.OpOption, 0, 2)
+
+	var key string
+
+	if token != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(token)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode token %v", token)
+		}
+
+		key = string(lastPath)
+
+		rangeEnd := clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
+		options = append(options, clientv3.WithRange(rangeEnd))
+	} else {
+		key = prefix
+		options = append(options, clientv3.WithPrefix())
+	}
+
+	options = append(options, clientv3.WithLimit(int64(limit)))
+
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
@@ -47,6 +69,15 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*store.Rulese
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
+
+	if len(entries.Entries) < limit || !resp.More {
+		return &entries, nil
+	}
+
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// we want to start immediately after the last key
+	entries.NextPageToken = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
 
 	return &entries, nil
 }

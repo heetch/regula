@@ -69,7 +69,6 @@ func TestList(t *testing.T) {
 	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
 	t.Run("Root", func(t *testing.T) {
-
 		createRuleset(t, s, "c", rs)
 		createRuleset(t, s, "a", rs)
 		createRuleset(t, s, "a/1", rs)
@@ -78,7 +77,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"a/1", "a", "b", "c"}
 
-		entries, err := s.List(context.Background(), "")
+		entries, err := s.List(context.Background(), "", 0, "")
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -95,7 +94,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"x/1", "x", "x/2", "xx"}
 
-		entries, err := s.List(context.Background(), "x")
+		entries, err := s.List(context.Background(), "x", 0, "")
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -105,8 +104,45 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist")
+		_, err := s.List(context.Background(), "doesntexist", 0, "")
 		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("Paging", func(t *testing.T) {
+		createRuleset(t, s, "y", rs)
+		createRuleset(t, s, "yy", rs)
+		createRuleset(t, s, "y/1", rs)
+		createRuleset(t, s, "y/2", rs)
+		createRuleset(t, s, "y/3", rs)
+
+		entries, err := s.List(context.Background(), "y", 2, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		require.Equal(t, "y/1", entries.Entries[0].Path)
+		require.Equal(t, "y", entries.Entries[1].Path)
+		require.NotEmpty(t, entries.NextPageToken)
+
+		token := entries.NextPageToken
+		entries, err = s.List(context.Background(), "y", 2, entries.NextPageToken)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		require.Equal(t, "y/2", entries.Entries[0].Path)
+		require.Equal(t, "y/3", entries.Entries[1].Path)
+		require.NotEmpty(t, entries.NextPageToken)
+
+		entries, err = s.List(context.Background(), "y", 2, entries.NextPageToken)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 1)
+		require.Equal(t, "yy", entries.Entries[0].Path)
+		require.Empty(t, entries.NextPageToken)
+
+		entries, err = s.List(context.Background(), "y", 3, token)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 3)
+		require.Equal(t, "y/2", entries.Entries[0].Path)
+		require.Equal(t, "y/3", entries.Entries[1].Path)
+		require.Equal(t, "yy", entries.Entries[2].Path)
+		require.Empty(t, entries.NextPageToken)
 	})
 }
 
