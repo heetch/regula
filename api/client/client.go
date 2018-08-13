@@ -218,3 +218,9 @@ func UserAgent(userAgent string) Option {
 		return nil
 	}
 }
+
+// ListOptions contains pagination options.
+type ListOptions struct {
+	Limit    int
+	Continue string
+}

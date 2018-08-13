@@ -60,9 +60,11 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
-	var err error
+	var (
+		err   error
+		limit int
+	)
 
-	limit := 50
 	if l := r.URL.Query().Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
 		if err != nil {
@@ -71,8 +73,8 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 		}
 	}
 
-	token := r.URL.Query().Get("page-token")
-	entries, err := s.rulesets.List(r.Context(), prefix, limit, token)
+	continueToken := r.URL.Query().Get("continue")
+	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken)
 	if err != nil {
 		if err == store.ErrNotFound {
 			s.writeError(w, r, err, http.StatusNotFound)

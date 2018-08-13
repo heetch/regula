@@ -30,13 +30,45 @@ func ExampleRulesetService_List() {
 		log.Fatal(err)
 	}
 
-	list, err := c.Rulesets.List(context.Background(), "prefix")
+	list, err := c.Rulesets.List(context.Background(), "prefix", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, e := range list.Rulesets {
 		e.Ruleset.Eval(nil)
+	}
+}
+
+func ExampleRulesetService_List_withPagination() {
+	c, err := client.New("http://127.0.0.1:5331")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list, err := c.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
+		Limit: 20,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range list.Rulesets {
+		e.Ruleset.Eval(nil)
+	}
+
+	for list.Continue != "" {
+		list, err = c.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
+			Limit:    20,
+			Continue: list.Continue,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, e := range list.Rulesets {
+			e.Ruleset.Eval(nil)
+		}
 	}
 }
 
@@ -90,7 +122,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		_, err = cli.Rulesets.List(context.Background(), "")
+		_, err = cli.Rulesets.List(context.Background(), "", nil)
 		aerr := err.(*api.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
@@ -173,6 +205,8 @@ func TestRulesetService(t *testing.T) {
 			assert.NotEmpty(t, r.Header.Get("User-Agent"))
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
 			assert.Contains(t, r.URL.Query(), "list")
+			assert.Equal(t, "some-token", r.URL.Query().Get("continue"))
+			assert.Equal(t, "10", r.URL.Query().Get("limit"))
 			assert.Equal(t, "/rulesets/prefix", r.URL.Path)
 			fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
 		}))
@@ -182,7 +216,10 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := cli.Rulesets.List(context.Background(), "prefix")
+		rs, err := cli.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
+			Limit:    10,
+			Continue: "some-token",
+		})
 		require.NoError(t, err)
 		require.Len(t, rs.Rulesets, 1)
 	})

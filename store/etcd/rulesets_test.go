@@ -146,6 +146,10 @@ func TestList(t *testing.T) {
 
 		entries, err = s.List(context.Background(), "y", 3, "some token")
 		require.Equal(t, store.ErrInvalidContinueToken, err)
+
+		entries, err = s.List(context.Background(), "y", -10, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 5)
 	})
 }
 

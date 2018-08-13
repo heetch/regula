@@ -32,6 +32,10 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	var key string
 
+	if limit < 0 || limit > 100 {
+		limit = 50 // TODO(asdine): make this configurable in future releases.
+	}
+
 	if continueToken != "" {
 		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
 		if err != nil {

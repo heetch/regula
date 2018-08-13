@@ -56,9 +56,9 @@ func TestAPI(t *testing.T) {
 			require.NoError(t, uerr)
 			limit := uu.Query().Get("limit")
 			if limit == "" {
-				limit = "50"
+				limit = "0"
 			}
-			token := uu.Query().Get("page-token")
+			token := uu.Query().Get("continue")
 
 			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))

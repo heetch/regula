@@ -22,7 +22,9 @@ type Evaluator struct {
 // the underlying RulesetBuffer.
 // If watch is set to true, the Close method must always be called to gracefully close the watcher.
 func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool) (*Evaluator, error) {
-	ls, err := client.Rulesets.List(ctx, prefix)
+	ls, err := client.Rulesets.List(ctx, prefix, &ListOptions{
+		Limit: 100, // TODO(asdine): make it configurable in future releases
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +33,20 @@ func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool
 
 	for _, re := range ls.Rulesets {
 		buf.Add(re.Path, re.Version, re.Ruleset)
+	}
+
+	for ls.Continue != "" {
+		ls, err = client.Rulesets.List(ctx, prefix, &ListOptions{
+			Limit:    100, // TODO(asdine): make it configurable in future releases
+			Continue: ls.Continue,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, re := range ls.Rulesets {
+			buf.Add(re.Path, re.Version, re.Ruleset)
+		}
 	}
 
 	ev := Evaluator{

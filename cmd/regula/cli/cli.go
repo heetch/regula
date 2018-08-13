@@ -25,6 +25,7 @@ type Config struct {
 	}
 	Server struct {
 		Address      string        `config:"addr"`
+		Timeout      time.Duration `config:"server-timeout"`
 		WatchTimeout time.Duration `config:"server-watch-timeout"`
 	}
 	LogLevel string `config:"log-level"`
@@ -36,7 +37,8 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = zerolog.DebugLevel.String()
 	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
 	cfg.Server.Address = "0.0.0.0:5331"
-	cfg.Server.WatchTimeout = 60 * time.Second
+	cfg.Server.Timeout = 5 * time.Second
+	cfg.Server.WatchTimeout = 30 * time.Second
 
 	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
