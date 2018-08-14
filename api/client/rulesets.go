@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	ppath "path"
+	"strconv"
 	"time"
 
 	"github.com/heetch/regula"
@@ -19,7 +20,7 @@ type RulesetService struct {
 }
 
 // List fetches all the rulesets starting with the given prefix.
-func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *ListOptions) (*api.Rulesets, error) {
 	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
 	if err != nil {
 		return nil, err
@@ -27,6 +28,17 @@ func (s *RulesetService) List(ctx context.Context, prefix string) (*api.Rulesets
 
 	q := req.URL.Query()
 	q.Add("list", "")
+
+	if opt != nil {
+		if opt.Limit != 0 {
+			q.Add("limit", strconv.Itoa(opt.Limit))
+		}
+
+		if opt.Continue != "" {
+			q.Add("continue", opt.Continue)
+		}
+	}
+
 	req.URL.RawQuery = q.Encode()
 
 	var rl api.Rulesets

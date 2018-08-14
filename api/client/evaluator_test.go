@@ -12,6 +12,7 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api/client"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,13 @@ func TestEvaluator(t *testing.T) {
 	t.Run("Watch disabled", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if _, ok := r.URL.Query()["list"]; ok {
-				fmt.Fprintf(w, `{"revision": "revA", "rulesets": [{"path": "a", "version":"1"}]}`)
+				if continueToken := r.URL.Query().Get("continue"); continueToken != "" {
+					assert.Equal(t, "some-token", continueToken)
+					fmt.Fprintf(w, `{"revision": "revB", "rulesets": [{"path": "a", "version":"2"}]}`)
+					return
+				}
+
+				fmt.Fprintf(w, `{"revision": "revA", "rulesets": [{"path": "a", "version":"1"}], "continue": "some-token"}`)
 				return
 			}
 
@@ -42,7 +49,7 @@ func TestEvaluator(t *testing.T) {
 
 		_, version, err := ev.Latest("a")
 		require.NoError(t, err)
-		require.Equal(t, "1", version)
+		require.Equal(t, "2", version)
 	})
 
 	t.Run("Watch enabled", func(t *testing.T) {

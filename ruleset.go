@@ -38,16 +38,17 @@ func NewFloat64Ruleset(rules ...*rule.Rule) (*Ruleset, error) {
 }
 
 func newRuleset(typ string, rules ...*rule.Rule) (*Ruleset, error) {
-	for _, r := range rules {
-		if typ != r.Result.Type {
-			return nil, ErrRulesetIncoherentType
-		}
-	}
-
-	return &Ruleset{
+	rs := Ruleset{
 		Rules: rules,
 		Type:  typ,
-	}, nil
+	}
+
+	err := rs.validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return &rs, nil
 }
 
 // Eval evaluates every rule of the ruleset until one matches.
@@ -74,6 +75,47 @@ func (r *Ruleset) UnmarshalJSON(data []byte) error {
 		return errors.New("unsupported ruleset type")
 	}
 
-	_, err := newRuleset(r.Type, r.Rules...)
-	return err
+	return r.validate()
+}
+
+// Params returns a list of all the parameters used in all the underlying rules.
+func (r *Ruleset) Params() []rule.Param {
+	bm := make(map[string]bool)
+	var params []rule.Param
+
+	for _, rl := range r.Rules {
+		ps := rl.Params()
+		for _, p := range ps {
+			if !bm[p.Name] {
+				params = append(params, p)
+				bm[p.Name] = true
+			}
+		}
+	}
+
+	return params
+}
+
+func (r *Ruleset) validate() error {
+	paramTypes := make(map[string]string)
+
+	for _, rl := range r.Rules {
+		if rl.Result.Type != r.Type {
+			return ErrRulesetIncoherentType
+		}
+
+		ps := rl.Params()
+		for _, p := range ps {
+			tp, ok := paramTypes[p.Name]
+			if ok {
+				if p.Type != tp {
+					return ErrRulesetIncoherentType
+				}
+			} else {
+				paramTypes[p.Name] = p.Type
+			}
+		}
+	}
+
+	return nil
 }

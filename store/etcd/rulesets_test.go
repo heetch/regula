@@ -43,7 +43,7 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 
 	s := etcd.RulesetService{
 		Client:    cli,
-		Namespace: fmt.Sprintf("regula-store-tests-%d", rand.Int()),
+		Namespace: fmt.Sprintf("regula-store-tests-%d/", rand.Int()),
 	}
 
 	return &s, func() {
@@ -69,7 +69,6 @@ func TestList(t *testing.T) {
 	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
 	t.Run("Root", func(t *testing.T) {
-
 		createRuleset(t, s, "c", rs)
 		createRuleset(t, s, "a", rs)
 		createRuleset(t, s, "a/1", rs)
@@ -78,7 +77,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"a/1", "a", "b", "c"}
 
-		entries, err := s.List(context.Background(), "")
+		entries, err := s.List(context.Background(), "", 0, "")
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -95,7 +94,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"x/1", "x", "x/2", "xx"}
 
-		entries, err := s.List(context.Background(), "x")
+		entries, err := s.List(context.Background(), "x", 0, "")
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -105,8 +104,52 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist")
+		_, err := s.List(context.Background(), "doesntexist", 0, "")
 		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("Paging", func(t *testing.T) {
+		createRuleset(t, s, "y", rs)
+		createRuleset(t, s, "yy", rs)
+		createRuleset(t, s, "y/1", rs)
+		createRuleset(t, s, "y/2", rs)
+		createRuleset(t, s, "y/3", rs)
+
+		entries, err := s.List(context.Background(), "y", 2, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		require.Equal(t, "y/1", entries.Entries[0].Path)
+		require.Equal(t, "y", entries.Entries[1].Path)
+		require.NotEmpty(t, entries.Continue)
+
+		token := entries.Continue
+		entries, err = s.List(context.Background(), "y", 2, entries.Continue)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		require.Equal(t, "y/2", entries.Entries[0].Path)
+		require.Equal(t, "y/3", entries.Entries[1].Path)
+		require.NotEmpty(t, entries.Continue)
+
+		entries, err = s.List(context.Background(), "y", 2, entries.Continue)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 1)
+		require.Equal(t, "yy", entries.Entries[0].Path)
+		require.Empty(t, entries.Continue)
+
+		entries, err = s.List(context.Background(), "y", 3, token)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 3)
+		require.Equal(t, "y/2", entries.Entries[0].Path)
+		require.Equal(t, "y/3", entries.Entries[1].Path)
+		require.Equal(t, "yy", entries.Entries[2].Path)
+		require.Empty(t, entries.Continue)
+
+		entries, err = s.List(context.Background(), "y", 3, "some token")
+		require.Equal(t, store.ErrInvalidContinueToken, err)
+
+		entries, err = s.List(context.Background(), "y", -10, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 5)
 	})
 }
 
@@ -116,17 +159,17 @@ func TestLatest(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	oldRse, _ := regula.NewBoolRuleset(
+	oldRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.BoolValue(true),
+			rule.StringValue("a"),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.StringValue("success"),
+			rule.StringValue("b"),
 		),
 	)
 
@@ -188,17 +231,17 @@ func TestOneByVersion(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	oldRse, _ := regula.NewBoolRuleset(
+	oldRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.BoolValue(true),
+			rule.StringValue("a"),
 		),
 	)
 
 	newRse, _ := regula.NewStringRuleset(
 		rule.New(
 			rule.True(),
-			rule.StringValue("success"),
+			rule.StringValue("b"),
 		),
 	)
 
@@ -258,14 +301,19 @@ func TestPut(t *testing.T) {
 		require.Equal(t, rs, entry.Ruleset)
 
 		// verify ruleset creation
-		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", path), clientv3.WithPrefix())
+		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "entries", path), clientv3.WithPrefix())
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"/"))
 
 		// verify checksum creation
-		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "checksums", path), clientv3.WithPrefix())
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		// verify latest pointer creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "latest", path), clientv3.WithPrefix())
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
@@ -284,6 +332,120 @@ func TestPut(t *testing.T) {
 		entry2, err = s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
 		require.NotEqual(t, entry.Version, entry2.Version)
+	})
+
+	t.Run("Signatures", func(t *testing.T) {
+		path := "b"
+		rs1, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs1)
+		require.NoError(t, err)
+
+		// same params, different return type
+		rs2, err := regula.NewStringRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+				),
+				rule.StringValue("true"),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs2)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new params
+		rs3, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs3)
+		require.True(t, store.IsValidationError(err))
+
+		// changing param types
+		rs4, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+		require.NoError(t, err)
+
+		_, err = s.Put(context.Background(), path, rs4)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new rule with different param types
+		rs5, err := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.StringParam("b"),
+					rule.Int64Param("c"),
+					rule.BoolParam("d"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+
+		_, err = s.Put(context.Background(), path, rs5)
+		require.True(t, store.IsValidationError(err))
+
+		// adding new rule with correct param types but less
+		rs6, _ := regula.NewBoolRuleset(
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+				),
+				rule.BoolValue(true),
+			),
+			rule.New(
+				rule.Eq(
+					rule.StringParam("a"),
+					rule.BoolParam("b"),
+				),
+				rule.BoolValue(true),
+			),
+		)
+
+		_, err = s.Put(context.Background(), path, rs6)
+		require.NoError(t, err)
 	})
 }
 

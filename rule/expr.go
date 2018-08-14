@@ -381,3 +381,26 @@ func (v *Value) compare(op token.Token, other *Value) bool {
 func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
+
+type operander interface {
+	Operands() []Expr
+}
+
+func walk(expr Expr, fn func(Expr) error) error {
+	err := fn(expr)
+	if err != nil {
+		return err
+	}
+
+	if o, ok := expr.(operander); ok {
+		ops := o.Operands()
+		for _, op := range ops {
+			err := walk(op, fn)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

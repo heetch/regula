@@ -35,6 +35,7 @@ func main() {
 
 	srv := server.New(&service, server.Config{
 		Logger:       &logger,
+		Timeout:      cfg.Server.Timeout,
 		WatchTimeout: cfg.Server.WatchTimeout,
 	})
 

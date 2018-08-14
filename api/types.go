@@ -39,6 +39,7 @@ type Ruleset struct {
 type Rulesets struct {
 	Rulesets []Ruleset `json:"rulesets"`
 	Revision string    `json:"revision"`
+	Continue string    `json:"continue,omitempty"`
 }
 
 // List of possible events executed against a ruleset.

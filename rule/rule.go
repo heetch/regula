@@ -90,3 +90,18 @@ func (r *Rule) Eval(params Params) (*Value, error) {
 
 	return r.Result, nil
 }
+
+// Params returns a list of all the parameters expected by this rule.
+func (r *Rule) Params() []Param {
+	var list []Param
+
+	walk(r.Expr, func(e Expr) error {
+		if p, ok := e.(*Param); ok {
+			list = append(list, *p)
+		}
+
+		return nil
+	})
+
+	return list
+}

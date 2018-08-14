@@ -52,3 +52,29 @@ func TestRuleEval(t *testing.T) {
 		}
 	})
 }
+
+func TestRuleParams(t *testing.T) {
+	tc := []struct {
+		rule   *rule.Rule
+		params []rule.Param
+	}{
+		{rule.New(rule.True(), rule.StringValue("result")), nil},
+		{
+			rule.New(rule.StringParam("a"), rule.StringValue("result")),
+			[]rule.Param{*rule.StringParam("a")},
+		},
+		{
+			rule.New(
+				rule.And(
+					rule.Eq(rule.Int64Param("a"), rule.Int64Value(10)),
+					rule.Eq(rule.BoolParam("b"), rule.BoolValue(true)),
+				), rule.StringValue("result")),
+			[]rule.Param{*rule.Int64Param("a"), *rule.BoolParam("b")},
+		},
+	}
+
+	for _, tt := range tc {
+		params := tt.rule.Params()
+		require.Equal(t, tt.params, params)
+	}
+}
