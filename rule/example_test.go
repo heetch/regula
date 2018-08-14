@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 )
 
-func Example() {
+func ExampleRule() {
 	r := rule.New(
 		rule.Eq(
 			rule.StringValue("foo"),
 			rule.StringParam("bar"),
 		),
-		rule.ReturnsString("matched"),
+		rule.StringValue("matched"),
 	)
 
-	ret, err := r.Eval(rule.Params{
+	ret, err := r.Eval(regula.Params{
 		"bar": "foo",
 	})
 	if err != nil {
@@ -42,8 +43,8 @@ func ExampleAnd() {
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
-		"foo": 10,
+	val, err := tree.Eval(regula.Params{
+		"foo": int64(10),
 		"bar": 1.6,
 	})
 	if err != nil {
@@ -66,7 +67,7 @@ func ExampleOr() {
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": 3.14,
 	})
 	if err != nil {
@@ -84,7 +85,7 @@ func ExampleEq_string() {
 		rule.StringParam("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -105,7 +106,7 @@ func ExampleEq_bool() {
 		),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -122,8 +123,8 @@ func ExampleEq_int64() {
 		rule.Int64Param("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
-		"foo": 10,
+	val, err := tree.Eval(regula.Params{
+		"foo": int64(10),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -139,7 +140,7 @@ func ExampleEq_float64() {
 		rule.Float64Param("foo"),
 	)
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": 3.14,
 	})
 	if err != nil {
@@ -183,7 +184,7 @@ func ExampleNot() {
 func ExampleStringParam() {
 	tree := rule.StringParam("foo")
 
-	val, err := tree.Eval(rule.Params{
+	val, err := tree.Eval(regula.Params{
 		"foo": "bar",
 	})
 	if err != nil {

@@ -31,11 +31,7 @@
 
 [[constraint]]
   name = "github.com/heetch/confita"
-  version = "0.4.0"
-
-[[constraint]]
-  name = "github.com/julienschmidt/httprouter"
-  version = "1.1.0"
+  version = "0.5.0"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -64,3 +60,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/net"
+
+[[constraint]]
+  name = "github.com/segmentio/ksuid"
+  version = "1.0.1"

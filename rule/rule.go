@@ -1,4 +1,3 @@
-// Package rule provides primitives for creating and evaluating logical rules.
 package rule
 
 import (
@@ -10,23 +9,32 @@ import (
 )
 
 var (
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types
+	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
+	ErrRulesetNotFound = errors.New("ruleset not found")
+
+	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
+	ErrParamTypeMismatch = errors.New("parameter type mismatches")
+
+	// ErrParamNotFound is returned when a parameter is not defined.
+	ErrParamNotFound = errors.New("parameter not found")
+
+	// ErrNoMatch is returned when the rule doesn't match the given params.
+	ErrNoMatch = errors.New("rule doesn't match the given params")
+
+	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
-// Params is a set of variables passed on rule evaluation.
-type Params map[string]interface{}
-
-// A Rule represents a logical expression that evaluates to a result.
+// A Rule represents a logical boolean expression that evaluates to a result.
 type Rule struct {
-	Root   Node   `json:"root"`
+	Expr   Expr   `json:"expr"`
 	Result *Value `json:"result"`
 }
 
-// New creates a rule with the given node and that returns the given result on evaluation.
-func New(node Node, result *Value) *Rule {
+// New creates a rule with the given expression and that returns the given result on evaluation.
+func New(expr Expr, result *Value) *Rule {
 	return &Rule{
-		Root:   node,
+		Expr:   expr,
 		Result: result,
 	}
 }
@@ -34,8 +42,8 @@ func New(node Node, result *Value) *Rule {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (r *Rule) UnmarshalJSON(data []byte) error {
 	tree := struct {
-		Root   json.RawMessage `json:"root"`
-		Result *Value          `json:"result"`
+		Expr   json.RawMessage
+		Result *Value
 	}{}
 
 	err := json.Unmarshal(data, &tree)
@@ -47,13 +55,13 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 		return errors.New("invalid rule result type")
 	}
 
-	res := gjson.Get(string(tree.Root), "kind")
-	n, err := parseNode(res.Str, []byte(tree.Root))
+	res := gjson.Get(string(tree.Expr), "kind")
+	n, err := unmarshalExpr(res.Str, []byte(tree.Expr))
 	if err != nil {
 		return err
 	}
 
-	r.Root = n
+	r.Expr = n
 	r.Result = tree.Result
 	return err
 }
@@ -62,7 +70,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
 func (r *Rule) Eval(params Params) (*Value, error) {
-	value, err := r.Root.Eval(params)
+	value, err := r.Expr.Eval(params)
 	if err != nil {
 		return nil, err
 	}
@@ -83,93 +91,17 @@ func (r *Rule) Eval(params Params) (*Value, error) {
 	return r.Result, nil
 }
 
-// ReturnsString specifies the string result to be returned by the rule if matched.
-func ReturnsString(value string) *Value {
-	return StringValue(value)
-}
+// Params returns a list of all the parameters expected by this rule.
+func (r *Rule) Params() []Param {
+	var list []Param
 
-// ReturnsBool specifies the bool result to be returned by the rule if matched.
-func ReturnsBool(value bool) *Value {
-	return BoolValue(value)
-}
-
-// ReturnsInt64 specifies the int64 result to be returned by the rule if matched.
-func ReturnsInt64(value int64) *Value {
-	return Int64Value(value)
-}
-
-// ReturnsFloat64 specifies the float64 result to be returned by the rule if matched.
-func ReturnsFloat64(value float64) *Value {
-	return Float64Value(value)
-}
-
-// A Ruleset is list of rules that must return the same type.
-type Ruleset struct {
-	Rules []*Rule `json:"rules"`
-	Type  string  `json:"type"`
-}
-
-// NewStringRuleset creates a ruleset which rules all return a string otherwise
-// ErrRulesetIncoherentType is returned.
-func NewStringRuleset(rules ...*Rule) (*Ruleset, error) {
-	return newRuleset("string", rules...)
-}
-
-// NewBoolRuleset creates a ruleset which rules all return a bool otherwise
-// ErrRulesetIncoherentType is returned.
-func NewBoolRuleset(rules ...*Rule) (*Ruleset, error) {
-	return newRuleset("bool", rules...)
-}
-
-// NewInt64Ruleset creates a ruleset which rules all return an int64 otherwise
-// ErrRulesetIncoherentType is returned.
-func NewInt64Ruleset(rules ...*Rule) (*Ruleset, error) {
-	return newRuleset("int64", rules...)
-}
-
-// NewFloat64Ruleset creates a ruleset which rules all return an float64 otherwise
-// ErrRulesetIncoherentType is returned.
-func NewFloat64Ruleset(rules ...*Rule) (*Ruleset, error) {
-	return newRuleset("float64", rules...)
-}
-
-func newRuleset(typ string, rules ...*Rule) (*Ruleset, error) {
-	for _, r := range rules {
-		if typ != r.Result.Type {
-			return nil, ErrRulesetIncoherentType
+	walk(r.Expr, func(e Expr) error {
+		if p, ok := e.(*Param); ok {
+			list = append(list, *p)
 		}
-	}
 
-	return &Ruleset{
-		Rules: rules,
-		Type:  typ,
-	}, nil
-}
+		return nil
+	})
 
-// Eval evaluates every rule of the ruleset until one matches.
-// It returns rule.ErrNoMatch if no rule matches the given context.
-func (r *Ruleset) Eval(params Params) (*Value, error) {
-	for _, rl := range r.Rules {
-		res, err := rl.Eval(params)
-		if err != ErrNoMatch {
-			return res, err
-		}
-	}
-
-	return nil, ErrNoMatch
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (r *Ruleset) UnmarshalJSON(data []byte) error {
-	type ruleset Ruleset
-	if err := json.Unmarshal(data, (*ruleset)(r)); err != nil {
-		return err
-	}
-
-	if r.Type != "string" && r.Type != "bool" && r.Type != "int64" && r.Type != "float64" {
-		return errors.New("unsupported ruleset type")
-	}
-
-	_, err := newRuleset(r.Type, r.Rules...)
-	return err
+	return list
 }

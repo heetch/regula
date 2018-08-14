@@ -5,30 +5,41 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
-	"github.com/heetch/rules-engine"
-	"github.com/heetch/rules-engine/api"
-	"github.com/heetch/rules-engine/rule"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/version"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
-	userAgent = "RulesEngine/" + rules.Version + " Go"
-	timeout   = 5 * time.Second
+	userAgent  = "RulesEngine/" + version.Version + " Go"
+	watchDelay = 1 * time.Second
+	retryDelay = 1 * time.Second
+	retries    = 3
 )
 
 // A Client manages communication with the Rules Engine API using HTTP.
 type Client struct {
+	Logger     zerolog.Logger
+	WatchDelay time.Duration // Time between failed watch requests. Defaults to 1s.
+	RetryDelay time.Duration // Time between failed requests retries. Defaults to 1s.
+	Retries    int           // Number of retries on retriable errors.
 	baseURL    *url.URL
 	userAgent  string
 	httpClient *http.Client
+
+	Rulesets *RulesetService
 }
 
-// NewClient creates an HTTP client that uses a base url to communicate with the api server.
-func NewClient(baseURL string, opts ...Option) (*Client, error) {
+// New creates an HTTP client that uses a base url to communicate with the api server.
+func New(baseURL string, opts ...Option) (*Client, error) {
 	var c Client
 	var err error
 
@@ -46,25 +57,19 @@ func NewClient(baseURL string, opts ...Option) (*Client, error) {
 	}
 
 	if c.httpClient == nil {
-		c.httpClient = &http.Client{
-			Timeout: timeout,
-		}
+		c.httpClient = http.DefaultClient
+	}
+
+	c.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	c.WatchDelay = watchDelay
+	c.RetryDelay = retryDelay
+	c.Retries = retries
+
+	c.Rulesets = &RulesetService{
+		client: &c,
 	}
 
 	return &c, nil
-}
-
-// ListRulesets fetches all the rulesets.
-func (c *Client) ListRulesets(ctx context.Context) ([]api.Ruleset, error) {
-	req, err := c.newRequest("GET", "/rulesets", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var rl []api.Ruleset
-
-	_, err = c.do(ctx, req, &rl)
-	return rl, err
 }
 
 func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
@@ -99,6 +104,73 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 	return req, nil
 }
 
+func isRetriableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if _, ok := err.(net.Error); ok {
+		return true
+	}
+
+	if aerr, ok := err.(*api.Error); ok {
+		return aerr.Response.StatusCode == http.StatusInternalServerError ||
+			aerr.Response.StatusCode == http.StatusRequestTimeout
+	}
+
+	return false
+}
+
+func (c *Client) try(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
+	return c.tryN(ctx, req, v, c.Retries)
+}
+
+func (c *Client) tryN(ctx context.Context, req *http.Request, v interface{}, times int) (resp *http.Response, err error) {
+	var (
+		i       int
+		reqBody *bytes.Reader
+	)
+
+	if req.Body != nil {
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		err = req.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		reqBody = bytes.NewReader(body)
+	}
+
+	for {
+		if reqBody != nil {
+			_, err = reqBody.Seek(0, io.SeekStart)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Body = ioutil.NopCloser(reqBody)
+		}
+
+		resp, err = c.do(ctx, req, v)
+		if err == nil || !isRetriableError(err) {
+			break
+		}
+
+		i++
+		if i >= times {
+			break
+		}
+
+		c.Logger.Debug().Err(err).Msgf("Request failed %d times, retrying in %s...", i, c.RetryDelay)
+		time.Sleep(c.RetryDelay)
+	}
+
+	return resp, err
+}
+
 func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
 	resp, err := ctxhttp.Do(ctx, c.httpClient, req)
 	if err != nil {
@@ -106,19 +178,26 @@ func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	}
 	defer resp.Body.Close()
 
+	c.Logger.Debug().Str("url", req.URL.String()).Int("status", resp.StatusCode).Msg("request sent")
+
 	dec := json.NewDecoder(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		var apiErr api.Error
-		err = dec.Decode(&apiErr)
-		if err != nil {
-			return resp, err
-		}
 
-		return resp, apiErr
+		_ = dec.Decode(&apiErr)
+
+		apiErr.Response = resp
+
+		return resp, &apiErr
 	}
 
-	return resp, dec.Decode(v)
+	err = dec.Decode(v)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // Option allows Client customization.
@@ -140,22 +219,8 @@ func UserAgent(userAgent string) Option {
 	}
 }
 
-// NewGetter uses the given client to fetch all the rulesets from the server
-// and returns a Getter that holds the results in memory.
-// No subsequent round trips are performed after this function returns.
-func NewGetter(ctx context.Context, client *Client) (*rules.MemoryGetter, error) {
-	ls, err := client.ListRulesets(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	g := rules.MemoryGetter{
-		Rulesets: make(map[string]*rule.Ruleset),
-	}
-
-	for _, re := range ls {
-		g.Rulesets[re.Name] = re.Ruleset
-	}
-
-	return &g, nil
+// ListOptions contains pagination options.
+type ListOptions struct {
+	Limit    int
+	Continue string
 }

@@ -1,101 +1,34 @@
-package rule
+package rule_test
 
 import (
-	"encoding/json"
 	"testing"
 
+	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
-
-func TestRuleUnmarshalling(t *testing.T) {
-	t.Run("OK", func(t *testing.T) {
-		var rule Rule
-
-		err := rule.UnmarshalJSON([]byte(`{
-			"result": {
-				"data": "foo",
-				"type": "string"
-			},
-			"root": {
-				"kind": "eq",
-				"operands": [
-					{
-						"kind": "value",
-						"type": "string",
-						"data": "bar"
-					},
-					{
-						"kind": "eq",
-						"operands": [
-							{
-								"kind": "param",
-								"type": "string",
-								"name": "foo"
-							},
-							{
-								"kind": "value",
-								"type": "string",
-								"data": "bar"
-							}
-						]
-					}
-				]
-			}
-		}`))
-		require.NoError(t, err)
-		require.Equal(t, "string", rule.Result.Type)
-		require.Equal(t, "foo", rule.Result.Data)
-		require.IsType(t, new(nodeEq), rule.Root)
-		eq := rule.Root.(*nodeEq)
-		require.Len(t, eq.Operands, 2)
-		require.IsType(t, new(Value), eq.Operands[0])
-		require.IsType(t, new(nodeEq), eq.Operands[1])
-	})
-
-	t.Run("Missing result type", func(t *testing.T) {
-		var rule Rule
-
-		err := rule.UnmarshalJSON([]byte(`{
-			"result": {
-				"value": "foo"
-			},
-			"root": {
-				"kind": "not",
-				"operands": [
-					{
-						"kind": "value",
-						"type": "bool",
-						"data": "true"
-					}
-				]
-			}
-		}`))
-
-		require.Error(t, err)
-	})
-}
 
 func TestRuleEval(t *testing.T) {
 	t.Run("Match", func(t *testing.T) {
 		tests := []struct {
-			node   Node
-			params Params
+			expr   rule.Expr
+			params rule.Params
 		}{
-			{Eq(StringValue("foo"), StringValue("foo")), nil},
-			{Eq(StringValue("foo"), StringParam("bar")), Params{"bar": "foo"}},
-			{In(StringValue("foo"), StringParam("bar")), Params{"bar": "foo"}},
+			{rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), nil},
+			{rule.Eq(rule.StringValue("foo"), rule.StringParam("bar")), regula.Params{"bar": "foo"}},
+			{rule.In(rule.StringValue("foo"), rule.StringParam("bar")), regula.Params{"bar": "foo"}},
 			{
-				Eq(
-					Eq(StringValue("bar"), StringValue("bar")),
-					Eq(StringValue("foo"), StringValue("foo")),
+				rule.Eq(
+					rule.Eq(rule.StringValue("bar"), rule.StringValue("bar")),
+					rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")),
 				),
 				nil,
 			},
-			{True(), nil},
+			{rule.True(), nil},
 		}
 
 		for _, test := range tests {
-			r := New(test.node, ReturnsString("matched"))
+			r := rule.New(test.expr, rule.StringValue("matched"))
 			res, err := r.Eval(test.params)
 			require.NoError(t, err)
 			require.Equal(t, "matched", res.Data)
@@ -105,93 +38,43 @@ func TestRuleEval(t *testing.T) {
 
 	t.Run("Invalid return", func(t *testing.T) {
 		tests := []struct {
-			node   Node
-			params Params
+			expr   rule.Expr
+			params rule.Params
 		}{
-			{StringValue("foo"), nil},
-			{StringParam("bar"), Params{"bar": "foo"}},
+			{rule.StringValue("foo"), nil},
+			{rule.StringParam("bar"), regula.Params{"bar": "foo"}},
 		}
 
 		for _, test := range tests {
-			r := New(test.node, ReturnsString("matched"))
+			r := rule.New(test.expr, rule.StringValue("matched"))
 			_, err := r.Eval(test.params)
 			require.Error(t, err)
 		}
 	})
 }
 
-func TestRulesetEval(t *testing.T) {
-	t.Run("Match string", func(t *testing.T) {
-		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
-			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsString("second")),
-		)
-		require.NoError(t, err)
+func TestRuleParams(t *testing.T) {
+	tc := []struct {
+		rule   *rule.Rule
+		params []rule.Param
+	}{
+		{rule.New(rule.True(), rule.StringValue("result")), nil},
+		{
+			rule.New(rule.StringParam("a"), rule.StringValue("result")),
+			[]rule.Param{*rule.StringParam("a")},
+		},
+		{
+			rule.New(
+				rule.And(
+					rule.Eq(rule.Int64Param("a"), rule.Int64Value(10)),
+					rule.Eq(rule.BoolParam("b"), rule.BoolValue(true)),
+				), rule.StringValue("result")),
+			[]rule.Param{*rule.Int64Param("a"), *rule.BoolParam("b")},
+		},
+	}
 
-		res, err := r.Eval(nil)
-		require.NoError(t, err)
-		require.Equal(t, "second", res.Data)
-	})
-
-	t.Run("Match bool", func(t *testing.T) {
-		r, err := NewBoolRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsBool(false)),
-			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsBool(true)),
-		)
-		require.NoError(t, err)
-
-		res, err := r.Eval(nil)
-		require.NoError(t, err)
-		require.Equal(t, "true", res.Data)
-	})
-
-	t.Run("Type mismatch", func(t *testing.T) {
-		_, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
-			New(Eq(StringValue("foo"), StringValue("foo")), ReturnsBool(true)),
-		)
-		require.Equal(t, ErrRulesetIncoherentType, err)
-	})
-
-	t.Run("No match", func(t *testing.T) {
-		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
-			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsString("second")),
-		)
-		require.NoError(t, err)
-
-		_, err = r.Eval(nil)
-		require.Equal(t, ErrNoMatch, err)
-	})
-
-	t.Run("Default", func(t *testing.T) {
-		r, err := NewStringRuleset(
-			New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
-			New(Eq(StringValue("bar"), StringValue("foo")), ReturnsString("second")),
-			New(True(), ReturnsString("default")),
-		)
-		require.NoError(t, err)
-
-		res, err := r.Eval(nil)
-		require.NoError(t, err)
-		require.Equal(t, "default", res.Data)
-	})
-}
-
-func TestRulesetEncDec(t *testing.T) {
-	r1, err := NewStringRuleset(
-		New(Eq(StringValue("foo"), StringValue("bar")), ReturnsString("first")),
-		New(Eq(StringValue("bar"), StringParam("foo")), ReturnsString("second")),
-		New(True(), ReturnsString("default")),
-	)
-	require.NoError(t, err)
-
-	raw, err := json.Marshal(r1)
-	require.NoError(t, err)
-
-	var r2 Ruleset
-	err = json.Unmarshal(raw, &r2)
-	require.NoError(t, err)
-
-	require.Equal(t, r1, &r2)
+	for _, tt := range tc {
+		params := tt.rule.Params()
+		require.Equal(t, tt.params, params)
+	}
 }
