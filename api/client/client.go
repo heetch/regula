@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	userAgent  = "RulesEngine/" + version.Version + " Go"
+	userAgent  = "Regula/" + version.Version + " Go"
 	watchDelay = 1 * time.Second
 	retryDelay = 1 * time.Second
 	retries    = 3

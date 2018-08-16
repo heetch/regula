@@ -1,9 +1,17 @@
 FROM golang:1.10-alpine as builder
-RUN apk --update add git ca-certificates && rm -rf /var/cache/apk/*
-COPY . /go/src/github.com/heetch/regula
-WORKDIR /go/src/github.com/heetch/regula
-RUN go install -v github.com/heetch/regula/cmd/regula
+
+ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
+RUN chmod +x /usr/bin/dep
+RUN apk --no-cache --update add git
+WORKDIR $GOPATH/src/github.com/heetch/regula
+COPY Gopkg.toml Gopkg.lock ./
+RUN dep ensure --vendor-only
+COPY . ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o /regula ./cmd/regula
+RUN chmod +x /regula
+CMD ["/regula"]
 
 FROM alpine:latest
-COPY --from=builder /go/bin/regula /regula
-CMD ["/regula"]
+RUN apk --no-cache add ca-certificates
+COPY --from=builder /regula .
+CMD ["./regula"]
