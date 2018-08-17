@@ -17,12 +17,14 @@ import (
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 )
 
 // RulesetService manages the rulesets using etcd.
 type RulesetService struct {
 	Client    *clientv3.Client
+	Logger    zerolog.Logger
 	Namespace string
 }
 
@@ -70,6 +72,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 	for i, pair := range resp.Kvs {
 		err = json.Unmarshal(pair.Value, &entries.Entries[i])
 		if err != nil {
+			s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
@@ -106,6 +109,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 	var entry store.RulesetEntry
 	err = json.Unmarshal(resp.Kvs[0].Value, &entry)
 	if err != nil {
+		s.Logger.Debug().Err(err).Bytes("entry", resp.Kvs[0].Value).Msg("latest: unmarshalling failed")
 		return nil, errors.Wrap(err, "failed to unmarshal entry")
 	}
 
@@ -132,6 +136,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	var entry store.RulesetEntry
 	err = json.Unmarshal(resp.Kvs[0].Value, &entry)
 	if err != nil {
+		s.Logger.Debug().Err(err).Bytes("entry", resp.Kvs[0].Value).Msg("one-by-version: unmarshalling failed")
 		return nil, errors.Wrap(err, "failed to unmarshal entry")
 	}
 
@@ -162,6 +167,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 
 			err = json.Unmarshal([]byte(v), &entry)
 			if err != nil {
+				s.Logger.Debug().Err(err).Str("entry", v).Msg("put: entry unmarshalling failed")
 				return errors.Wrap(err, "failed to unmarshal entry")
 			}
 
@@ -174,6 +180,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			var curSig signature
 			err := json.Unmarshal([]byte(rawSig), &curSig)
 			if err != nil {
+				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
@@ -377,11 +384,15 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				switch ev.Type {
 				case mvccpb.PUT:
 					events[i].Type = store.RulesetPutEvent
+				default:
+					s.Logger.Debug().Str("type", string(ev.Type)).Msg("watch: ignoring event type")
+					continue
 				}
 
 				var e store.RulesetEntry
 				err := json.Unmarshal(ev.Kv.Value, &e)
 				if err != nil {
+					s.Logger.Debug().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed")
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
 				events[i].Path = e.Path

@@ -31,6 +31,7 @@ func main() {
 	service := etcd.RulesetService{
 		Client:    etcdCli,
 		Namespace: cfg.Etcd.Namespace,
+		Logger:    logger.With().Str("service", "etcd").Logger(),
 	}
 
 	srv := server.New(&service, server.Config{
