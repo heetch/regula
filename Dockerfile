@@ -14,4 +14,5 @@ CMD ["/regula"]
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /regula .
+EXPOSE 5331/tcp
 CMD ["./regula"]

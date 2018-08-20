@@ -21,3 +21,11 @@ go:
 
 script:
   - go test -v -race -cover -timeout=1m ./...
+
+deploy:
+  provider: script
+  skip_cleanup: true
+  script: .ci/docker.sh
+  on:
+    tags: true
+    go: "1.10"
