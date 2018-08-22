@@ -1,0 +1,6 @@
+site_name: Regula
+
+repo_url: https://github.com/heetch/regula/
+
+nav:
+    - Introduction: index.md
