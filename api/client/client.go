@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/heetch/regula/api"
@@ -21,7 +22,7 @@ import (
 const (
 	userAgent  = "Regula/" + version.Version + " Go"
 	watchDelay = 1 * time.Second
-	retryDelay = 1 * time.Second
+	retryDelay = 250 * time.Millisecond
 	retries    = 3
 )
 
@@ -46,6 +47,10 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c.baseURL, err = url.Parse(baseURL)
 	if err != nil {
 		return nil, err
+	}
+
+	if !strings.HasSuffix(c.baseURL.Path, "/") {
+		c.baseURL.Path += "/"
 	}
 
 	for _, opt := range opts {

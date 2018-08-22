@@ -201,27 +201,41 @@ func TestRulesetService(t *testing.T) {
 	})
 
 	t.Run("ListRulesets", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.NotEmpty(t, r.Header.Get("User-Agent"))
-			assert.Equal(t, "application/json", r.Header.Get("Accept"))
-			assert.Contains(t, r.URL.Query(), "list")
-			assert.Equal(t, "some-token", r.URL.Query().Get("continue"))
-			assert.Equal(t, "10", r.URL.Query().Get("limit"))
-			assert.Equal(t, "/rulesets/prefix", r.URL.Path)
-			fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
-		}))
-		defer ts.Close()
+		tl := []struct {
+			path string
+			url  string
+		}{
+			{"", "/subpath/rulesets/"},
+			{"/", "/subpath/rulesets/"},
+			{"a/b", "/subpath/rulesets/a/b"},
+			{"/a/b", "/subpath/rulesets/a/b"},
+		}
 
-		cli, err := client.New(ts.URL)
-		require.NoError(t, err)
-		cli.Logger = zerolog.New(ioutil.Discard)
+		for _, tc := range tl {
+			t.Run(tc.path, func(t *testing.T) {
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					assert.NotEmpty(t, r.Header.Get("User-Agent"))
+					assert.Equal(t, "application/json", r.Header.Get("Accept"))
+					assert.Contains(t, r.URL.Query(), "list")
+					assert.Equal(t, "some-token", r.URL.Query().Get("continue"))
+					assert.Equal(t, "10", r.URL.Query().Get("limit"))
+					assert.Equal(t, tc.url, r.URL.Path)
+					fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
+				}))
+				defer ts.Close()
 
-		rs, err := cli.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
-			Limit:    10,
-			Continue: "some-token",
-		})
-		require.NoError(t, err)
-		require.Len(t, rs.Rulesets, 1)
+				cli, err := client.New(ts.URL + "/subpath")
+				require.NoError(t, err)
+				cli.Logger = zerolog.New(ioutil.Discard)
+
+				rs, err := cli.Rulesets.List(context.Background(), tc.path, &client.ListOptions{
+					Limit:    10,
+					Continue: "some-token",
+				})
+				require.NoError(t, err)
+				require.Len(t, rs.Rulesets, 1)
+			})
+		}
 	})
 
 	t.Run("EvalRuleset", func(t *testing.T) {
