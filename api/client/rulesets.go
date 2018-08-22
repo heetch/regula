@@ -19,9 +19,18 @@ type RulesetService struct {
 	client *Client
 }
 
+func (s *RulesetService) joinPath(path string) string {
+	path = "./" + ppath.Join("rulesets/", path)
+	if path == "./rulesets" {
+		return path + "/"
+	}
+
+	return path
+}
+
 // List fetches all the rulesets starting with the given prefix.
 func (s *RulesetService) List(ctx context.Context, prefix string, opt *ListOptions) (*api.Rulesets, error) {
-	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
+	req, err := s.client.newRequest("GET", s.joinPath(prefix), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +65,7 @@ func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Para
 // EvalVersion evaluates the given ruleset version with the given params.
 // It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
 func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-	req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", path), nil)
+	req, err := s.client.newRequest("GET", s.joinPath(path), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +100,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 
 // Put creates a ruleset version on the given path.
 func (s *RulesetService) Put(ctx context.Context, path string, rs *regula.Ruleset) (*api.Ruleset, error) {
-	req, err := s.client.newRequest("PUT", ppath.Join("/rulesets/", path), rs)
+	req, err := s.client.newRequest("PUT", s.joinPath(path), rs)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +135,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 			default:
 			}
 
-			req, err := s.client.newRequest("GET", ppath.Join("/rulesets/", prefix), nil)
+			req, err := s.client.newRequest("GET", s.joinPath(prefix), nil)
 			if err != nil {
 				ch <- WatchResponse{Err: errors.Wrap(err, "failed to create watch request")}
 				return
