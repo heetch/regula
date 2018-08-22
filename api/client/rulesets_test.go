@@ -216,6 +216,8 @@ func TestRulesetService(t *testing.T) {
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					assert.NotEmpty(t, r.Header.Get("User-Agent"))
 					assert.Equal(t, "application/json", r.Header.Get("Accept"))
+					assert.Equal(t, "hv1", r.Header.Get("hk1"))
+					assert.Equal(t, "hv2", r.Header.Get("hk2"))
 					assert.Contains(t, r.URL.Query(), "list")
 					assert.Equal(t, "some-token", r.URL.Query().Get("continue"))
 					assert.Equal(t, "10", r.URL.Query().Get("limit"))
@@ -224,9 +226,10 @@ func TestRulesetService(t *testing.T) {
 				}))
 				defer ts.Close()
 
-				cli, err := client.New(ts.URL + "/subpath")
+				cli, err := client.New(ts.URL+"/subpath", client.Header("hk1", "hv1"))
 				require.NoError(t, err)
 				cli.Logger = zerolog.New(ioutil.Discard)
+				cli.Headers["hk2"] = "hv2"
 
 				rs, err := cli.Rulesets.List(context.Background(), tc.path, &client.ListOptions{
 					Limit:    10,

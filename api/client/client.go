@@ -36,6 +36,7 @@ type Client struct {
 	userAgent  string
 	httpClient *http.Client
 
+	Headers  map[string]string
 	Rulesets *RulesetService
 }
 
@@ -43,6 +44,8 @@ type Client struct {
 func New(baseURL string, opts ...Option) (*Client, error) {
 	var c Client
 	var err error
+
+	c.Headers = make(map[string]string)
 
 	c.baseURL, err = url.Parse(baseURL)
 	if err != nil {
@@ -97,6 +100,10 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 	req, err := http.NewRequest(method, u.String(), r)
 	if err != nil {
 		return nil, err
+	}
+
+	for k, v := range c.Headers {
+		req.Header.Set(k, v)
 	}
 
 	if body != nil {
@@ -220,6 +227,14 @@ func HTTPClient(httpClient *http.Client) Option {
 func UserAgent(userAgent string) Option {
 	return func(c *Client) error {
 		c.userAgent = userAgent
+		return nil
+	}
+}
+
+// Header adds a key value pair to the headers sent on each request.
+func Header(k, v string) Option {
+	return func(c *Client) error {
+		c.Headers[k] = v
 		return nil
 	}
 }
