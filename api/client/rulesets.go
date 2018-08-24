@@ -174,13 +174,13 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				}
 
 				// avoid too many requests on errors.
-				time.Sleep(s.client.WatchDelay)
+				time.Sleep(s.client.WatchRetryDelay)
 				continue
 			}
 
 			if events.Timeout {
 				s.client.Logger.Debug().Msg("watch request timed out")
-				time.Sleep(s.client.WatchDelay)
+				time.Sleep(s.client.WatchRetryDelay)
 				continue
 			}
 

@@ -349,7 +349,7 @@ func TestRulesetService(t *testing.T) {
 		cli, err := client.New(ts.URL)
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
-		cli.WatchDelay = 1 * time.Millisecond
+		cli.WatchRetryDelay = 1 * time.Millisecond
 
 		ch := cli.Rulesets.Watch(ctx, "a", "")
 		evs := <-ch
@@ -400,7 +400,7 @@ func TestRulesetService(t *testing.T) {
 			cli, err := client.New(ts.URL)
 			require.NoError(t, err)
 			cli.Logger = zerolog.New(ioutil.Discard)
-			cli.WatchDelay = 1 * time.Millisecond
+			cli.WatchRetryDelay = 1 * time.Millisecond
 
 			ch := cli.Rulesets.Watch(ctx, "a", "")
 			evs := <-ch
