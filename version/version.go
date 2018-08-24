@@ -2,4 +2,4 @@
 package version
 
 // Version of Regula.
-const Version = "v0.5.0-DEV"
+const Version = "v0.5.0"
