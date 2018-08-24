@@ -28,13 +28,13 @@ const (
 
 // A Client manages communication with the Rules Engine API using HTTP.
 type Client struct {
-	Logger     zerolog.Logger
-	WatchDelay time.Duration // Time between failed watch requests. Defaults to 1s.
-	RetryDelay time.Duration // Time between failed requests retries. Defaults to 1s.
-	Retries    int           // Number of retries on retriable errors.
-	baseURL    *url.URL
-	userAgent  string
-	httpClient *http.Client
+	Logger          zerolog.Logger
+	WatchRetryDelay time.Duration // Time between failed watch requests. Defaults to 1s.
+	RetryDelay      time.Duration // Time between failed requests retries. Defaults to 1s.
+	Retries         int           // Number of retries on retriable errors.
+	baseURL         *url.URL
+	userAgent       string
+	httpClient      *http.Client
 
 	Headers  map[string]string
 	Rulesets *RulesetService
@@ -69,7 +69,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	}
 
 	c.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
-	c.WatchDelay = watchDelay
+	c.WatchRetryDelay = watchDelay
 	c.RetryDelay = retryDelay
 	c.Retries = retries
 

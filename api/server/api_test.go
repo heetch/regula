@@ -248,9 +248,11 @@ func TestAPI(t *testing.T) {
 				var res store.RulesetEvents
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l.Events), len(res.Events))
-				for i := range l.Events {
-					require.Equal(t, l.Events[i], res.Events[i])
+				if es != nil {
+					require.Equal(t, len(es.Events), len(res.Events))
+					for i := range l.Events {
+						require.Equal(t, l.Events[i], res.Events[i])
+					}
 				}
 			}
 		}
@@ -289,7 +291,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("Timeout", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusRequestTimeout, nil, context.DeadlineExceeded)
+			call(t, "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded)
 		})
 	})
 

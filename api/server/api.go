@@ -139,12 +139,13 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
+	var ae api.Events
+
 	events, err := s.rulesets.Watch(r.Context(), prefix, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
 		case context.DeadlineExceeded:
-			w.WriteHeader(http.StatusRequestTimeout)
-			return
+			ae.Timeout = true
 		case store.ErrNotFound:
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -154,16 +155,16 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 		}
 	}
 
-	el := api.Events{
-		Events:   make([]api.Event, len(events.Events)),
-		Revision: events.Revision,
+	if events != nil {
+		ae.Events = make([]api.Event, len(events.Events))
+		ae.Revision = events.Revision
+
+		for i := range events.Events {
+			ae.Events[i] = api.Event(events.Events[i])
+		}
 	}
 
-	for i := range events.Events {
-		el.Events[i] = api.Event(events.Events[i])
-	}
-
-	s.encodeJSON(w, r, el, http.StatusOK)
+	s.encodeJSON(w, r, ae, http.StatusOK)
 }
 
 // put creates a new version of a ruleset.
