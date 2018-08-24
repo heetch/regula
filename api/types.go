@@ -57,6 +57,7 @@ type Event struct {
 
 // Events holds a list of events occured on a group of rulesets.
 type Events struct {
-	Events   []Event `json:"events"`
-	Revision string  `json:"revision"`
+	Events   []Event `json:"events,omitempty"`
+	Revision string  `json:"revision,omitempty"`
+	Timeout  bool    `json:"timeout,omitempty"`
 }

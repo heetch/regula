@@ -331,6 +331,32 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, evs.Err)
 	})
 
+	t.Run("WatchRuleset/Timeout", func(t *testing.T) {
+		var i int32
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if atomic.AddInt32(&i, 1) > 3 {
+				fmt.Fprintf(w, `{"events": [{"type": "PUT", "path": "a"}], "revision": "rev"}`)
+				return
+			}
+
+			fmt.Fprintf(w, `{"timeout": true}`)
+		}))
+		defer ts.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+		cli.WatchDelay = 1 * time.Millisecond
+
+		ch := cli.Rulesets.Watch(ctx, "a", "")
+		evs := <-ch
+		require.NoError(t, evs.Err)
+		require.EqualValues(t, 4, i)
+	})
+
 	t.Run("WatchRuleset/NotFound", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)

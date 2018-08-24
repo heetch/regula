@@ -156,8 +156,6 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					case http.StatusNotFound:
 						ch <- WatchResponse{Err: err}
 						return
-					case http.StatusRequestTimeout:
-						s.client.Logger.Debug().Err(err).Msg("watch request timed out")
 					case http.StatusInternalServerError:
 						s.client.Logger.Debug().Err(err).Msg("watch request failed: internal server error")
 					default:
@@ -176,6 +174,12 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				}
 
 				// avoid too many requests on errors.
+				time.Sleep(s.client.WatchDelay)
+				continue
+			}
+
+			if events.Timeout {
+				s.client.Logger.Debug().Msg("watch request timed out")
 				time.Sleep(s.client.WatchDelay)
 				continue
 			}
