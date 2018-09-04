@@ -38,13 +38,16 @@ import (
 )
 
 func main() {
+	// Create a client.
 	cli, err := client.New("http://localhost:5331/")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Create an engine and pass the client.Rulesets field whitch instantiates the regula.Evaluator interface.
 	ng := regula.NewEngine(cli.Rulesets)
 
+	// Every call to the engine methods will send a request to the server.
 	str, res, err := ng.GetString(context.Background(), "/a/b/c", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
@@ -56,7 +59,9 @@ With this evaluator, every call to `GetString` and other methods of the engine o
 
 #### Client side evaluation
 
-TODO
+Regula also provides client side evaluation to avoid network round-trips when necessary.
+At startup, the evaluator loads all the requested rulesets and saves them in a local cache.
+An optional watching mechanism watches the server for changes and automatically updates the local cache.
 
 ```go
 package main
@@ -70,6 +75,7 @@ import (
 )
 
 func main() {
+	// Create a client.
 	cli, err := client.New("http://localhost:5331/")
 	if err != nil {
 		log.Fatal(err)
@@ -89,8 +95,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Create the engine.
 	ng := regula.NewEngine(ev)
 
+	// Every call to the engine methods will evaluate rulesets in memory with no network round trip.
 	str, res, err := ng.GetString(context.Background(), "/a/b/c", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
