@@ -1,6 +1,6 @@
 # Golang library quickstart
 
-The Regula Golang library provides programmatic access to the full Regula APIs and features.
+The Regula Golang library provides programmatic access to the full API and features of Regula.
 
 ## Install
 
@@ -14,8 +14,8 @@ The API documentation can be found on [godoc](https://godoc.org/github.com/heetc
 
 ## Engine
 
-An **engine** is an unified API allowing to evaluate rulesets regardless of their location. Whether a ruleset is stored on a remote Regula cluster or in memory, the evaluation API remains the same. The **engine** deleguates the evaluation to an **evaluator** which as its name suggests is able to evaluate rulesets. The role of the **engine** is to make sure the **result** of the evaluation corresponds to the expected type, decodes it and return it to the caller.
-This separation allows to decouple the evaluation logic from the exploitation of its result by the user.
+The **engine** is a unified API which allows the evaluation of rulesets.  Whether a ruleset is stored on a remote Regula cluster, or in memory, the evaluation API remains the same. The **engine** delegates the evaluation to an **evaluator** which as its name suggests is able to evaluate rulesets. The role of the **engine** is to make sure the **result** of the evaluation corresponds to the expected type, decodes it and return it to the caller.
+This separation allows the decoupling of the evaluation logic from the exploitation of its result by the user.
 
 ### Creating an evaluator and an engine
 
@@ -24,8 +24,8 @@ Regula provides three ways to do so.
 
 #### Server-side evaluation
 
-One of the simplest method is to deleguate the evaluation of rulesets to the Regula server.
-In order to do that, the user must create use the Regula Client Ruleset API which implements the `Evaluator` interface.
+One of the simplest methods is to deleguate the evaluation of rulesets to the Regula server.
+In order to do that, you must use the Regula Client Ruleset API which implements the `Evaluator` interface.
 
 ```go
 package main
@@ -55,13 +55,13 @@ func main() {
 }
 ```
 
-With this evaluator, every call to `GetString` and other methods of the engine object will occasionate a call to the Regula server.
+With this evaluator, every call to `GetString` and other methods of the engine object will result in a call to the Regula server.
 
 #### Client side evaluation
 
 Regula also provides client side evaluation to avoid network round-trips when necessary.
 At startup, the evaluator loads all the requested rulesets and saves them in a local cache.
-An optional watching mechanism watches the server for changes and automatically updates the local cache.
+An optional mechanism watches the server for changes and automatically updates the local cache.
 
 ```go
 package main
