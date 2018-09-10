@@ -1,0 +1,8 @@
+site_name: Regula
+
+repo_url: https://github.com/heetch/regula/
+
+pages:
+    - Introduction: index.md
+    - "Libraries & SDKs":
+        - 'Golang library quickstart': 'clients/go.md'
