@@ -16,7 +16,8 @@ install: dep ensure
 
 go:
   - 1.9
-  - "1.10"
+  - '1.10'
+  - '1.11'
   - tip
 
 script:
@@ -28,4 +29,4 @@ deploy:
   script: .ci/docker.sh
   on:
     tags: true
-    go: "1.10"
+    go: '1.11'
