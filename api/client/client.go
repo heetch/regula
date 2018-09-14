@@ -33,7 +33,6 @@ type Client struct {
 	RetryDelay      time.Duration // Time between failed requests retries. Defaults to 1s.
 	Retries         int           // Number of retries on retriable errors.
 	baseURL         *url.URL
-	userAgent       string
 	httpClient      *http.Client
 
 	Headers  map[string]string
@@ -58,10 +57,6 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 
 	for _, opt := range opts {
 		opt(&c)
-	}
-
-	if c.userAgent == "" {
-		c.userAgent = userAgent
 	}
 
 	if c.httpClient == nil {
@@ -106,12 +101,16 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 		req.Header.Set(k, v)
 	}
 
+	// If no User-Agent header is set, then we default it.
+	if _, ok := req.Header["User-Agent"]; !ok {
+		req.Header.Set("User-Agent", userAgent)
+	}
+
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", c.userAgent)
 
 	return req, nil
 }
@@ -219,14 +218,6 @@ type Option func(*Client) error
 func HTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) error {
 		c.httpClient = httpClient
-		return nil
-	}
-}
-
-// UserAgent specifies which user agent to sent alongside the request.
-func UserAgent(userAgent string) Option {
-	return func(c *Client) error {
-		c.userAgent = userAgent
 		return nil
 	}
 }
