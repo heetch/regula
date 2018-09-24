@@ -94,6 +94,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer ev.Close()
 
 	// Create the engine.
 	ng := regula.NewEngine(ev)
