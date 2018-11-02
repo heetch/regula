@@ -17,3 +17,7 @@ const (
 func isWhitespace(r rune) bool {
 	return r == ' ' || r == '\t' || r == '\r' || r == '\n'
 }
+
+func isLParen(r rune) bool {
+	return r == '('
+}
