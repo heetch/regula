@@ -103,3 +103,19 @@ func TestIsBool(t *testing.T) {
 	require.False(t, isBool('0'))
 	require.False(t, isBool(';'))
 }
+
+func TestIsComment(t *testing.T) {
+	require.True(t, isComment(';'))
+	require.False(t, isComment('#'))
+	require.False(t, isComment('"'))
+	require.False(t, isComment(' '))
+	require.False(t, isComment('\t'))
+	require.False(t, isComment('\r'))
+	require.False(t, isComment('\n'))
+	require.False(t, isComment('-'))
+	require.False(t, isComment('a'))
+	require.False(t, isComment(')'))
+	require.False(t, isComment('('))
+	require.False(t, isComment('_'))
+	require.False(t, isComment('0'))
+}

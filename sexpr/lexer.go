@@ -40,3 +40,7 @@ func isNumber(r rune) bool {
 func isBool(r rune) bool {
 	return r == '#'
 }
+
+func isComment(r rune) bool {
+	return r == ';'
+}
