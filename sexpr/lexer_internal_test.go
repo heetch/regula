@@ -87,3 +87,19 @@ func TestIsNumber(t *testing.T) {
 	require.False(t, isNumber('#'))
 	require.False(t, isNumber(';'))
 }
+
+func TestIsBool(t *testing.T) {
+	require.True(t, isBool('#'))
+	require.False(t, isBool('"'))
+	require.False(t, isBool(' '))
+	require.False(t, isBool('\t'))
+	require.False(t, isBool('\r'))
+	require.False(t, isBool('\n'))
+	require.False(t, isBool('-'))
+	require.False(t, isBool('a'))
+	require.False(t, isBool(')'))
+	require.False(t, isBool('('))
+	require.False(t, isBool('_'))
+	require.False(t, isBool('0'))
+	require.False(t, isBool(';'))
+}

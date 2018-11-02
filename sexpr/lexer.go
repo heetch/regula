@@ -36,3 +36,7 @@ func isNumber(r rune) bool {
 	// the predicate.
 	return r == '-' || (r >= '0' && r <= '9')
 }
+
+func isBool(r rune) bool {
+	return r == '#'
+}
