@@ -25,3 +25,7 @@ func isLParen(r rune) bool {
 func isRParen(r rune) bool {
 	return r == ')'
 }
+
+func isString(r rune) bool {
+	return r == '"'
+}

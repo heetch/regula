@@ -53,3 +53,20 @@ func TestIsRParen(t *testing.T) {
 	require.False(t, isRParen('#'))
 	require.False(t, isRParen(';'))
 }
+
+func TestIsString(t *testing.T) {
+	require.True(t, isString('"'))
+	require.False(t, isString(' '))
+	require.False(t, isString('\t'))
+	require.False(t, isString('\r'))
+	require.False(t, isString('\n'))
+	require.False(t, isString('-'))
+	require.False(t, isString('a'))
+	require.False(t, isString(')'))
+	require.False(t, isString('('))
+	require.False(t, isString('_'))
+	require.False(t, isString('0'))
+	require.False(t, isString('#'))
+	require.False(t, isString(';'))
+
+}
