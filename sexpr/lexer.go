@@ -29,3 +29,10 @@ func isRParen(r rune) bool {
 func isString(r rune) bool {
 	return r == '"'
 }
+
+func isNumber(r rune) bool {
+	// Note, although we allow a number to contain a decimal
+	// point, it can't start with one so we don't include that in
+	// the predicate.
+	return r == '-' || (r >= '0' && r <= '9')
+}

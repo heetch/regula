@@ -68,5 +68,22 @@ func TestIsString(t *testing.T) {
 	require.False(t, isString('0'))
 	require.False(t, isString('#'))
 	require.False(t, isString(';'))
+}
 
+func TestIsNumber(t *testing.T) {
+	require.True(t, isNumber('-'))
+	for r := '0'; r <= '9'; r++ {
+		require.True(t, isNumber(r))
+	}
+	require.False(t, isNumber('"'))
+	require.False(t, isNumber(' '))
+	require.False(t, isNumber('\t'))
+	require.False(t, isNumber('\r'))
+	require.False(t, isNumber('\n'))
+	require.False(t, isNumber('a'))
+	require.False(t, isNumber(')'))
+	require.False(t, isNumber('('))
+	require.False(t, isNumber('_'))
+	require.False(t, isNumber('#'))
+	require.False(t, isNumber(';'))
 }
