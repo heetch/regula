@@ -36,5 +36,20 @@ func TestIsLParen(t *testing.T) {
 	require.False(t, isLParen('0'))
 	require.False(t, isLParen('#'))
 	require.False(t, isLParen(';'))
+}
 
+func TestIsRParen(t *testing.T) {
+	require.True(t, isRParen(')'))
+	require.False(t, isRParen(' '))
+	require.False(t, isRParen('\t'))
+	require.False(t, isRParen('\r'))
+	require.False(t, isRParen('\n'))
+	require.False(t, isRParen('-'))
+	require.False(t, isRParen('a'))
+	require.False(t, isRParen('"'))
+	require.False(t, isRParen('('))
+	require.False(t, isRParen('_'))
+	require.False(t, isRParen('0'))
+	require.False(t, isRParen('#'))
+	require.False(t, isRParen(';'))
 }

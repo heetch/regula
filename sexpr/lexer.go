@@ -21,3 +21,7 @@ func isWhitespace(r rune) bool {
 func isLParen(r rune) bool {
 	return r == '('
 }
+
+func isRParen(r rune) bool {
+	return r == ')'
+}
