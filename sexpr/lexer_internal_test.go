@@ -119,3 +119,28 @@ func TestIsComment(t *testing.T) {
 	require.False(t, isComment('_'))
 	require.False(t, isComment('0'))
 }
+
+func TestIsSymbol(t *testing.T) {
+	require.True(t, isSymbol('a'))
+	require.True(t, isSymbol('Z'))
+	require.True(t, isSymbol('!'))
+	require.True(t, isSymbol('+'))
+	require.True(t, isSymbol('_'))
+
+	require.False(t, isSymbol(';'))
+	require.False(t, isSymbol('#'))
+	require.False(t, isSymbol('"'))
+	require.False(t, isSymbol(' '))
+	require.False(t, isSymbol('\t'))
+	require.False(t, isSymbol('\r'))
+	require.False(t, isSymbol('\n'))
+
+	// '-' is a special case because it can also denote a number -
+	// we'll have to handle this in the parser
+	require.False(t, isSymbol('-'))
+
+	require.False(t, isSymbol(')'))
+	require.False(t, isSymbol('('))
+	require.False(t, isSymbol('0'))
+
+}

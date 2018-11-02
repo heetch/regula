@@ -44,3 +44,7 @@ func isBool(r rune) bool {
 func isComment(r rune) bool {
 	return r == ';'
 }
+
+func isSymbol(r rune) bool {
+	return !(isWhitespace(r) || isLParen(r) || isRParen(r) || isString(r) || isNumber(r) || isBool(r) || isComment(r))
+}
