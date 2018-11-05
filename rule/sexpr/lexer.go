@@ -1,5 +1,7 @@
 package sexpr
 
+import "unicode"
+
 type Token int
 
 const (
@@ -17,7 +19,7 @@ const (
 // isWhitespace returns true if the rune is the first rune of a
 // Whitespace sequence.
 func isWhitespace(r rune) bool {
-	return r == ' ' || r == '\t' || r == '\r' || r == '\n'
+	return unicode.IsSpace(r)
 }
 
 // isLParen returns true if the rune is a left parenthesis
