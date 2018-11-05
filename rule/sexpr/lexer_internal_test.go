@@ -158,3 +158,14 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, io.EOF, err)
 	require.Equal(t, expected, content)
 }
+
+func TestScannerScan(t *testing.T) {
+	expected := "("
+	b := bytes.NewBufferString(expected)
+	s := NewScanner(b)
+	tok, lit, err := s.Scan()
+	require.NoError(t, err)
+	require.Equal(t, tok, LPAREN)
+	require.Equal(t, lit, "(")
+
+}

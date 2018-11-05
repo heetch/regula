@@ -72,7 +72,11 @@ func isSymbol(r rune) bool {
 // Scanner is a lexical scanner for extracting the lexical tokens from
 // a string of characters in our rule symbolic expression language.
 type Scanner struct {
-	r *bufio.Reader
+	r             *bufio.Reader
+	byteCount     int
+	charCount     int
+	lineCount     int
+	lineCharCount int
 }
 
 // NewScanner wraps a Scanner around the provided io.Reader so that we
@@ -80,4 +84,59 @@ type Scanner struct {
 // from it.
 func NewScanner(r io.Reader) *Scanner {
 	return &Scanner{r: bufio.NewReader(r)}
+}
+
+// Scan returns the next lexical token found in the Scanner's io.Reader.
+func (s *Scanner) Scan() (Token, string, error) {
+	rn, err := s.readRune()
+	if err != nil {
+		return EOF, "", s.newScanError(err.Error())
+	}
+	switch {
+	case isLParen(rn):
+		return LPAREN, "(", nil
+	}
+	return EOF, string(rn), s.newScanError("Illegal character scanned")
+}
+
+//
+func (s *Scanner) readRune() (rune, error) {
+	rn, size, err := s.r.ReadRune()
+	s.byteCount += size
+	s.charCount++
+	s.lineCharCount++
+	if rn == '\n' {
+		// DOS/Windows encoding does \n\r for new lines, but
+		// we can ignore the \r and still get the right
+		// result.
+		s.lineCount++
+		// it's char zero, the next readRune should take us to 1
+		s.lineCharCount = 0
+	}
+	return rn, err
+
+}
+
+//
+func (s *Scanner) newScanError(message string) *ScanError {
+	return &ScanError{
+		Byte:       s.byteCount,
+		Char:       s.charCount,
+		Line:       s.lineCount + 1,
+		CharInLine: s.lineCharCount,
+		msg:        message,
+	}
+}
+
+type ScanError struct {
+	Byte       int
+	Char       int
+	Line       int
+	CharInLine int
+	msg        string
+}
+
+//
+func (se *ScanError) Error() string {
+	return se.msg
 }
