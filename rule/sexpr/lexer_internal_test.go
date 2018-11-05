@@ -1,6 +1,8 @@
 package sexpr
 
 import (
+	"bytes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -144,5 +146,15 @@ func TestIsSymbol(t *testing.T) {
 	require.False(t, isSymbol(')'))
 	require.False(t, isSymbol('('))
 	require.False(t, isSymbol('0'))
+}
 
+// NewScanner wraps an io.Reader
+func TestNewScanner(t *testing.T) {
+	expected := "(+ 1 1)"
+	b := bytes.NewBufferString(expected)
+	s := NewScanner(b)
+	content, err := s.r.ReadString('\n')
+	require.Error(t, err)
+	require.Equal(t, io.EOF, err)
+	require.Equal(t, expected, content)
 }

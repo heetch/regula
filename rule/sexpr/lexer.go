@@ -1,6 +1,10 @@
 package sexpr
 
-import "unicode"
+import (
+	"bufio"
+	"io"
+	"unicode"
+)
 
 type Token int
 
@@ -63,4 +67,17 @@ func isComment(r rune) bool {
 // the rune.
 func isSymbol(r rune) bool {
 	return !(isWhitespace(r) || isLParen(r) || isRParen(r) || isString(r) || isNumber(r) || isBool(r) || isComment(r))
+}
+
+// Scanner is a lexical scanner for extracting the lexical tokens from
+// a string of characters in our rule symbolic expression language.
+type Scanner struct {
+	r *bufio.Reader
+}
+
+// NewScanner wraps a Scanner around the provided io.Reader so that we
+// might scan lexical tokens for the rule symbolic expression language
+// from it.
+func NewScanner(r io.Reader) *Scanner {
+	return &Scanner{r: bufio.NewReader(r)}
 }
