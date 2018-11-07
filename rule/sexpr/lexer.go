@@ -2,6 +2,7 @@ package sexpr
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"unicode"
 )
