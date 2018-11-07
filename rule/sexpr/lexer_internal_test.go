@@ -161,17 +161,17 @@ func TestNewScanner(t *testing.T) {
 }
 
 func assertScanned(t *testing.T, input string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
-	t.Run(fmt.Sprintf("Scan %s", input), func(t *testing.T) {
+	t.Run(fmt.Sprintf("Scan %s 0x%x", input, input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
 		tok, lit, err := s.Scan()
 		require.NoError(t, err)
 		require.Equal(t, token, tok)
 		require.Equal(t, input, lit)
-		require.Equal(t, byteCount, s.byteCount)
-		require.Equal(t, charCount, s.charCount)
-		require.Equal(t, lineCount, s.lineCount)
-		require.Equal(t, lineCharCount, s.lineCharCount)
+		require.Equalf(t, byteCount, s.byteCount, "byteCount")
+		require.Equalf(t, charCount, s.charCount, "charCount")
+		require.Equalf(t, lineCount, s.lineCount, "lineCount")
+		require.Equalf(t, lineCharCount, s.lineCharCount, "lineCharCount")
 	})
 }
 
@@ -179,4 +179,9 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, "(", LPAREN, 1, 1, 1, 1)
 	assertScanned(t, ")", RPAREN, 1, 1, 1, 1)
 	assertScanned(t, " ", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\t", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\r", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\n", WHITESPACE, 1, 1, 2, 0)
+	assertScanned(t, "\v", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\f", WHITESPACE, 1, 1, 1, 1)
 }

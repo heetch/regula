@@ -2,9 +2,11 @@ package sexpr
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"unicode"
+	"unicode/utf8"
 )
 
 type Token int
@@ -73,11 +75,12 @@ func isSymbol(r rune) bool {
 // Scanner is a lexical scanner for extracting the lexical tokens from
 // a string of characters in our rule symbolic expression language.
 type Scanner struct {
-	r             *bufio.Reader
-	byteCount     int
-	charCount     int
-	lineCount     int
-	lineCharCount int
+	r                     *bufio.Reader
+	byteCount             int
+	charCount             int
+	lineCount             int
+	lineCharCount         int
+	previousLineCharCount int
 }
 
 // NewScanner wraps a Scanner around the provided io.Reader so that we
@@ -101,12 +104,25 @@ func (s *Scanner) Scan() (Token, string, error) {
 		return LPAREN, "(", nil
 	case isRParen(rn):
 		return RPAREN, ")", nil
+	case isWhitespace(rn):
+		err := s.unreadRune(rn)
+		if err != nil {
+			return EOF, string(rn), err
+		}
+		return s.scanWhitespace()
 	}
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
 }
 
 func (s *Scanner) readRune() (rune, error) {
 	rn, size, err := s.r.ReadRune()
+	// EOF is a special case, it shouldn't affect counts
+	if err == io.EOF {
+		return rn, s.eof()
+	}
+	// We need to update the counts correctly before considering
+	// any error, so that the data embedded in the ScanError is
+	// correct.
 	s.byteCount += size
 	s.charCount++
 	s.lineCharCount++
@@ -115,11 +131,65 @@ func (s *Scanner) readRune() (rune, error) {
 		// we can ignore the \r and still get the right
 		// result.
 		s.lineCount++
+		// Store the previous line char count in case we unread
+		s.previousLineCharCount = s.lineCharCount
 		// it's char zero, the next readRune should take us to 1
 		s.lineCharCount = 0
 	}
-	return rn, err
+	if err != nil {
+		return rn, s.newScanError(err.Error())
+	}
+	return rn, nil
+}
 
+func (s *Scanner) unreadRune(rn rune) error {
+	err := s.r.UnreadRune()
+	if err != nil {
+		return s.newScanError(err.Error())
+	}
+	// Decrement counts after the unread is complete
+	s.byteCount -= utf8.RuneLen(rn)
+	s.charCount--
+	s.lineCharCount--
+	if rn == '\n' {
+		s.lineCount--
+		s.lineCharCount = s.previousLineCharCount
+		s.previousLineCharCount--
+	}
+
+	return nil
+}
+
+// scanWhitespace scans a contiguous sequence of whitespace
+// characters.  Note that this will consume newlines as it goes,
+// lexically speaking they're insignificant to the language.
+func (s *Scanner) scanWhitespace() (Token, string, error) {
+	var b bytes.Buffer
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// We'll get EOF next time we try to
+				// read a rune anyway, so we don't
+				// have to care about it here, which
+				// simplifies things.
+				return WHITESPACE, b.String(), nil
+
+			}
+			return WHITESPACE, b.String(), err
+
+		}
+		if !isWhitespace(rn) {
+			err = s.unreadRune(rn)
+			if err != nil {
+				return WHITESPACE, b.String(), err
+			}
+			break
+		}
+		b.WriteRune(rn)
+	}
+	return WHITESPACE, b.String(), nil
 }
 
 //
@@ -133,15 +203,22 @@ func (s *Scanner) newScanError(message string) *ScanError {
 	}
 }
 
+func (s *Scanner) eof() *ScanError {
+	err := s.newScanError("EOF")
+	err.EOF = true
+	return err
+}
+
 type ScanError struct {
 	Byte       int
 	Char       int
 	Line       int
 	CharInLine int
 	msg        string
+	EOF        bool
 }
 
 //
-func (se *ScanError) Error() string {
+func (se ScanError) Error() string {
 	return fmt.Sprintf("Error:%d,%d: %s", se.Line, se.CharInLine, se.msg)
 }
