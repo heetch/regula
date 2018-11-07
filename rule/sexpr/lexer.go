@@ -110,7 +110,10 @@ func (s *Scanner) Scan() (Token, string, error) {
 			return EOF, string(rn), err
 		}
 		return s.scanWhitespace()
+	case isString(rn):
+		return s.scanString()
 	}
+
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
 }
 
@@ -190,6 +193,38 @@ func (s *Scanner) scanWhitespace() (Token, string, error) {
 		b.WriteRune(rn)
 	}
 	return WHITESPACE, b.String(), nil
+}
+
+// scanString returns the contents of single, contiguous, double-quote delimited string constant.
+func (s *Scanner) scanString() (Token, string, error) {
+	var b bytes.Buffer
+	escape := false
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// we reached the end of the file
+				// without seeing a terminator, that's
+				// an error.
+				return STRING, b.String(), s.newScanError("unterminated string constant")
+			}
+			return STRING, b.String(), err
+		}
+		if escape {
+			b.WriteRune(rn)
+			escape = false
+			continue
+		}
+		if isString(rn) {
+			break
+		}
+		escape = rn == '\\'
+		if !escape {
+			b.WriteRune(rn)
+		}
+	}
+	return STRING, b.String(), nil
 }
 
 //

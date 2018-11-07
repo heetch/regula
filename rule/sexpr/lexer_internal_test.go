@@ -175,20 +175,42 @@ func assertScanned(t *testing.T, input, output string, token Token, byteCount, c
 	})
 }
 
+func assertScanFailed(t *testing.T, input, message string) {
+	t.Run(fmt.Sprintf("Scan should fail %s 0x%x", input, input), func(t *testing.T) {
+		b := bytes.NewBufferString(input)
+		s := NewScanner(b)
+		_, _, err := s.Scan()
+		require.EqualError(t, err, message)
+	})
+
+}
+
 func TestScannerScan(t *testing.T) {
+	// Test L Parenthesis
 	assertScanned(t, "(", "(", LPAREN, 1, 1, 1, 1)
+	// Test R Parenthesis
 	assertScanned(t, ")", ")", RPAREN, 1, 1, 1, 1)
+	// Test white-space
 	assertScanned(t, " ", " ", WHITESPACE, 1, 1, 1, 1)
 	assertScanned(t, "\t", "\t", WHITESPACE, 1, 1, 1, 1)
 	assertScanned(t, "\r", "\r", WHITESPACE, 1, 1, 1, 1)
 	assertScanned(t, "\n", "\n", WHITESPACE, 1, 1, 2, 0)
 	assertScanned(t, "\v", "\v", WHITESPACE, 1, 1, 1, 1)
 	assertScanned(t, "\f", "\f", WHITESPACE, 1, 1, 1, 1)
-}
-
-func TestScannerScanContiguousWhitespace(t *testing.T) {
-	// Terminated by EOF
+	// Test contiguous white-space:
+	// - terminated by EOF
 	assertScanned(t, "  ", "  ", WHITESPACE, 2, 2, 1, 2)
-	// Terminated by non-whitespace char
+	// - terminated by non white-space character.
 	assertScanned(t, "  (", "  ", WHITESPACE, 2, 2, 1, 2)
+	// Test string:
+	// - the empty string
+	assertScanned(t, `""`, "", STRING, 2, 2, 1, 2)
+	// - the happy case
+	assertScanned(t, `"foo"`, "foo", STRING, 5, 5, 1, 5)
+	// - an unterminated sad case
+	assertScanFailed(t, `"foo`, "Error:1,4: unterminated string constant")
+	// - happy case with escaped double quote
+	assertScanned(t, `"foo\""`, `foo"`, STRING, 7, 7, 1, 7)
+	// - sad case with escaped terminator
+	assertScanFailed(t, `"foo\"`, "Error:1,6: unterminated string constant")
 }
