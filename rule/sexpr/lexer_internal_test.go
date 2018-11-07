@@ -173,4 +173,5 @@ func assertScanned(t *testing.T, input string, token Token) {
 
 func TestScannerScan(t *testing.T) {
 	assertScanned(t, "(", LPAREN)
+	assertScanned(t, ")", RPAREN)
 }

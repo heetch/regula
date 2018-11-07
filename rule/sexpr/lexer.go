@@ -95,11 +95,12 @@ func (s *Scanner) Scan() (Token, string, error) {
 	switch {
 	case isLParen(rn):
 		return LPAREN, "(", nil
+	case isRParen(rn):
+		return RPAREN, ")", nil
 	}
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
 }
 
-//
 func (s *Scanner) readRune() (rune, error) {
 	rn, size, err := s.r.ReadRune()
 	s.byteCount += size
