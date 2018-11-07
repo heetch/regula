@@ -84,7 +84,10 @@ type Scanner struct {
 // might scan lexical tokens for the rule symbolic expression language
 // from it.
 func NewScanner(r io.Reader) *Scanner {
-	return &Scanner{r: bufio.NewReader(r)}
+	return &Scanner{
+		r:         bufio.NewReader(r),
+		lineCount: 1,
+	}
 }
 
 // Scan returns the next lexical token found in the Scanner's io.Reader.
@@ -124,7 +127,7 @@ func (s *Scanner) newScanError(message string) *ScanError {
 	return &ScanError{
 		Byte:       s.byteCount,
 		Char:       s.charCount,
-		Line:       s.lineCount + 1,
+		Line:       s.lineCount,
 		CharInLine: s.lineCharCount,
 		msg:        message,
 	}
