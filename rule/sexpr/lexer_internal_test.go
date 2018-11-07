@@ -2,6 +2,7 @@ package sexpr
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"testing"
 
@@ -159,13 +160,17 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, expected, content)
 }
 
-func TestScannerScan(t *testing.T) {
-	expected := "("
-	b := bytes.NewBufferString(expected)
-	s := NewScanner(b)
-	tok, lit, err := s.Scan()
-	require.NoError(t, err)
-	require.Equal(t, tok, LPAREN)
-	require.Equal(t, lit, "(")
+func assertScanned(t *testing.T, input string, token Token) {
+	t.Run(fmt.Sprintf("Scan %s", input), func(t *testing.T) {
+		b := bytes.NewBufferString(input)
+		s := NewScanner(b)
+		tok, lit, err := s.Scan()
+		require.NoError(t, err)
+		require.Equal(t, token, tok)
+		require.Equal(t, input, lit)
+	})
+}
 
+func TestScannerScan(t *testing.T) {
+	assertScanned(t, "(", LPAREN)
 }
