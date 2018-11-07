@@ -218,6 +218,8 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, "1", "1", NUMBER, 1, 1, 1, 1)
 	// - Single digit integer, terminated by non-number character
 	assertScanned(t, "1)", "1", NUMBER, 1, 1, 1, 1)
-	// - Multi digit integer, EOF terminated
+	// - Multi-digit integer, EOF terminated
 	assertScanned(t, "998989", "998989", NUMBER, 6, 6, 1, 6)
+	// - Negative multi-digit integer, EOF terminated
+	assertScanned(t, "-100", "-100", NUMBER, 4, 4, 1, 4)
 }
