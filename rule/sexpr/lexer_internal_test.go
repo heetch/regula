@@ -213,4 +213,9 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, `"foo\""`, `foo"`, STRING, 7, 7, 1, 7)
 	// - sad case with escaped terminator
 	assertScanFailed(t, `"foo\"`, "Error:1,6: unterminated string constant")
+	// Test number
+	// - Single digit integer, EOF terminated
+	assertScanned(t, "1", "1", NUMBER, 1, 1, 1, 1)
+	// - Single digit integer, terminated by non-number character
+	assertScanned(t, "1)", "1", NUMBER, 1, 1, 1, 1)
 }

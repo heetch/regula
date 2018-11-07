@@ -112,6 +112,12 @@ func (s *Scanner) Scan() (Token, string, error) {
 		return s.scanWhitespace()
 	case isString(rn):
 		return s.scanString()
+	case isNumber(rn):
+		err := s.unreadRune(rn)
+		if err != nil {
+			return EOF, string(rn), err
+		}
+		return s.scanNumber()
 	}
 
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
@@ -225,6 +231,32 @@ func (s *Scanner) scanString() (Token, string, error) {
 		}
 	}
 	return STRING, b.String(), nil
+}
+
+//
+func (s *Scanner) scanNumber() (Token, string, error) {
+	var b bytes.Buffer
+
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// EOF is a valid terminator for a number
+				return NUMBER, b.String(), nil
+			}
+			return NUMBER, b.String(), err
+		}
+		if !isNumber(rn) {
+			err := s.unreadRune(rn)
+			if err != nil {
+				return NUMBER, b.String(), err
+			}
+			break
+		}
+		b.WriteRune(rn)
+	}
+	return NUMBER, b.String(), nil
 }
 
 //
