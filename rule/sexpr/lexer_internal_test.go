@@ -160,14 +160,14 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, expected, content)
 }
 
-func assertScanned(t *testing.T, input string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
+func assertScanned(t *testing.T, input, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
 	t.Run(fmt.Sprintf("Scan %s 0x%x", input, input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
 		tok, lit, err := s.Scan()
 		require.NoError(t, err)
 		require.Equal(t, token, tok)
-		require.Equal(t, input, lit)
+		require.Equal(t, output, lit)
 		require.Equalf(t, byteCount, s.byteCount, "byteCount")
 		require.Equalf(t, charCount, s.charCount, "charCount")
 		require.Equalf(t, lineCount, s.lineCount, "lineCount")
@@ -176,12 +176,19 @@ func assertScanned(t *testing.T, input string, token Token, byteCount, charCount
 }
 
 func TestScannerScan(t *testing.T) {
-	assertScanned(t, "(", LPAREN, 1, 1, 1, 1)
-	assertScanned(t, ")", RPAREN, 1, 1, 1, 1)
-	assertScanned(t, " ", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\t", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\r", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\n", WHITESPACE, 1, 1, 2, 0)
-	assertScanned(t, "\v", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\f", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "(", "(", LPAREN, 1, 1, 1, 1)
+	assertScanned(t, ")", ")", RPAREN, 1, 1, 1, 1)
+	assertScanned(t, " ", " ", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\t", "\t", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\r", "\r", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\n", "\n", WHITESPACE, 1, 1, 2, 0)
+	assertScanned(t, "\v", "\v", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, "\f", "\f", WHITESPACE, 1, 1, 1, 1)
+}
+
+func TestScannerScanContiguousWhitespace(t *testing.T) {
+	// Terminated by EOF
+	assertScanned(t, "  ", "  ", WHITESPACE, 2, 2, 1, 2)
+	// Terminated by non-whitespace char
+	assertScanned(t, "  (", "  ", WHITESPACE, 2, 2, 1, 2)
 }
