@@ -160,7 +160,7 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, expected, content)
 }
 
-func assertScanned(t *testing.T, input string, token Token) {
+func assertScanned(t *testing.T, input string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
 	t.Run(fmt.Sprintf("Scan %s", input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
@@ -168,10 +168,15 @@ func assertScanned(t *testing.T, input string, token Token) {
 		require.NoError(t, err)
 		require.Equal(t, token, tok)
 		require.Equal(t, input, lit)
+		require.Equal(t, byteCount, s.byteCount)
+		require.Equal(t, charCount, s.charCount)
+		require.Equal(t, lineCount, s.lineCount)
+		require.Equal(t, lineCharCount, s.lineCharCount)
 	})
 }
 
 func TestScannerScan(t *testing.T) {
-	assertScanned(t, "(", LPAREN)
-	assertScanned(t, ")", RPAREN)
+	assertScanned(t, "(", LPAREN, 1, 1, 1, 1)
+	assertScanned(t, ")", RPAREN, 1, 1, 1, 1)
+	assertScanned(t, " ", WHITESPACE, 1, 1, 1, 1)
 }
