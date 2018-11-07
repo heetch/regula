@@ -139,5 +139,5 @@ type ScanError struct {
 
 //
 func (se *ScanError) Error() string {
-	return se.msg
+	return fmt.Sprintf("Error:%d,%d: %s", se.Line, se.CharInLine, se.msg)
 }
