@@ -216,10 +216,19 @@ func TestScannerScan(t *testing.T) {
 	// Test number
 	// - Single digit integer, EOF terminated
 	assertScanned(t, "1", "1", NUMBER, 1, 1, 1, 1)
-	// - Single digit integer, terminated by non-number character
+	// - Single digit integer, terminated by non-numeric character
 	assertScanned(t, "1)", "1", NUMBER, 1, 1, 1, 1)
 	// - Multi-digit integer, EOF terminated
 	assertScanned(t, "998989", "998989", NUMBER, 6, 6, 1, 6)
 	// - Negative multi-digit integer, EOF terminated
 	assertScanned(t, "-100", "-100", NUMBER, 4, 4, 1, 4)
+	// - Floating point number, EOF terminated
+	assertScanned(t, "2.4", "2.4", NUMBER, 3, 3, 1, 3)
+	// - long negative float, terminated by non-numeric character
+	assertScanned(t, "-123.45456 ", "-123.45456", NUMBER, 10, 10, 1, 10)
+	// - special case: a "-" without a number following it (as per the minus operator)
+	assertScanned(t, "- 1 2", "-", SYMBOL, 1, 1, 1, 1)
+	// - sad case: a minus mid-number
+	assertScanFailed(t, "1-2", "Error:1,2: invalid number format (minus can only appear at the beginning of a number)")
+	assertScanFailed(t, "-", "Error:1,1: EOF")
 }

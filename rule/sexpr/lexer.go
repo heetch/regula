@@ -9,6 +9,8 @@ import (
 	"unicode/utf8"
 )
 
+// Tokens are the fundamental identifier of the lexical scanner.
+// Every scanned element will be assigned a token type.
 type Token int
 
 const (
@@ -51,7 +53,7 @@ func isNumber(r rune) bool {
 	// Note, although we allow a number to contain a decimal
 	// point, it can't start with one so we don't include that in
 	// the predicate.
-	return r == '-' || (r >= '0' && r <= '9')
+	return r == '-' || unicode.IsDigit(r)
 }
 
 // isBool returns true if the rune is the # (hash or octothorpe)
@@ -105,24 +107,19 @@ func (s *Scanner) Scan() (Token, string, error) {
 	case isRParen(rn):
 		return RPAREN, ")", nil
 	case isWhitespace(rn):
-		err := s.unreadRune(rn)
-		if err != nil {
-			return EOF, string(rn), err
-		}
+		s.unreadRune(rn)
 		return s.scanWhitespace()
 	case isString(rn):
 		return s.scanString()
 	case isNumber(rn):
-		err := s.unreadRune(rn)
-		if err != nil {
-			return EOF, string(rn), err
-		}
+		s.unreadRune(rn)
 		return s.scanNumber()
 	}
 
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
 }
 
+// readRune pulls the next rune from the input sequence.
 func (s *Scanner) readRune() (rune, error) {
 	rn, size, err := s.r.ReadRune()
 	// EOF is a special case, it shouldn't affect counts
@@ -151,10 +148,14 @@ func (s *Scanner) readRune() (rune, error) {
 	return rn, nil
 }
 
-func (s *Scanner) unreadRune(rn rune) error {
+// unreadRune puts the last readRune back on the buffer and resets the
+// counters.  It requires that the rune to be unread is passed, as we
+// need to know the byte size of the rune.
+func (s *Scanner) unreadRune(rn rune) {
 	err := s.r.UnreadRune()
 	if err != nil {
-		return s.newScanError(err.Error())
+		// This means something truly awful happened!
+		panic(err.Error())
 	}
 	// Decrement counts after the unread is complete
 	s.byteCount -= utf8.RuneLen(rn)
@@ -166,7 +167,6 @@ func (s *Scanner) unreadRune(rn rune) error {
 		s.previousLineCharCount--
 	}
 
-	return nil
 }
 
 // scanWhitespace scans a contiguous sequence of whitespace
@@ -190,10 +190,7 @@ func (s *Scanner) scanWhitespace() (Token, string, error) {
 
 		}
 		if !isWhitespace(rn) {
-			err = s.unreadRune(rn)
-			if err != nil {
-				return WHITESPACE, b.String(), err
-			}
+			s.unreadRune(rn)
 			break
 		}
 		b.WriteRune(rn)
@@ -233,9 +230,61 @@ func (s *Scanner) scanString() (Token, string, error) {
 	return STRING, b.String(), nil
 }
 
-//
+// scanNumber scans a contiguous string representing a number.  As we
+// have to handle the negative numeric form, it's possible that the
+// '-' rune can prefix a number.  This is problematic because '-' can
+// also be a symbol referring to the arithmetic operation "minus" -
+// that confusion is resolved by scanNumber, and should it consider
+// the latter case to be true it will return a SYMBOL rather than a
+// NUMBER.
 func (s *Scanner) scanNumber() (Token, string, error) {
 	var b bytes.Buffer
+
+	// We can be certain this isn't EOF because we will already
+	// have read and unread the rune before arriving here.
+	rn, err := s.readRune()
+	if err != nil {
+		// Something drastic happened, because we read this fine the first time.
+		return NUMBER, "", err
+	}
+
+	// Whatever happens we'll want the rune.
+	b.WriteRune(rn)
+
+	// Deal with the first rune.  Numbers have special rules about
+	// the first rune, specifically it, and only it, may be the
+	// minus symbol. When we loop later any occurrence of '-' will
+	// be an error.
+	if rn == '-' {
+
+		// Now we look ahead to see if a number is coming, if
+		// its anything else then this isn't a negative
+		// number, but some other form.
+		rn, err := s.readRune()
+
+		// EOF would leave us with a '-' on its own.
+		// This is never valid, so we can just promote
+		// the error without bothering to check.
+		if err != nil {
+			return NUMBER, b.String(), err
+		}
+
+		// We've stored the rune, and we know we'll want to
+		// unread whatever happens, so lets just do that now.
+		s.unreadRune(rn)
+
+		// If the next rune isn't a digit then we're going to
+		// assume this is the minus operator and return '-' as
+		// a symbol instead of a number.  There are still
+		// cases where this wouldn't be valid, but they're all
+		// errors and we'll leave that for the Parser to
+		// handle.
+		if !unicode.IsDigit(rn) {
+			return SYMBOL, b.String(), nil
+		}
+	}
+
+	// OK, let's scan the rest of the number...
 
 	for {
 		rn, err := s.readRune()
@@ -247,19 +296,26 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 			}
 			return NUMBER, b.String(), err
 		}
-		if !isNumber(rn) {
-			err := s.unreadRune(rn)
-			if err != nil {
-				return NUMBER, b.String(), err
-			}
-			break
+		if rn == '-' {
+			// As we said before '-' can't appear in the
+			// body of a number, this is an error.
+			return NUMBER, b.String(), s.newScanError("invalid number format (minus can only appear at the beginning of a number)")
 		}
-		b.WriteRune(rn)
+
+		// Valid number parts are written to the buffer
+		if isNumber(rn) || rn == '.' {
+			b.WriteRune(rn)
+			continue
+		}
+		// we hit a terminating character, end the number here.
+		s.unreadRune(rn)
+		break
 	}
 	return NUMBER, b.String(), nil
 }
 
-//
+// newScanError returns a ScanError initialised with the current
+// positional information of the Scanner.
 func (s *Scanner) newScanError(message string) *ScanError {
 	return &ScanError{
 		Byte:       s.byteCount,
@@ -270,12 +326,17 @@ func (s *Scanner) newScanError(message string) *ScanError {
 	}
 }
 
+// eof returns a ScanError, initialised with the current positional
+// information of the Scanner, and with it's EOF field set to True.
 func (s *Scanner) eof() *ScanError {
 	err := s.newScanError("EOF")
 	err.EOF = true
 	return err
 }
 
+// ScanError is a type that implements the Error interface, but adds
+// additional context information to errors that can be inspected.  It
+// is intended to be used for all errors emerging from the Scanner.
 type ScanError struct {
 	Byte       int
 	Char       int
@@ -285,7 +346,9 @@ type ScanError struct {
 	EOF        bool
 }
 
-//
+// Error makes ScanError comply with the Error interface.  It returns
+// a string representation of the ScanError including it's message and
+// some human readable position information.
 func (se ScanError) Error() string {
 	return fmt.Sprintf("Error:%d,%d: %s", se.Line, se.CharInLine, se.msg)
 }
