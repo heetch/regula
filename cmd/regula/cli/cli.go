@@ -32,6 +32,7 @@ type Config struct {
 		Address      string        `config:"addr"`
 		Timeout      time.Duration `config:"server-timeout"`
 		WatchTimeout time.Duration `config:"server-watch-timeout"`
+		DistPath     string        `config:"server-dist-path"`
 	}
 	LogLevel string `config:"log-level"`
 }
@@ -44,6 +45,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Server.Address = "0.0.0.0:5331"
 	cfg.Server.Timeout = 5 * time.Second
 	cfg.Server.WatchTimeout = 30 * time.Second
+	cfg.Server.DistPath = "dist"
 
 	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
@@ -81,8 +83,8 @@ func CreateLogger(level string, w io.Writer) zerolog.Logger {
 // Server is a ready to use HTTP server that shuts downs automatically
 // when receiving SIGINT or SIGTERM signals.
 type Server struct {
-	// Use the Mux field to add handlers to the server.
-	Mux http.ServeMux
+	// The http handler this server must serve.
+	Handler http.Handler
 	// OnShutdownCtx is canceled when the server is shutting down.
 	OnShutdownCtx context.Context
 	Logger        zerolog.Logger
@@ -105,7 +107,7 @@ func NewServer() *Server {
 // if the SIGINT or SIGTERM signal are catched. It can also be closed manually by canceling the
 // given context.
 func (s *Server) Run(ctx context.Context, addr string) error {
-	s.srv.Handler = &s.Mux
+	s.srv.Handler = s.Handler
 
 	l, err := net.Listen("tcp", addr)
 	if err != nil {

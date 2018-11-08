@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,17 +16,14 @@ import (
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAPI(t *testing.T) {
 	s := new(mockRulesetService)
-	log := zerolog.New(ioutil.Discard)
 	h := NewHandler(s, Config{
 		WatchTimeout: 1 * time.Second,
-		Logger:       &log,
 	})
 
 	t.Run("Root", func(t *testing.T) {

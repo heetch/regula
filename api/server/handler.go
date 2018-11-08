@@ -3,14 +3,12 @@ package server
 import (
 	"context"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/heetch/regula/api"
 	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 )
 
 // HTTP errors
@@ -20,7 +18,6 @@ var (
 
 // Config contains the API configuration.
 type Config struct {
-	Logger         *zerolog.Logger
 	Timeout        time.Duration
 	WatchTimeout   time.Duration
 	WatchCancelCtx context.Context // set this to cancel watchers on demand
@@ -28,14 +25,6 @@ type Config struct {
 
 // NewHandler creates an http handler to serve the rules engine API.
 func NewHandler(rsService store.RulesetService, cfg Config) http.Handler {
-	var logger zerolog.Logger
-
-	if cfg.Logger != nil {
-		logger = *cfg.Logger
-	} else {
-		logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
-	}
-
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 5 * time.Second
 	}
@@ -48,11 +37,11 @@ func NewHandler(rsService store.RulesetService, cfg Config) http.Handler {
 		cfg.WatchCancelCtx = context.Background()
 	}
 
-	rulesetsHandler := reghttp.NewHandler(logger, &rulesetAPI{
+	rulesetsHandler := rulesetAPI{
 		rulesets:     rsService,
 		timeout:      cfg.Timeout,
 		watchTimeout: cfg.WatchTimeout,
-	})
+	}
 
 	// router
 	mux := http.NewServeMux()
