@@ -11,19 +11,19 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 )
 
-type rulesetService struct {
-	*service
-
+type rulesetAPI struct {
+	rulesets     store.RulesetService
 	timeout      time.Duration
 	watchTimeout time.Duration
 }
 
-func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets")
 	path = strings.TrimPrefix(path, "/")
 
@@ -59,7 +59,7 @@ func (s *rulesetService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // list fetches all the rulesets from the store and writes them to the http response.
-func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix string) {
+func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
 		err   error
 		limit int
@@ -68,7 +68,7 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	if l := r.URL.Query().Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
 		if err != nil {
-			s.writeError(w, r, errors.New("invalid limit"), http.StatusBadRequest)
+			writeError(w, r, errors.New("invalid limit"), http.StatusBadRequest)
 			return
 		}
 	}
@@ -77,16 +77,16 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken)
 	if err != nil {
 		if err == store.ErrNotFound {
-			s.writeError(w, r, err, http.StatusNotFound)
+			writeError(w, r, err, http.StatusNotFound)
 			return
 		}
 
 		if err == store.ErrInvalidContinueToken {
-			s.writeError(w, r, err, http.StatusBadRequest)
+			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		s.writeError(w, r, err, http.StatusInternalServerError)
+		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -99,10 +99,10 @@ func (s *rulesetService) list(w http.ResponseWriter, r *http.Request, prefix str
 	rl.Revision = entries.Revision
 	rl.Continue = entries.Continue
 
-	s.encodeJSON(w, r, &rl, http.StatusOK)
+	reghttp.EncodeJSON(w, r, &rl, http.StatusOK)
 }
 
-func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path string) {
+func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 	var err error
 	var res *regula.EvalResult
 
@@ -119,38 +119,42 @@ func (s *rulesetService) eval(w http.ResponseWriter, r *http.Request, path strin
 
 	if err != nil {
 		if err == regula.ErrRulesetNotFound {
-			s.writeError(w, r, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
+			writeError(w, r, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
 			return
 		}
 
 		if err == rule.ErrParamNotFound ||
 			err == rule.ErrParamTypeMismatch ||
 			err == rule.ErrNoMatch {
-			s.writeError(w, r, err, http.StatusBadRequest)
+			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		s.writeError(w, r, err, http.StatusInternalServerError)
+		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	s.encodeJSON(w, r, (*api.EvalResult)(res), http.StatusOK)
+	reghttp.EncodeJSON(w, r, (*api.EvalResult)(res), http.StatusOK)
 }
 
 // watch watches a prefix for change and returns anything newer.
-func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix string) {
+func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string) {
 	var ae api.Events
 
 	events, err := s.rulesets.Watch(r.Context(), prefix, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
+		case context.Canceled:
+			// context has been canceled manually
+			// same behaviour as a timeout
+			fallthrough
 		case context.DeadlineExceeded:
 			ae.Timeout = true
 		case store.ErrNotFound:
 			w.WriteHeader(http.StatusNotFound)
 			return
 		default:
-			s.writeError(w, r, err, http.StatusInternalServerError)
+			writeError(w, r, err, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -164,29 +168,29 @@ func (s *rulesetService) watch(w http.ResponseWriter, r *http.Request, prefix st
 		}
 	}
 
-	s.encodeJSON(w, r, ae, http.StatusOK)
+	reghttp.EncodeJSON(w, r, ae, http.StatusOK)
 }
 
 // put creates a new version of a ruleset.
-func (s *rulesetService) put(w http.ResponseWriter, r *http.Request, path string) {
+func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 	var rs regula.Ruleset
 
 	err := json.NewDecoder(r.Body).Decode(&rs)
 	if err != nil {
-		s.writeError(w, r, err, http.StatusBadRequest)
+		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
 	if err != nil && err != store.ErrNotModified {
 		if store.IsValidationError(err) {
-			s.writeError(w, r, err, http.StatusBadRequest)
+			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		s.writeError(w, r, err, http.StatusInternalServerError)
+		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	s.encodeJSON(w, r, (*api.Ruleset)(entry), http.StatusOK)
+	reghttp.EncodeJSON(w, r, (*api.Ruleset)(entry), http.StatusOK)
 }

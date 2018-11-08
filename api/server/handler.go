@@ -2,16 +2,15 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/heetch/regula/api"
+	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/hlog"
 )
 
 // HTTP errors
@@ -21,17 +20,14 @@ var (
 
 // Config contains the API configuration.
 type Config struct {
-	Logger       *zerolog.Logger
-	Timeout      time.Duration
-	WatchTimeout time.Duration
+	Logger         *zerolog.Logger
+	Timeout        time.Duration
+	WatchTimeout   time.Duration
+	WatchCancelCtx context.Context // set this to cancel watchers on demand
 }
 
 // NewHandler creates an http handler to serve the rules engine API.
-func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config) http.Handler {
-	s := service{
-		rulesets: rsService,
-	}
-
+func NewHandler(rsService store.RulesetService, cfg Config) http.Handler {
 	var logger zerolog.Logger
 
 	if cfg.Logger != nil {
@@ -48,74 +44,34 @@ func NewHandler(ctx context.Context, rsService store.RulesetService, cfg Config)
 		cfg.WatchTimeout = 30 * time.Second
 	}
 
-	rs := rulesetService{
-		service:      &s,
+	if cfg.WatchCancelCtx == nil {
+		cfg.WatchCancelCtx = context.Background()
+	}
+
+	rulesetsHandler := reghttp.NewHandler(logger, &rulesetAPI{
+		rulesets:     rsService,
 		timeout:      cfg.Timeout,
 		watchTimeout: cfg.WatchTimeout,
-	}
+	})
 
 	// router
 	mux := http.NewServeMux()
-	mux.Handle("/rulesets/", &rs)
-
-	// middlewares
-	chain := []func(http.Handler) http.Handler{
-		hlog.NewHandler(logger),
-		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
-			hlog.FromRequest(r).Info().
-				Str("method", r.Method).
-				Str("url", r.URL.String()).
-				Int("status", status).
-				Int("size", size).
-				Dur("duration", duration).
-				Msg("request received")
-		}),
-		hlog.RemoteAddrHandler("ip"),
-		hlog.UserAgentHandler("user_agent"),
-		hlog.RefererHandler("referer"),
-		func(http.Handler) http.Handler {
-			return mux
-		},
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// playing the middleware chain
-		var cur http.Handler
-		for i := len(chain) - 1; i >= 0; i-- {
-			cur = chain[i](cur)
+	mux.HandleFunc("/rulesets/", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
+			rulesetsHandler.ServeHTTP(w, r.WithContext(cfg.WatchCancelCtx))
+			return
 		}
 
-		// serving the request
-		cur.ServeHTTP(w, r.WithContext(ctx))
+		rulesetsHandler.ServeHTTP(w, r)
 	})
-}
 
-type service struct {
-	rulesets store.RulesetService
-}
-
-// encodeJSON encodes v to w in JSON format.
-func (s *service) encodeJSON(w http.ResponseWriter, r *http.Request, v interface{}, status int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		loggerFromRequest(r).Error().Err(err).Interface("value", v).Msg("failed to encode value to http response")
-	}
-}
-
-func loggerFromRequest(r *http.Request) *zerolog.Logger {
-	logger := hlog.FromRequest(r).With().
-		Str("method", r.Method).
-		Str("url", r.URL.String()).
-		Logger()
-	return &logger
+	return mux
 }
 
 // writeError writes an error to the http response in JSON format.
-func (s *service) writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
+func writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
 	// Prepare log.
-	logger := loggerFromRequest(r).With().
+	logger := reghttp.LoggerFromRequest(r).With().
 		Err(err).
 		Int("status", code).
 		Logger()
@@ -128,5 +84,5 @@ func (s *service) writeError(w http.ResponseWriter, r *http.Request, err error, 
 		logger.Debug().Msg("http error")
 	}
 
-	s.encodeJSON(w, r, &api.Error{Err: err.Error()}, code)
+	reghttp.EncodeJSON(w, r, &api.Error{Err: err.Error()}, code)
 }
