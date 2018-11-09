@@ -116,6 +116,8 @@ func (s *Scanner) Scan() (Token, string, error) {
 		return s.scanNumber()
 	case isBool(rn):
 		return s.scanBool()
+	case isComment(rn):
+		return s.scanComment()
 	}
 
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
@@ -350,7 +352,30 @@ func (s *Scanner) scanBool() (Token, string, error) {
 		return BOOL, symbol, s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
 	}
 	return BOOL, symbol, s.newScanError("invalid boolean")
+}
 
+// scanComment will scan to the end of the current line, consuming any and all chars prior to '\n'.
+func (s *Scanner) scanComment() (Token, string, error) {
+	var b bytes.Buffer
+
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// EOF is a valid terminator for a Comment
+				break
+			}
+			return COMMENT, b.String(), err
+		}
+
+		if rn == '\n' {
+			break
+		}
+
+		b.WriteRune(rn)
+	}
+	return COMMENT, b.String(), nil
 }
 
 // newScanError returns a ScanError initialised with the current

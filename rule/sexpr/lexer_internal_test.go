@@ -244,11 +244,31 @@ func TestScannerScanNumber(t *testing.T) {
 }
 
 func TestScannerScanBool(t *testing.T) {
+	// Happy cases
+	// - true,  EOF Terminated
 	assertScanned(t, "#true", "true", BOOL, 5, 5, 1, 5)
-	assertScanned(t, "#false", "false", BOOL, 6, 6, 1, 6)
+	// - false, newline terminated
+	assertScanned(t, "#false\n", "false", BOOL, 7, 7, 2, 0)
+	// Sad cases
+	// - partial true
 	assertScanFailed(t, "#tru ", "Error:1,4: invalid boolean: tru")
+	// - partial false
 	assertScanFailed(t, "#fa)", "Error:1,3: invalid boolean: fa")
+	// - invalid
 	assertScanFailed(t, "#1", "Error:1,1: invalid boolean")
+	// - repeated signal character
 	assertScanFailed(t, "##", "Error:1,1: invalid boolean")
+	// - empty
 	assertScanFailed(t, "#", "Error:1,1: invalid boolean")
+}
+
+func TestScannerScanComment(t *testing.T) {
+	// Simple empty comment at EOF
+	assertScanned(t, ";", "", COMMENT, 1, 1, 1, 1)
+	// Comment terminated by newline
+	assertScanned(t, "; Foo\nbar", " Foo", COMMENT, 6, 6, 2, 0)
+	// Comment containing Comment char
+	assertScanned(t, ";Pants;On;Fire", "Pants;On;Fire", COMMENT, 14, 14, 1, 14)
+	// Comment containing control characters
+	assertScanned(t, `;()"-#1`, `()"-#1`, COMMENT, 7, 7, 1, 7)
 }
