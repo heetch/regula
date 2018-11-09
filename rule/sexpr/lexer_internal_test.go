@@ -185,11 +185,14 @@ func assertScanFailed(t *testing.T, input, message string) {
 
 }
 
-func TestScannerScan(t *testing.T) {
+func TestScannerScanParenthesis(t *testing.T) {
 	// Test L Parenthesis
 	assertScanned(t, "(", "(", LPAREN, 1, 1, 1, 1)
 	// Test R Parenthesis
 	assertScanned(t, ")", ")", RPAREN, 1, 1, 1, 1)
+}
+
+func TestScannerScanWhiteSpace(t *testing.T) {
 	// Test white-space
 	assertScanned(t, " ", " ", WHITESPACE, 1, 1, 1, 1)
 	assertScanned(t, "\t", "\t", WHITESPACE, 1, 1, 1, 1)
@@ -202,6 +205,9 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, "  ", "  ", WHITESPACE, 2, 2, 1, 2)
 	// - terminated by non white-space character.
 	assertScanned(t, "  (", "  ", WHITESPACE, 2, 2, 1, 2)
+}
+
+func TestScannerScanString(t *testing.T) {
 	// Test string:
 	// - the empty string
 	assertScanned(t, `""`, "", STRING, 2, 2, 1, 2)
@@ -213,6 +219,9 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, `"foo\""`, `foo"`, STRING, 7, 7, 1, 7)
 	// - sad case with escaped terminator
 	assertScanFailed(t, `"foo\"`, "Error:1,6: unterminated string constant")
+}
+
+func TestScannerScanNumber(t *testing.T) {
 	// Test number
 	// - Single digit integer, EOF terminated
 	assertScanned(t, "1", "1", NUMBER, 1, 1, 1, 1)
@@ -230,5 +239,16 @@ func TestScannerScan(t *testing.T) {
 	assertScanned(t, "- 1 2", "-", SYMBOL, 1, 1, 1, 1)
 	// - sad case: a minus mid-number
 	assertScanFailed(t, "1-2", "Error:1,2: invalid number format (minus can only appear at the beginning of a number)")
+	// - sad case: a minus followed by EOF
 	assertScanFailed(t, "-", "Error:1,1: EOF")
+}
+
+func TestScannerScanBool(t *testing.T) {
+	assertScanned(t, "#true", "true", BOOL, 5, 5, 1, 5)
+	assertScanned(t, "#false", "false", BOOL, 6, 6, 1, 6)
+	assertScanFailed(t, "#tru ", "Error:1,4: invalid boolean: tru")
+	assertScanFailed(t, "#fa)", "Error:1,3: invalid boolean: fa")
+	assertScanFailed(t, "#1", "Error:1,1: invalid boolean")
+	assertScanFailed(t, "##", "Error:1,1: invalid boolean")
+	assertScanFailed(t, "#", "Error:1,1: invalid boolean")
 }

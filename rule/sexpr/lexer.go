@@ -114,6 +114,8 @@ func (s *Scanner) Scan() (Token, string, error) {
 	case isNumber(rn):
 		s.unreadRune(rn)
 		return s.scanNumber()
+	case isBool(rn):
+		return s.scanBool()
 	}
 
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
@@ -312,6 +314,43 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 		break
 	}
 	return NUMBER, b.String(), nil
+}
+
+// scanBool scans the contiguous characters following the '#' symbol,
+// it they are either 'true', or 'false' a BOOL is returned, otherwise
+// an ScanError will be returned.
+func (s *Scanner) scanBool() (Token, string, error) {
+
+	var b bytes.Buffer
+
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// EOF is a valid terminator for a number
+				break
+			}
+			return BOOL, b.String(), err
+		}
+
+		// isSymbol is handy shorthand for "it's not anything else"
+		if !isSymbol(rn) {
+			s.unreadRune(rn)
+			break
+		}
+		b.WriteRune(rn)
+	}
+
+	symbol := b.String()
+	if symbol == "true" || symbol == "false" {
+		return BOOL, symbol, nil
+	}
+	if len(symbol) > 0 {
+		return BOOL, symbol, s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
+	}
+	return BOOL, symbol, s.newScanError("invalid boolean")
+
 }
 
 // newScanError returns a ScanError initialised with the current
