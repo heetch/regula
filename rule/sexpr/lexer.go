@@ -99,7 +99,11 @@ func NewScanner(r io.Reader) *Scanner {
 func (s *Scanner) Scan() (Token, string, error) {
 	rn, err := s.readRune()
 	if err != nil {
-		return EOF, "", s.newScanError(err.Error())
+		se := err.(*ScanError)
+		if se.EOF {
+			return EOF, "", nil
+		}
+		return EOF, "", err
 	}
 	switch {
 	case isLParen(rn):

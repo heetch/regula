@@ -160,27 +160,36 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, expected, content)
 }
 
+func assertScannerScanned(t *testing.T, s *Scanner, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
+	tok, lit, err := s.Scan()
+	require.NoError(t, err)
+	require.Equalf(t, token, tok, "token")
+	require.Equalf(t, output, lit, "literal")
+	require.Equalf(t, byteCount, s.byteCount, "byteCount")
+	require.Equalf(t, charCount, s.charCount, "charCount")
+	require.Equalf(t, lineCount, s.lineCount, "lineCount")
+	require.Equalf(t, lineCharCount, s.lineCharCount, "lineCharCount")
+}
+
 func assertScanned(t *testing.T, input, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
 	t.Run(fmt.Sprintf("Scan %s 0x%x", input, input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
-		tok, lit, err := s.Scan()
-		require.NoError(t, err)
-		require.Equal(t, token, tok)
-		require.Equal(t, output, lit)
-		require.Equalf(t, byteCount, s.byteCount, "byteCount")
-		require.Equalf(t, charCount, s.charCount, "charCount")
-		require.Equalf(t, lineCount, s.lineCount, "lineCount")
-		require.Equalf(t, lineCharCount, s.lineCharCount, "lineCharCount")
+		assertScannerScanned(t, s, output, token, byteCount, charCount, lineCount, lineCharCount)
 	})
+}
+
+func assertScannerScanFailed(t *testing.T, s *Scanner, message string) {
+	_, _, err := s.Scan()
+	require.EqualError(t, err, message)
+
 }
 
 func assertScanFailed(t *testing.T, input, message string) {
 	t.Run(fmt.Sprintf("Scan should fail %s 0x%x", input, input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
-		_, _, err := s.Scan()
-		require.EqualError(t, err, message)
+		assertScannerScanFailed(t, s, message)
 	})
 
 }
@@ -290,4 +299,43 @@ func TestScannerScanSymbol(t *testing.T) {
 	assertScanned(t, "+", "+", SYMBOL, 1, 1, 1, 1)
 	// actually handled by the number scan, but we'll check '-' all the same:
 	assertScanned(t, "-", "-", SYMBOL, 1, 1, 1, 1)
+}
+
+func TestScannerScanSequence(t *testing.T) {
+	input := `
+(and
+  (= (+ 1 -1) 0)
+  (= my-parameter "fudge sundae")) ; Crazy
+`
+	b := bytes.NewBufferString(input)
+	s := NewScanner(b)
+	assertScannerScanned(t, s, "\n", WHITESPACE, 1, 1, 2, 0)
+	assertScannerScanned(t, s, "(", LPAREN, 2, 2, 2, 1)
+	assertScannerScanned(t, s, "and", SYMBOL, 5, 5, 2, 5)
+	assertScannerScanned(t, s, "\n  ", WHITESPACE, 8, 8, 3, 2)
+	assertScannerScanned(t, s, "(", LPAREN, 9, 9, 3, 3)
+	assertScannerScanned(t, s, "=", SYMBOL, 10, 10, 3, 4)
+	assertScannerScanned(t, s, " ", WHITESPACE, 11, 11, 3, 5)
+	assertScannerScanned(t, s, "(", LPAREN, 12, 12, 3, 6)
+	assertScannerScanned(t, s, "+", SYMBOL, 13, 13, 3, 7)
+	assertScannerScanned(t, s, " ", WHITESPACE, 14, 14, 3, 8)
+	assertScannerScanned(t, s, "1", NUMBER, 15, 15, 3, 9)
+	assertScannerScanned(t, s, " ", WHITESPACE, 16, 16, 3, 10)
+	assertScannerScanned(t, s, "-1", NUMBER, 18, 18, 3, 12)
+	assertScannerScanned(t, s, ")", RPAREN, 19, 19, 3, 13)
+	assertScannerScanned(t, s, " ", WHITESPACE, 20, 20, 3, 14)
+	assertScannerScanned(t, s, "0", NUMBER, 21, 21, 3, 15)
+	assertScannerScanned(t, s, ")", RPAREN, 22, 22, 3, 16)
+	assertScannerScanned(t, s, "\n  ", WHITESPACE, 25, 25, 4, 2)
+	assertScannerScanned(t, s, "(", LPAREN, 26, 26, 4, 3)
+	assertScannerScanned(t, s, "=", SYMBOL, 27, 27, 4, 4)
+	assertScannerScanned(t, s, " ", WHITESPACE, 28, 28, 4, 5)
+	assertScannerScanned(t, s, "my-parameter", SYMBOL, 40, 40, 4, 17)
+	assertScannerScanned(t, s, " ", WHITESPACE, 41, 41, 4, 18)
+	assertScannerScanned(t, s, "fudge sundae", STRING, 55, 55, 4, 32)
+	assertScannerScanned(t, s, ")", RPAREN, 56, 56, 4, 33)
+	assertScannerScanned(t, s, ")", RPAREN, 57, 57, 4, 34)
+	assertScannerScanned(t, s, " ", WHITESPACE, 58, 58, 4, 35)
+	assertScannerScanned(t, s, " Crazy", COMMENT, 66, 66, 5, 0)
+	assertScannerScanned(t, s, "", EOF, 66, 66, 5, 0)
 }
