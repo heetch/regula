@@ -257,7 +257,7 @@ func TestScannerScanBool(t *testing.T) {
 	// - true,  EOF Terminated
 	assertScanned(t, "#true", "true", BOOL, 5, 5, 1, 5)
 	// - false, newline terminated
-	assertScanned(t, "#false\n", "false", BOOL, 7, 7, 2, 0)
+	assertScanned(t, "#false\n", "false", BOOL, 6, 6, 1, 7)
 	// Sad cases
 	// - partial true
 	assertScanFailed(t, "#tru ", "Error:1,4: invalid boolean: tru")
