@@ -272,3 +272,22 @@ func TestScannerScanComment(t *testing.T) {
 	// Comment containing control characters
 	assertScanned(t, `;()"-#1`, `()"-#1`, COMMENT, 7, 7, 1, 7)
 }
+
+func TestScannerScanSymbol(t *testing.T) {
+	// Simple, single character identifier
+	assertScanned(t, "a", "a", SYMBOL, 1, 1, 1, 1)
+	// Fully formed symbol
+	assertScanned(t, "abba-sucks-123_ok!", "abba-sucks-123_ok!", SYMBOL, 18, 18, 1, 18)
+	// Unicode in symbols
+	assertScanned(t, "mötlěy_crü_sucks_more", "mötlěy_crü_sucks_more", SYMBOL, 24, 21, 1, 21)
+	// terminated by comment
+	assertScanned(t, "bon;jovi is worse", "bon", SYMBOL, 3, 3, 1, 3)
+	// terminated by whitespace
+	assertScanned(t, "van halen is the worst", "van", SYMBOL, 3, 3, 1, 3)
+	// terminated by control character
+	assertScanned(t, "NoWayMichaelBolton)IsTheNadir", "NoWayMichaelBolton", SYMBOL, 18, 18, 1, 18)
+	// symbol starting with a non-alpha character
+	assertScanned(t, "+", "+", SYMBOL, 1, 1, 1, 1)
+	// actually handled by the number scan, but we'll check '-' all the same:
+	assertScanned(t, "-", "-", SYMBOL, 1, 1, 1, 1)
+}

@@ -118,6 +118,9 @@ func (s *Scanner) Scan() (Token, string, error) {
 		return s.scanBool()
 	case isComment(rn):
 		return s.scanComment()
+	case isSymbol(rn):
+		s.unreadRune(rn)
+		return s.scanSymbol()
 	}
 
 	return EOF, string(rn), s.newScanError("Illegal character scanned")
@@ -266,10 +269,16 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 		// number, but some other form.
 		rn, err := s.readRune()
 
-		// EOF would leave us with a '-' on its own.
-		// This is never valid, so we can just promote
-		// the error without bothering to check.
 		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// In reality having '-' as the final
+				// symbol in a stream is never useful,
+				// but this is the sort of error we
+				// should catch in the Parser, not the
+				// scanner.
+				return SYMBOL, b.String(), nil
+			}
 			return NUMBER, b.String(), err
 		}
 
@@ -376,6 +385,32 @@ func (s *Scanner) scanComment() (Token, string, error) {
 		b.WriteRune(rn)
 	}
 	return COMMENT, b.String(), nil
+}
+
+// scanSymbol scans a contiguous block of symbol characters. Any non-symbol character will terminate it.
+func (s *Scanner) scanSymbol() (Token, string, error) {
+	var b bytes.Buffer
+
+	for {
+		rn, err := s.readRune()
+		if err != nil {
+			se := err.(*ScanError)
+			if se.EOF {
+				// EOF is a valid terminator for a Comment
+				break
+			}
+			return SYMBOL, b.String(), err
+		}
+		// Again, we have to special case '-', which can't start a symbol, but can appear in it.
+		// Likewise numbers.
+		if !(isSymbol(rn) || rn == '-' || unicode.IsDigit(rn)) {
+			s.unreadRune(rn)
+			break
+		}
+		b.WriteRune(rn)
+	}
+
+	return SYMBOL, b.String(), nil
 }
 
 // newScanError returns a ScanError initialised with the current
