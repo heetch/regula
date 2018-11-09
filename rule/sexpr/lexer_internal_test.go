@@ -301,6 +301,7 @@ func TestScannerScanSymbol(t *testing.T) {
 	assertScanned(t, "-", "-", SYMBOL, 1, 1, 1, 1)
 }
 
+// Scanner.Scan can scan a full symbollic expression sequence.
 func TestScannerScanSequence(t *testing.T) {
 	input := `
 (and
@@ -338,4 +339,16 @@ func TestScannerScanSequence(t *testing.T) {
 	assertScannerScanned(t, s, " ", WHITESPACE, 58, 58, 4, 35)
 	assertScannerScanned(t, s, " Crazy", COMMENT, 66, 66, 5, 0)
 	assertScannerScanned(t, s, "", EOF, 66, 66, 5, 0)
+}
+
+func TestScannerScanReturnsScanError(t *testing.T) {
+	input := `
+(= "toffee`
+	b := bytes.NewBufferString(input)
+	s := NewScanner(b)
+	assertScannerScanned(t, s, "\n", WHITESPACE, 1, 1, 2, 0)
+	assertScannerScanned(t, s, "(", LPAREN, 2, 2, 2, 1)
+	assertScannerScanned(t, s, "=", SYMBOL, 3, 3, 2, 2)
+	assertScannerScanned(t, s, " ", WHITESPACE, 4, 4, 2, 3)
+	assertScannerScanFailed(t, s, "Error:2,10: unterminated string constant")
 }
