@@ -248,8 +248,6 @@ func TestScannerScanNumber(t *testing.T) {
 	assertScanned(t, "- 1 2", "-", SYMBOL, 1, 1, 1, 1)
 	// - sad case: a minus mid-number
 	assertScanFailed(t, "1-2", "Error:1,2: invalid number format (minus can only appear at the beginning of a number)")
-	// - sad case: a minus followed by EOF
-	assertScanFailed(t, "-", "Error:1,1: EOF")
 }
 
 func TestScannerScanBool(t *testing.T) {
