@@ -18,11 +18,11 @@ var (
 func NewHandler(service store.RulesetService, distPath string) http.Handler {
 	var mux http.ServeMux
 
+	mux.Handle("/i/", http.StripPrefix("/i", newInternalHandler(service)))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(distPath, "index.html"))
 	})
-
-	mux.Handle("/i", http.StripPrefix("/i", newInternalHandler(service)))
 
 	return &mux
 }

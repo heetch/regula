@@ -48,7 +48,7 @@ func TestInternalHandler(t *testing.T) {
 				return &entries, nil
 			}
 
-			rec := doRequest(newInternalHandler(s), "GET", "/rulesets/", nil)
+			rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
 			require.Equal(t, http.StatusOK, rec.Code)
 			require.JSONEq(t, `{"rulesets": [{"path": "Path0"},{"path": "Path1"},{"path": "Path2"}]}`, rec.Body.String())
 		})
@@ -59,7 +59,7 @@ func TestInternalHandler(t *testing.T) {
 				return nil, errors.New("some error")
 			}
 
-			rec := doRequest(newInternalHandler(s), "GET", "/rulesets/", nil)
+			rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
 			require.Equal(t, http.StatusInternalServerError, rec.Code)
 		})
 	})
