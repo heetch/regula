@@ -400,7 +400,7 @@ func (s *Scanner) scanSymbol() (Token, string, error) {
 		if err != nil {
 			se := err.(*ScanError)
 			if se.EOF {
-				// EOF is a valid terminator for a Comment
+				// EOF is a valid terminator for a Symbol
 				break
 			}
 			return SYMBOL, b.String(), err
