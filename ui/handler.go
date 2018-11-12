@@ -79,7 +79,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 		var token string
 
 		for i := 0; i == 0 || token != ""; i++ {
-			list, err := h.service.List(r.Context(), token, 100, "")
+			list, err := h.service.List(r.Context(), "", 100, token)
 			if err != nil {
 				writeError(w, r, err, http.StatusInternalServerError)
 				return
@@ -90,5 +90,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 				resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
 			}
 		}
+
+		reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 	})
 }
