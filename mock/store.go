@@ -1,17 +1,18 @@
-package server
+package mock
 
 import (
 	"context"
 
-	"github.com/heetch/regula/rule"
-
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 )
 
-var _ store.RulesetService = new(mockRulesetService)
+// Ensure BoardSRulesetServiceervice implements store.RulesetService.
+var _ store.RulesetService = new(RulesetService)
 
-type mockRulesetService struct {
+// RulesetService mocks the store.RulesetService interface.
+type RulesetService struct {
 	ListCount         int
 	ListFn            func(context.Context, string, int, string) (*store.RulesetEntries, error)
 	LatestCount       int
@@ -28,7 +29,8 @@ type mockRulesetService struct {
 	EvalVersionFn     func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
-func (s *mockRulesetService) List(ctx context.Context, prefix string, limit int, token string) (*store.RulesetEntries, error) {
+// List runs ListFn if provided and increments ListCount when invoked.
+func (s *RulesetService) List(ctx context.Context, prefix string, limit int, token string) (*store.RulesetEntries, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
@@ -38,7 +40,8 @@ func (s *mockRulesetService) List(ctx context.Context, prefix string, limit int,
 	return nil, nil
 }
 
-func (s *mockRulesetService) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
+// Latest runs LatestFn if provided and increments LatestCount when invoked.
+func (s *RulesetService) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
 	s.LatestCount++
 
 	if s.LatestFn != nil {
@@ -47,7 +50,8 @@ func (s *mockRulesetService) Latest(ctx context.Context, path string) (*store.Ru
 	return nil, nil
 }
 
-func (s *mockRulesetService) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+// OneByVersion runs OneByVersionFn if provided and increments OneByVersionCount when invoked.
+func (s *RulesetService) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
 	s.OneByVersionCount++
 
 	if s.OneByVersionFn != nil {
@@ -56,7 +60,8 @@ func (s *mockRulesetService) OneByVersion(ctx context.Context, path, version str
 	return nil, nil
 }
 
-func (s *mockRulesetService) Watch(ctx context.Context, prefix, revision string) (*store.RulesetEvents, error) {
+// Watch runs WatchFn if provided and increments WatchCount when invoked.
+func (s *RulesetService) Watch(ctx context.Context, prefix, revision string) (*store.RulesetEvents, error) {
 	s.WatchCount++
 
 	if s.WatchFn != nil {
@@ -66,7 +71,8 @@ func (s *mockRulesetService) Watch(ctx context.Context, prefix, revision string)
 	return nil, nil
 }
 
-func (s *mockRulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+// Put runs PutFn if provided and increments PutCount when invoked.
+func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	s.PutCount++
 
 	if s.PutFn != nil {
@@ -75,7 +81,8 @@ func (s *mockRulesetService) Put(ctx context.Context, path string, ruleset *regu
 	return nil, nil
 }
 
-func (s *mockRulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+// Eval runs EvalFn if provided and increments EvalCount when invoked.
+func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalCount++
 
 	if s.EvalFn != nil {
@@ -84,7 +91,8 @@ func (s *mockRulesetService) Eval(ctx context.Context, path string, params rule.
 	return nil, nil
 }
 
-func (s *mockRulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+// EvalVersion runs EvalVersionFn if provided and increments EvalVersionCount when invoked.
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalVersionCount++
 
 	if s.EvalVersionFn != nil {
