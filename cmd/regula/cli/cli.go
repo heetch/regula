@@ -1,6 +1,6 @@
 // Package cli provides types and functions that are specific to the Regula program.
 // These helpers are provided separately from the main package to be able to customize
-// Regula server's behaviour to create custom binaries.
+// Regula server's behaviour and create custom binaries.
 package cli
 
 import (
@@ -103,7 +103,7 @@ func NewServer() *Server {
 	return &s
 }
 
-// Run runs the http server on the chosen address. The server will shutdown automatically
+// Run the http server on the chosen address. The server will shutdown automatically
 // if the SIGINT or SIGTERM signal are catched. It can also be closed manually by canceling the
 // given context.
 func (s *Server) Run(ctx context.Context, addr string) error {

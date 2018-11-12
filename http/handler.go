@@ -3,17 +3,11 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
-)
-
-// HTTP errors
-var (
-	errInternal = errors.New("internal_error")
 )
 
 // NewHandler creates an http handler with logging capabilities.
