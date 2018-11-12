@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,17 +16,14 @@ import (
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAPI(t *testing.T) {
 	s := new(mockRulesetService)
-	log := zerolog.New(ioutil.Discard)
-	h := NewHandler(context.Background(), s, Config{
+	h := NewHandler(s, Config{
 		WatchTimeout: 1 * time.Second,
-		Logger:       &log,
 	})
 
 	t.Run("Root", func(t *testing.T) {
@@ -265,6 +261,10 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a?watch", http.StatusOK, &l, nil)
 		})
 
+		t.Run("NotFound", func(t *testing.T) {
+			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, store.ErrNotFound)
+		})
+
 		t.Run("WithRevision", func(t *testing.T) {
 			t.Helper()
 
@@ -292,6 +292,10 @@ func TestAPI(t *testing.T) {
 
 		t.Run("Timeout", func(t *testing.T) {
 			call(t, "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded)
+		})
+
+		t.Run("ContextCanceled", func(t *testing.T) {
+			call(t, "/rulesets/?watch", http.StatusOK, nil, context.Canceled)
 		})
 	})
 

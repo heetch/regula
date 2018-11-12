@@ -1,9 +1,14 @@
+// Package cli provides types and functions that are specific to the Regula program.
+// These helpers are provided separately from the main package to be able to customize
+// Regula server's behaviour and create custom binaries.
 package cli
 
 import (
 	"context"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,8 +17,8 @@ import (
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/flags"
-	"github.com/heetch/regula/api/server"
 	isatty "github.com/mattn/go-isatty"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -27,6 +32,7 @@ type Config struct {
 		Address      string        `config:"addr"`
 		Timeout      time.Duration `config:"server-timeout"`
 		WatchTimeout time.Duration `config:"server-watch-timeout"`
+		DistPath     string        `config:"server-dist-path"`
 	}
 	LogLevel string `config:"log-level"`
 }
@@ -39,6 +45,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Server.Address = "0.0.0.0:5331"
 	cfg.Server.Timeout = 5 * time.Second
 	cfg.Server.WatchTimeout = 30 * time.Second
+	cfg.Server.DistPath = "dist"
 
 	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
@@ -73,19 +80,67 @@ func CreateLogger(level string, w io.Writer) zerolog.Logger {
 	return logger
 }
 
-// RunServer runs the server and listens to SIGINT and SIGTERM
-// to stop the server gracefully.
-func RunServer(srv *server.Server, addr string) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// Server is a ready to use HTTP server that shuts downs automatically
+// when receiving SIGINT or SIGTERM signals.
+type Server struct {
+	// The http handler this server must serve.
+	Handler http.Handler
+	// OnShutdownCtx is canceled when the server is shutting down.
+	OnShutdownCtx context.Context
+	Logger        zerolog.Logger
+	srv           http.Server
+	cancelFn      func()
+}
+
+// NewServer creates an HTTP Server
+func NewServer() *Server {
+	var s Server
+
+	s.OnShutdownCtx, s.cancelFn = context.WithCancel(context.Background())
+
+	s.srv.RegisterOnShutdown(s.cancelFn)
+
+	return &s
+}
+
+// Run the http server on the chosen address. The server will shutdown automatically
+// if the SIGINT or SIGTERM signal are catched. It can also be closed manually by canceling the
+// given context.
+func (s *Server) Run(ctx context.Context, addr string) error {
+	s.srv.Handler = s.Handler
+
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-
-		<-quit
-		cancel()
+		s.Logger.Info().Msg("Listening on " + l.Addr().String())
+		err = s.srv.Serve(l)
+		if err != http.ErrServerClosed {
+			panic(err)
+		}
 	}()
 
-	return srv.Run(ctx, addr)
+	select {
+	case sig := <-quit:
+		s.Logger.Debug().Msgf("received %s signal, shutting down...", sig)
+	case <-ctx.Done():
+		s.Logger.Debug().Msgf("%s, shutting down...", ctx.Err())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = s.srv.Shutdown(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to shutdown server gracefully")
+	}
+
+	s.Logger.Debug().Msg("server shutdown successfully")
+
+	return nil
 }
