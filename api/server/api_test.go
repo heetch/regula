@@ -362,15 +362,11 @@ func TestAPI(t *testing.T) {
 
 func resetStore(s *mock.RulesetService) {
 	s.ListCount = 0
-	s.LatestCount = 0
-	s.OneByVersionCount = 0
 	s.WatchCount = 0
 	s.PutCount = 0
 	s.EvalCount = 0
 	s.EvalVersionCount = 0
 	s.ListFn = nil
-	s.LatestFn = nil
-	s.OneByVersionFn = nil
 	s.WatchFn = nil
 	s.PutFn = nil
 	s.EvalFn = nil

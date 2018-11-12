@@ -13,20 +13,16 @@ var _ store.RulesetService = new(RulesetService)
 
 // RulesetService mocks the store.RulesetService interface.
 type RulesetService struct {
-	ListCount         int
-	ListFn            func(context.Context, string, int, string) (*store.RulesetEntries, error)
-	LatestCount       int
-	LatestFn          func(context.Context, string) (*store.RulesetEntry, error)
-	OneByVersionCount int
-	OneByVersionFn    func(context.Context, string, string) (*store.RulesetEntry, error)
-	WatchCount        int
-	WatchFn           func(context.Context, string, string) (*store.RulesetEvents, error)
-	PutCount          int
-	PutFn             func(context.Context, string) (*store.RulesetEntry, error)
-	EvalCount         int
-	EvalFn            func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
-	EvalVersionCount  int
-	EvalVersionFn     func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+	ListCount        int
+	ListFn           func(context.Context, string, int, string) (*store.RulesetEntries, error)
+	WatchCount       int
+	WatchFn          func(context.Context, string, string) (*store.RulesetEvents, error)
+	PutCount         int
+	PutFn            func(context.Context, string) (*store.RulesetEntry, error)
+	EvalCount        int
+	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
+	EvalVersionCount int
+	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
 // List runs ListFn if provided and increments ListCount when invoked.
@@ -37,26 +33,6 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, tok
 		return s.ListFn(ctx, prefix, limit, token)
 	}
 
-	return nil, nil
-}
-
-// Latest runs LatestFn if provided and increments LatestCount when invoked.
-func (s *RulesetService) Latest(ctx context.Context, path string) (*store.RulesetEntry, error) {
-	s.LatestCount++
-
-	if s.LatestFn != nil {
-		return s.LatestFn(ctx, path)
-	}
-	return nil, nil
-}
-
-// OneByVersion runs OneByVersionFn if provided and increments OneByVersionCount when invoked.
-func (s *RulesetService) OneByVersion(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
-	s.OneByVersionCount++
-
-	if s.OneByVersionFn != nil {
-		return s.OneByVersionFn(ctx, path, version)
-	}
 	return nil, nil
 }
 

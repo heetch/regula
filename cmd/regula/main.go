@@ -59,7 +59,7 @@ func runServer(cfg *cli.Config, logger zerolog.Logger) error {
 		WatchCancelCtx: srv.OnShutdownCtx,
 	}))
 
-	mux.Handle("/ui/", http.StripPrefix("/ui", ui.NewHandler(logger, cfg.Server.DistPath)))
+	mux.Handle("/ui/", http.StripPrefix("/ui", ui.NewHandler(&service, cfg.Server.DistPath)))
 
 	// Add middlewares and set the handler to the server
 	srv.Handler = reghttp.NewHandler(logger, &mux)
