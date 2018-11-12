@@ -17,26 +17,43 @@ export default {
   name: 'Sidebar',
   data: () => ({
     tree: [],
-    items: [
-      {
-        name: 'a',
-      },
-      {
-        name: 'b',
-      },
-      {
-        name: 'c',
-        children: [
-          {
-            name: 'd',
-            children: [{
-              name: 'e',
-            }],
-          },
-        ],
-      },
-    ],
+    items: [],
   }),
+
+  mounted() {
+    this.fetchRulesets();
+  },
+
+  methods: {
+
+    fetchRulesets() {
+      fetch('/i/rulesets/')
+        .then(stream => stream.json())
+        .then(this.rulesetsToTree)
+        .catch(console.error);
+    },
+
+    rulesetsToTree({ rulesets = [] }) {
+      const tree = {};
+
+      rulesets.forEach(({ path }) => {
+        let node = tree;
+
+        path.split('/').forEach((chunk, idx, list) => {
+          if (!Object.prototype.hasOwnProperty.call(node, chunk)) {
+            node[chunk] = idx + 1 < list.length ? {} : [];
+          }
+
+          node = node[chunk];
+        });
+      });
+
+      const walk = (o = {}) => Object.keys(o)
+        .map(k => ({ name: k, ...(!Array.isArray(o[k]) && { children: walk(o[k]) }) }));
+
+      this.items = walk(tree);
+    },
+  },
 };
 </script>
 
