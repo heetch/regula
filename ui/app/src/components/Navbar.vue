@@ -42,7 +42,7 @@
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faBook } from '@fortawesome/free-solid-svg-icons';
-import Sidebar from './Sidebar';
+import Sidebar from '@/components/Sidebar.vue';
 
 library.add(faGithub, faBook);
 
