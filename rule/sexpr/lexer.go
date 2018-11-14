@@ -343,7 +343,7 @@ func (s *Scanner) scanBool() (Token, string, error) {
 		if err != nil {
 			se := err.(*ScanError)
 			if se.EOF {
-				// EOF is a valid terminator for a number
+				// EOF is a valid terminator for a boolean
 				break
 			}
 			return BOOL, b.String(), err
