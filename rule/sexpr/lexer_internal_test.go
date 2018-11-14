@@ -161,10 +161,10 @@ func TestNewScanner(t *testing.T) {
 }
 
 func assertScannerScanned(t *testing.T, s *Scanner, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
-	tok, lit, err := s.Scan()
+	le, err := s.Scan()
 	require.NoError(t, err)
-	require.Equalf(t, token, tok, "token")
-	require.Equalf(t, output, lit, "literal")
+	require.Equalf(t, token, le.Token, "token")
+	require.Equalf(t, output, le.Literal, "literal")
 	require.Equalf(t, byteCount, s.byteCount, "byteCount")
 	require.Equalf(t, charCount, s.charCount, "charCount")
 	require.Equalf(t, lineCount, s.lineCount, "lineCount")
@@ -180,7 +180,7 @@ func assertScanned(t *testing.T, input, output string, token Token, byteCount, c
 }
 
 func assertScannerScanFailed(t *testing.T, s *Scanner, message string) {
-	_, _, err := s.Scan()
+	_, err := s.Scan()
 	require.EqualError(t, err, message)
 
 }

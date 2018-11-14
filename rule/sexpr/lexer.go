@@ -25,6 +25,18 @@ const (
 	SYMBOL
 )
 
+// The lexicalElement is the structure returned by the Scanner and unit iterated over by the Parser.
+type lexicalElement struct {
+	Token   Token  // The Token indicates the type of lexical element represented
+	Literal string // The Literal stores the string that was read
+	// from the source code that is associated with
+	// the lexicalElement.
+}
+
+func newLE(tok Token, lit string) lexicalElement {
+	return lexicalElement{Token: tok, Literal: lit}
+}
+
 // isWhitespace returns true if the rune is the first rune of a
 // Whitespace sequence.
 func isWhitespace(r rune) bool {
@@ -96,20 +108,20 @@ func NewScanner(r io.Reader) *Scanner {
 }
 
 // Scan returns the next lexical token found in the Scanner's io.Reader.
-func (s *Scanner) Scan() (Token, string, error) {
+func (s *Scanner) Scan() (lexicalElement, error) {
 	rn, err := s.readRune()
 	if err != nil {
 		se := err.(*ScanError)
 		if se.EOF {
-			return EOF, "", nil
+			return newLE(EOF, ""), nil
 		}
-		return EOF, "", err
+		return newLE(EOF, ""), err
 	}
 	switch {
 	case isLParen(rn):
-		return LPAREN, "(", nil
+		return newLE(LPAREN, "("), nil
 	case isRParen(rn):
-		return RPAREN, ")", nil
+		return newLE(RPAREN, ")"), nil
 	case isWhitespace(rn):
 		s.unreadRune(rn)
 		return s.scanWhitespace()
@@ -127,7 +139,7 @@ func (s *Scanner) Scan() (Token, string, error) {
 		return s.scanSymbol()
 	}
 
-	return EOF, string(rn), s.newScanError("Illegal character scanned")
+	return newLE(EOF, string(rn)), s.newScanError("Illegal character scanned")
 }
 
 // readRune pulls the next rune from the input sequence.
@@ -183,7 +195,7 @@ func (s *Scanner) unreadRune(rn rune) {
 // scanWhitespace scans a contiguous sequence of whitespace
 // characters.  Note that this will consume newlines as it goes,
 // lexically speaking they're insignificant to the language.
-func (s *Scanner) scanWhitespace() (Token, string, error) {
+func (s *Scanner) scanWhitespace() (lexicalElement, error) {
 	var b bytes.Buffer
 	for {
 		rn, err := s.readRune()
@@ -194,10 +206,10 @@ func (s *Scanner) scanWhitespace() (Token, string, error) {
 				// read a rune anyway, so we don't
 				// have to care about it here, which
 				// simplifies things.
-				return WHITESPACE, b.String(), nil
+				return newLE(WHITESPACE, b.String()), nil
 
 			}
-			return WHITESPACE, b.String(), err
+			return newLE(WHITESPACE, b.String()), err
 
 		}
 		if !isWhitespace(rn) {
@@ -206,11 +218,11 @@ func (s *Scanner) scanWhitespace() (Token, string, error) {
 		}
 		b.WriteRune(rn)
 	}
-	return WHITESPACE, b.String(), nil
+	return newLE(WHITESPACE, b.String()), nil
 }
 
 // scanString returns the contents of single, contiguous, double-quote delimited string constant.
-func (s *Scanner) scanString() (Token, string, error) {
+func (s *Scanner) scanString() (lexicalElement, error) {
 	var b bytes.Buffer
 	escape := false
 	for {
@@ -221,9 +233,9 @@ func (s *Scanner) scanString() (Token, string, error) {
 				// we reached the end of the file
 				// without seeing a terminator, that's
 				// an error.
-				return STRING, b.String(), s.newScanError("unterminated string constant")
+				return newLE(STRING, b.String()), s.newScanError("unterminated string constant")
 			}
-			return STRING, b.String(), err
+			return newLE(STRING, b.String()), err
 		}
 		if escape {
 			b.WriteRune(rn)
@@ -238,7 +250,7 @@ func (s *Scanner) scanString() (Token, string, error) {
 			b.WriteRune(rn)
 		}
 	}
-	return STRING, b.String(), nil
+	return newLE(STRING, b.String()), nil
 }
 
 // scanNumber scans a contiguous string representing a number.  As we
@@ -248,7 +260,7 @@ func (s *Scanner) scanString() (Token, string, error) {
 // that confusion is resolved by scanNumber, and should it consider
 // the latter case to be true it will return a SYMBOL rather than a
 // NUMBER.
-func (s *Scanner) scanNumber() (Token, string, error) {
+func (s *Scanner) scanNumber() (lexicalElement, error) {
 	var b bytes.Buffer
 
 	// We can be certain this isn't EOF because we will already
@@ -256,7 +268,7 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 	rn, err := s.readRune()
 	if err != nil {
 		// Something drastic happened, because we read this fine the first time.
-		return NUMBER, "", err
+		return newLE(NUMBER, ""), err
 	}
 
 	// Whatever happens we'll want the rune.
@@ -281,9 +293,9 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 				// but this is the sort of error we
 				// should catch in the Parser, not the
 				// scanner.
-				return SYMBOL, b.String(), nil
+				return newLE(SYMBOL, b.String()), nil
 			}
-			return NUMBER, b.String(), err
+			return newLE(NUMBER, b.String()), err
 		}
 
 		// We've stored the rune, and we know we'll want to
@@ -297,7 +309,7 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 		// errors and we'll leave that for the Parser to
 		// handle.
 		if !unicode.IsDigit(rn) {
-			return SYMBOL, b.String(), nil
+			return newLE(SYMBOL, b.String()), nil
 		}
 	}
 
@@ -309,14 +321,14 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 			se := err.(*ScanError)
 			if se.EOF {
 				// EOF is a valid terminator for a number
-				return NUMBER, b.String(), nil
+				return newLE(NUMBER, b.String()), nil
 			}
-			return NUMBER, b.String(), err
+			return newLE(NUMBER, b.String()), err
 		}
 		if rn == '-' {
 			// As we said before '-' can't appear in the
 			// body of a number, this is an error.
-			return NUMBER, b.String(), s.newScanError("invalid number format (minus can only appear at the beginning of a number)")
+			return newLE(NUMBER, b.String()), s.newScanError("invalid number format (minus can only appear at the beginning of a number)")
 		}
 
 		// Valid number parts are written to the buffer
@@ -328,13 +340,13 @@ func (s *Scanner) scanNumber() (Token, string, error) {
 		s.unreadRune(rn)
 		break
 	}
-	return NUMBER, b.String(), nil
+	return newLE(NUMBER, b.String()), nil
 }
 
 // scanBool scans the contiguous characters following the '#' symbol,
 // it they are either 'true', or 'false' a BOOL is returned, otherwise
 // an ScanError will be returned.
-func (s *Scanner) scanBool() (Token, string, error) {
+func (s *Scanner) scanBool() (lexicalElement, error) {
 
 	var b bytes.Buffer
 
@@ -346,7 +358,7 @@ func (s *Scanner) scanBool() (Token, string, error) {
 				// EOF is a valid terminator for a boolean
 				break
 			}
-			return BOOL, b.String(), err
+			return newLE(BOOL, b.String()), err
 		}
 
 		// isSymbol is handy shorthand for "it's not anything else"
@@ -359,16 +371,16 @@ func (s *Scanner) scanBool() (Token, string, error) {
 
 	symbol := b.String()
 	if symbol == "true" || symbol == "false" {
-		return BOOL, symbol, nil
+		return newLE(BOOL, symbol), nil
 	}
 	if len(symbol) > 0 {
-		return BOOL, symbol, s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
+		return newLE(BOOL, symbol), s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
 	}
-	return BOOL, symbol, s.newScanError("invalid boolean")
+	return newLE(BOOL, symbol), s.newScanError("invalid boolean")
 }
 
 // scanComment will scan to the end of the current line, consuming any and all chars prior to '\n'.
-func (s *Scanner) scanComment() (Token, string, error) {
+func (s *Scanner) scanComment() (lexicalElement, error) {
 	var b bytes.Buffer
 
 	for {
@@ -379,7 +391,7 @@ func (s *Scanner) scanComment() (Token, string, error) {
 				// EOF is a valid terminator for a Comment
 				break
 			}
-			return COMMENT, b.String(), err
+			return newLE(COMMENT, b.String()), err
 		}
 
 		if rn == '\n' {
@@ -388,11 +400,11 @@ func (s *Scanner) scanComment() (Token, string, error) {
 
 		b.WriteRune(rn)
 	}
-	return COMMENT, b.String(), nil
+	return newLE(COMMENT, b.String()), nil
 }
 
 // scanSymbol scans a contiguous block of symbol characters. Any non-symbol character will terminate it.
-func (s *Scanner) scanSymbol() (Token, string, error) {
+func (s *Scanner) scanSymbol() (lexicalElement, error) {
 	var b bytes.Buffer
 
 	for {
@@ -403,7 +415,7 @@ func (s *Scanner) scanSymbol() (Token, string, error) {
 				// EOF is a valid terminator for a Symbol
 				break
 			}
-			return SYMBOL, b.String(), err
+			return newLE(SYMBOL, b.String()), err
 		}
 		// Again, we have to special case '-', which can't start a symbol, but can appear in it.
 		// Likewise numbers.
@@ -414,7 +426,7 @@ func (s *Scanner) scanSymbol() (Token, string, error) {
 		b.WriteRune(rn)
 	}
 
-	return SYMBOL, b.String(), nil
+	return newLE(SYMBOL, b.String()), nil
 }
 
 // newScanError returns a ScanError initialised with the current
