@@ -24,8 +24,7 @@ type rulesetAPI struct {
 }
 
 func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/rulesets")
-	path = strings.TrimPrefix(path, "/")
+	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
 	if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
 		ctx, cancel := context.WithTimeout(r.Context(), s.watchTimeout)
