@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,4 +51,15 @@ func TestUnscanLexicalElement(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, SYMBOL, le.Token)
 	require.Equal(t, "hello", le.Literal)
+}
+
+func TestParse(t *testing.T) {
+	b := bytes.NewBufferString(`(= 1 1)`)
+	p := NewParser(b)
+	var expr rule.Expr
+	var err error
+	expr, err = p.Parse()
+	require.NoError(t, err)
+	require.True(t, ok)
+
 }
