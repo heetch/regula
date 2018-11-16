@@ -169,3 +169,11 @@ func TestRuleUnmarshalling(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestOperatorSameness(t *testing.T) {
+	o1 := &operator{kind: "not", operands: []Expr{BoolValue(true)}}
+	o2 := Not(BoolValue(true))
+	o3 := Or(BoolValue(true), BoolValue(false))
+	require.True(t, o1.Same(o2))
+	require.False(t, o1.Same(o3))
+}

@@ -12,6 +12,33 @@ type operator struct {
 	operands []Expr
 }
 
+func (o *operator) Same(c ComparableExpression) bool {
+	if o.kind == c.GetKind() {
+		o2, ok := c.(operander)
+		if ok {
+			ops := o2.Operands()
+			len1 := len(o.operands)
+			len2 := len(ops)
+			if len1 != len2 {
+				return false
+			}
+			for i := 0; i < len1; i++ {
+				if !o.operands[i].Same(ops[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	return false
+}
+
+//
+func (o *operator) GetKind() string {
+	return o.kind
+}
+
 func (o *operator) UnmarshalJSON(data []byte) error {
 	var node struct {
 		Kind     string

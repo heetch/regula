@@ -5,6 +5,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +26,14 @@ func (m *mockExpr) Eval(params rule.Params) (*rule.Value, error) {
 	}
 
 	return m.val, m.err
+}
+
+func (m *mockExpr) Same(e rule.ComparableExpression) bool {
+	return false
+}
+
+func (m *mockExpr) GetKind() string {
+	return "mock"
 }
 
 func (m *mockExpr) MarshalJSON() ([]byte, error) {
@@ -226,4 +235,79 @@ func TestValue(t *testing.T) {
 	require.True(t, v1.Equal(rule.BoolValue(true)))
 	require.False(t, v1.Equal(rule.BoolValue(false)))
 	require.False(t, v1.Equal(rule.StringValue("true")))
+}
+
+func TestExprSame(t *testing.T) {
+	expr1 := rule.Eq(
+		rule.Int64Value(1),
+		rule.Int64Value(1),
+	)
+	expr2 := rule.Eq(
+		rule.Int64Value(1),
+		rule.Int64Value(1),
+	)
+	expr3 := rule.Eq(
+		rule.Int64Value(1),
+		rule.Int64Value(2),
+	)
+	expr4 := rule.And(
+		rule.BoolValue(true),
+		rule.BoolValue(true),
+	)
+
+	assert.True(t, expr1.Same(expr2))
+	assert.False(t, expr1.Same(expr3))
+	assert.False(t, expr1.Same(expr4))
+}
+
+func TestExprTreeSame(t *testing.T) {
+	expr1 := rule.Eq(
+		rule.And(
+			rule.And(
+				rule.BoolValue(true),
+				rule.BoolValue(true),
+			),
+			rule.Or(
+				rule.BoolValue(false),
+				rule.BoolValue(true),
+			),
+			rule.BoolValue(true),
+		),
+		rule.BoolValue(false),
+	)
+	expr2 := rule.Eq(
+		rule.And(
+			rule.And(
+				rule.BoolValue(true),
+				// This is flipped to false
+				rule.BoolValue(false),
+			),
+			rule.Or(
+				rule.BoolValue(false),
+				rule.BoolValue(true),
+			),
+			rule.BoolValue(true),
+		),
+		rule.BoolValue(false),
+	)
+
+	expr3 := rule.Eq(
+		rule.And(
+			rule.And(
+				rule.BoolValue(true),
+				rule.BoolValue(true),
+			),
+			rule.Or(
+				rule.BoolValue(false),
+				rule.BoolValue(true),
+			),
+			// This is flipped to false
+			rule.BoolValue(false),
+		),
+		rule.BoolValue(false),
+	)
+
+	assert.True(t, expr1.Same(expr1))
+	assert.False(t, expr1.Same(expr2))
+	assert.False(t, expr1.Same(expr3))
 }
