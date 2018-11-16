@@ -170,6 +170,7 @@ func TestRuleUnmarshalling(t *testing.T) {
 	})
 }
 
+// An operator is a ComparableExpression
 func TestOperatorSameness(t *testing.T) {
 	o1 := &operator{kind: "not", operands: []Expr{BoolValue(true)}}
 	o2 := Not(BoolValue(true))

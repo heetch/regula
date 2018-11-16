@@ -237,6 +237,7 @@ func TestValue(t *testing.T) {
 	require.False(t, v1.Equal(rule.StringValue("true")))
 }
 
+// A ComparableExpression can check its equivalence to another ComparableExpression
 func TestExprSame(t *testing.T) {
 	expr1 := rule.Eq(
 		rule.Int64Value(1),
@@ -260,6 +261,7 @@ func TestExprSame(t *testing.T) {
 	assert.False(t, expr1.Same(expr4))
 }
 
+// A ComparableExpression can check it equivalence to a complete AST.
 func TestExprTreeSame(t *testing.T) {
 	expr1 := rule.Eq(
 		rule.And(
@@ -310,4 +312,24 @@ func TestExprTreeSame(t *testing.T) {
 	assert.True(t, expr1.Same(expr1))
 	assert.False(t, expr1.Same(expr2))
 	assert.False(t, expr1.Same(expr3))
+}
+
+// A Value is a ComparableExpression
+func TestValueSameness(t *testing.T) {
+	v1 := rule.StringValue("foo")
+	v2 := rule.StringValue("bar")
+	v3 := rule.Int64Value(42)
+	require.True(t, v1.Same(v1))
+	require.False(t, v1.Same(v2))
+	require.False(t, v1.Same(v3))
+}
+
+// A Param is a ComparableExpression
+func TestParamSameness(t *testing.T) {
+	p1 := rule.StringParam("bob")
+	p2 := rule.StringParam("dave")
+	p3 := rule.Float64Param("bob")
+	require.True(t, p1.Same(p1))
+	require.False(t, p1.Same(p2))
+	require.False(t, p1.Same(p3))
 }
