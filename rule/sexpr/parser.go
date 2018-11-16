@@ -1,6 +1,10 @@
 package sexpr
 
-import "io"
+import (
+	"io"
+
+	"github.com/heetch/regula/rule"
+)
 
 // Parser
 type Parser struct {
@@ -27,4 +31,9 @@ func (p *Parser) scan() (lexicalElement, error) {
 // unscan instructs the Parser to use the buffered value for the next call to scan
 func (p *Parser) unscan() {
 	p.buffered = true
+}
+
+//
+func (p *Parser) Parse() (rule.Expr, error) {
+
 }
