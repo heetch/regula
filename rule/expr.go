@@ -8,7 +8,15 @@ import (
 
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
+	ComparableExpression
 	Eval(Params) (*Value, error)
+}
+
+// ComparableExpression is a logical expression that can be compared
+// to another logical expression for equivalence, without evaluation.
+type ComparableExpression interface {
+	Same(ComparableExpression) bool
+	GetKind() string
 }
 
 // A Params is a set of parameters passed on rule evaluation.
@@ -23,14 +31,14 @@ type Params interface {
 }
 
 type exprNot struct {
-	operator
+	*operator
 }
 
 // Not creates an expression that evaluates the given operand e and returns its opposite.
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
 	return &exprNot{
-		operator: operator{
+		operator: &operator{
 			kind:     "not",
 			operands: []Expr{e},
 		},
@@ -244,6 +252,18 @@ type Param struct {
 	Name string `json:"name"`
 }
 
+func (p *Param) Same(c ComparableExpression) bool {
+	if p.Kind == c.GetKind() {
+		p2, ok := c.(*Param)
+		return ok && p.Type == p2.Type && p.Name == p2.Name
+	}
+	return false
+}
+
+func (p *Param) GetKind() string {
+	return p.Kind
+}
+
 // StringParam creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
@@ -342,6 +362,21 @@ func newValue(typ, data string) *Value {
 		Type: typ,
 		Data: data,
 	}
+}
+
+//
+func (v *Value) Same(c ComparableExpression) bool {
+	if v.Kind == c.GetKind() {
+		v2, ok := c.(*Value)
+		return ok && v.Type == v2.Type && v.Data == v2.Data
+	}
+	return false
+
+}
+
+//
+func (v *Value) GetKind() string {
+	return v.Kind
 }
 
 // BoolValue creates a bool type value.
