@@ -160,22 +160,26 @@ func TestNewScanner(t *testing.T) {
 	require.Equal(t, expected, content)
 }
 
-func assertScannerScanned(t *testing.T, s *Scanner, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
+func assertScannerScanned(t *testing.T, s *Scanner, expected lexicalElement) {
 	le, err := s.Scan()
 	require.NoError(t, err)
-	require.Equalf(t, token, le.Token, "token")
-	require.Equalf(t, output, le.Literal, "literal")
-	require.Equalf(t, byteCount, s.byteCount, "byteCount")
-	require.Equalf(t, charCount, s.charCount, "charCount")
-	require.Equalf(t, lineCount, s.lineCount, "lineCount")
-	require.Equalf(t, lineCharCount, s.lineCharCount, "lineCharCount")
+	require.Equalf(t, expected.Token, le.Token, "Token")
+	require.Equalf(t, expected.Literal, le.Literal, "Literal")
+	require.Equalf(t, expected.StartByte, le.StartByte, "StartByte")
+	require.Equalf(t, expected.StartChar, le.StartChar, "StartChar")
+	require.Equalf(t, expected.StartLine, le.StartLine, "StartLine")
+	require.Equalf(t, expected.StartCharInLine, le.StartCharInLine, "StartCharInLine")
+	require.Equalf(t, expected.EndByte, le.EndByte, "EndByte")
+	require.Equalf(t, expected.EndChar, le.EndChar, "EndChar")
+	require.Equalf(t, expected.EndLine, le.EndLine, "EndLine")
+	require.Equalf(t, expected.EndCharInLine, le.EndCharInLine, "EndCharInLine")
 }
 
-func assertScanned(t *testing.T, input, output string, token Token, byteCount, charCount, lineCount, lineCharCount int) {
+func assertScanned(t *testing.T, input string, expected lexicalElement) {
 	t.Run(fmt.Sprintf("Scan %s 0x%x", input, input), func(t *testing.T) {
 		b := bytes.NewBufferString(input)
 		s := NewScanner(b)
-		assertScannerScanned(t, s, output, token, byteCount, charCount, lineCount, lineCharCount)
+		assertScannerScanned(t, s, expected)
 	})
 }
 
@@ -196,36 +200,179 @@ func assertScanFailed(t *testing.T, input, message string) {
 
 func TestScannerScanParenthesis(t *testing.T) {
 	// Test L Parenthesis
-	assertScanned(t, "(", "(", LPAREN, 1, 1, 1, 1)
+	assertScanned(t, "(", lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// Test R Parenthesis
-	assertScanned(t, ")", ")", RPAREN, 1, 1, 1, 1)
+	assertScanned(t, ")", lexicalElement{
+		Literal:         ")",
+		Token:           RPAREN,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 }
 
 func TestScannerScanWhiteSpace(t *testing.T) {
 	// Test white-space
-	assertScanned(t, " ", " ", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\t", "\t", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\r", "\r", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\n", "\n", WHITESPACE, 1, 1, 2, 0)
-	assertScanned(t, "\v", "\v", WHITESPACE, 1, 1, 1, 1)
-	assertScanned(t, "\f", "\f", WHITESPACE, 1, 1, 1, 1)
+	assertScanned(t, " ", lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
+	assertScanned(t, "\t", lexicalElement{
+		Literal:         "\t",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
+	assertScanned(t, "\r", lexicalElement{
+		Literal:         "\r",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
+	assertScanned(t, "\n", lexicalElement{
+		Literal:         "\n",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         2,
+		EndCharInLine:   0,
+	})
+	assertScanned(t, "\v", lexicalElement{
+		Literal:         "\v",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
+	assertScanned(t, "\f", lexicalElement{
+		Literal:         "\f",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// Test contiguous white-space:
 	// - terminated by EOF
-	assertScanned(t, "  ", "  ", WHITESPACE, 2, 2, 1, 2)
+	assertScanned(t, "  ", lexicalElement{
+		Literal:         "  ",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         2,
+		EndChar:         2,
+		EndLine:         1,
+		EndCharInLine:   2,
+	})
 	// - terminated by non white-space character.
-	assertScanned(t, "  (", "  ", WHITESPACE, 2, 2, 1, 2)
+	assertScanned(t, "  (", lexicalElement{
+		Literal:         "  ",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         2,
+		EndChar:         2,
+		EndLine:         1,
+		EndCharInLine:   2,
+	})
 }
 
 func TestScannerScanString(t *testing.T) {
 	// Test string:
 	// - the empty string
-	assertScanned(t, `""`, "", STRING, 2, 2, 1, 2)
+	assertScanned(t, `""`, lexicalElement{
+		Literal:         "",
+		Token:           STRING,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         2,
+		EndChar:         2,
+		EndLine:         1,
+		EndCharInLine:   2,
+	})
 	// - the happy case
-	assertScanned(t, `"foo"`, "foo", STRING, 5, 5, 1, 5)
+	assertScanned(t, `"foo"`, lexicalElement{
+		Literal:         "foo",
+		Token:           STRING,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         5,
+		EndChar:         5,
+		EndLine:         1,
+		EndCharInLine:   5,
+	})
 	// - an unterminated sad case
 	assertScanFailed(t, `"foo`, "Error:1,4: unterminated string constant")
 	// - happy case with escaped double quote
-	assertScanned(t, `"foo\""`, `foo"`, STRING, 7, 7, 1, 7)
+	assertScanned(t, `"foo\""`, lexicalElement{
+		Literal:         `foo"`,
+		Token:           STRING,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         7,
+		EndChar:         7,
+		EndLine:         1,
+		EndCharInLine:   7,
+	})
 	// - sad case with escaped terminator
 	assertScanFailed(t, `"foo\"`, "Error:1,6: unterminated string constant")
 }
@@ -233,19 +380,96 @@ func TestScannerScanString(t *testing.T) {
 func TestScannerScanNumber(t *testing.T) {
 	// Test number
 	// - Single digit integer, EOF terminated
-	assertScanned(t, "1", "1", NUMBER, 1, 1, 1, 1)
+	assertScanned(t, "1", lexicalElement{
+		Literal:         "1",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// - Single digit integer, terminated by non-numeric character
-	assertScanned(t, "1)", "1", NUMBER, 1, 1, 1, 1)
+	assertScanned(t, "1)", lexicalElement{
+		Literal:         "1",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// - Multi-digit integer, EOF terminated
-	assertScanned(t, "998989", "998989", NUMBER, 6, 6, 1, 6)
+	assertScanned(t, "998989", lexicalElement{
+		Literal:         "998989",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         6,
+		EndChar:         6,
+		EndLine:         1,
+		EndCharInLine:   6,
+	})
 	// - Negative multi-digit integer, EOF terminated
-	assertScanned(t, "-100", "-100", NUMBER, 4, 4, 1, 4)
+	assertScanned(t, "-100", lexicalElement{
+		Literal:         "-100",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         4,
+		EndChar:         4,
+		EndLine:         1,
+		EndCharInLine:   4,
+	})
 	// - Floating point number, EOF terminated
-	assertScanned(t, "2.4", "2.4", NUMBER, 3, 3, 1, 3)
+	assertScanned(t, "2.4", lexicalElement{
+		Literal:         "2.4",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         3,
+		EndChar:         3,
+		EndLine:         1,
+		EndCharInLine:   3,
+	})
 	// - long negative float, terminated by non-numeric character
-	assertScanned(t, "-123.45456 ", "-123.45456", NUMBER, 10, 10, 1, 10)
+	assertScanned(t, "-123.45456 ", lexicalElement{
+		Literal:         "-123.45456",
+		Token:           NUMBER,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: -0,
+		EndByte:         10,
+		EndChar:         10,
+		EndLine:         1,
+		EndCharInLine:   10,
+	})
 	// - special case: a "-" without a number following it (as per the minus operator)
-	assertScanned(t, "- 1 2", "-", SYMBOL, 1, 1, 1, 1)
+	assertScanned(t, "- 1 2", lexicalElement{
+		Literal:         "-",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// - sad case: a minus mid-number
 	assertScanFailed(t, "1-2", "Error:1,2: invalid number format (minus can only appear at the beginning of a number)")
 }
@@ -253,9 +477,31 @@ func TestScannerScanNumber(t *testing.T) {
 func TestScannerScanBool(t *testing.T) {
 	// Happy cases
 	// - true,  EOF Terminated
-	assertScanned(t, "#true", "true", BOOL, 5, 5, 1, 5)
+	assertScanned(t, "#true", lexicalElement{
+		Literal:         "true",
+		Token:           BOOL,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         5,
+		EndChar:         5,
+		EndLine:         1,
+		EndCharInLine:   5,
+	})
 	// - false, newline terminated
-	assertScanned(t, "#false\n", "false", BOOL, 6, 6, 1, 7)
+	assertScanned(t, "#false\n", lexicalElement{
+		Literal:         "false",
+		Token:           BOOL,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         6,
+		EndChar:         6,
+		EndLine:         1,
+		EndCharInLine:   7,
+	})
 	// Sad cases
 	// - partial true
 	assertScanFailed(t, "#tru ", "Error:1,4: invalid boolean: tru")
@@ -271,32 +517,164 @@ func TestScannerScanBool(t *testing.T) {
 
 func TestScannerScanComment(t *testing.T) {
 	// Simple empty comment at EOF
-	assertScanned(t, ";", "", COMMENT, 1, 1, 1, 1)
+	assertScanned(t, ";", lexicalElement{
+		Literal:         "",
+		Token:           COMMENT,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// Comment terminated by newline
-	assertScanned(t, "; Foo\nbar", " Foo", COMMENT, 6, 6, 2, 0)
+	assertScanned(t, "; Foo\nbar", lexicalElement{
+		Literal:         " Foo",
+		Token:           COMMENT,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         6,
+		EndChar:         6,
+		EndLine:         2,
+		EndCharInLine:   0,
+	})
 	// Comment containing Comment char
-	assertScanned(t, ";Pants;On;Fire", "Pants;On;Fire", COMMENT, 14, 14, 1, 14)
+	assertScanned(t, ";Pants;On;Fire", lexicalElement{
+		Literal:         "Pants;On;Fire",
+		Token:           COMMENT,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         14,
+		EndChar:         14,
+		EndLine:         1,
+		EndCharInLine:   14,
+	})
 	// Comment containing control characters
-	assertScanned(t, `;()"-#1`, `()"-#1`, COMMENT, 7, 7, 1, 7)
+	assertScanned(t, `;()"-#1`, lexicalElement{
+		Literal:         `()"-#1`,
+		Token:           COMMENT,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         7,
+		EndChar:         7,
+		EndLine:         1,
+		EndCharInLine:   7,
+	})
 }
 
 func TestScannerScanSymbol(t *testing.T) {
 	// Simple, single character identifier
-	assertScanned(t, "a", "a", SYMBOL, 1, 1, 1, 1)
+	assertScanned(t, "a", lexicalElement{
+		Literal:         "a",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// Fully formed symbol
-	assertScanned(t, "abba-sucks-123_ok!", "abba-sucks-123_ok!", SYMBOL, 18, 18, 1, 18)
+	assertScanned(t, "abba-sucks-123_ok!", lexicalElement{
+		Literal:         "abba-sucks-123_ok!",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         18,
+		EndChar:         18,
+		EndLine:         1,
+		EndCharInLine:   18,
+	})
 	// Unicode in symbols
-	assertScanned(t, "mötlěy_crü_sucks_more", "mötlěy_crü_sucks_more", SYMBOL, 24, 21, 1, 21)
+	assertScanned(t, "mötlěy_crü_sucks_more", lexicalElement{
+		Literal:         "mötlěy_crü_sucks_more",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         24,
+		EndChar:         21,
+		EndLine:         1,
+		EndCharInLine:   21,
+	})
 	// terminated by comment
-	assertScanned(t, "bon;jovi is worse", "bon", SYMBOL, 3, 3, 1, 3)
+	assertScanned(t, "bon;jovi is worse", lexicalElement{
+		Literal:         "bon",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         3,
+		EndChar:         3,
+		EndLine:         1,
+		EndCharInLine:   3,
+	})
 	// terminated by whitespace
-	assertScanned(t, "van halen is the worst", "van", SYMBOL, 3, 3, 1, 3)
+	assertScanned(t, "van halen is the worst", lexicalElement{
+		Literal:         "van",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         3,
+		EndChar:         3,
+		EndLine:         1,
+		EndCharInLine:   3,
+	})
 	// terminated by control character
-	assertScanned(t, "NoWayMichaelBolton)IsTheNadir", "NoWayMichaelBolton", SYMBOL, 18, 18, 1, 18)
+	assertScanned(t, "NoWayMichaelBolton)IsTheNadir", lexicalElement{
+		Literal:         "NoWayMichaelBolton",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         18,
+		EndChar:         18,
+		EndLine:         1,
+		EndCharInLine:   18,
+	})
 	// symbol starting with a non-alpha character
-	assertScanned(t, "+", "+", SYMBOL, 1, 1, 1, 1)
+	assertScanned(t, "+", lexicalElement{
+		Literal:         "+",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 	// actually handled by the number scan, but we'll check '-' all the same:
-	assertScanned(t, "-", "-", SYMBOL, 1, 1, 1, 1)
+	assertScanned(t, "-", lexicalElement{
+		Literal:         "-",
+		Token:           SYMBOL,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 0,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         1,
+		EndCharInLine:   1,
+	})
 }
 
 // Scanner.Scan can scan a full symbollic expression sequence.
@@ -308,35 +686,354 @@ func TestScannerScanSequence(t *testing.T) {
 `
 	b := bytes.NewBufferString(input)
 	s := NewScanner(b)
-	assertScannerScanned(t, s, "\n", WHITESPACE, 1, 1, 2, 0)
-	assertScannerScanned(t, s, "(", LPAREN, 2, 2, 2, 1)
-	assertScannerScanned(t, s, "and", SYMBOL, 5, 5, 2, 5)
-	assertScannerScanned(t, s, "\n  ", WHITESPACE, 8, 8, 3, 2)
-	assertScannerScanned(t, s, "(", LPAREN, 9, 9, 3, 3)
-	assertScannerScanned(t, s, "=", SYMBOL, 10, 10, 3, 4)
-	assertScannerScanned(t, s, " ", WHITESPACE, 11, 11, 3, 5)
-	assertScannerScanned(t, s, "(", LPAREN, 12, 12, 3, 6)
-	assertScannerScanned(t, s, "+", SYMBOL, 13, 13, 3, 7)
-	assertScannerScanned(t, s, " ", WHITESPACE, 14, 14, 3, 8)
-	assertScannerScanned(t, s, "1", NUMBER, 15, 15, 3, 9)
-	assertScannerScanned(t, s, " ", WHITESPACE, 16, 16, 3, 10)
-	assertScannerScanned(t, s, "-1", NUMBER, 18, 18, 3, 12)
-	assertScannerScanned(t, s, ")", RPAREN, 19, 19, 3, 13)
-	assertScannerScanned(t, s, " ", WHITESPACE, 20, 20, 3, 14)
-	assertScannerScanned(t, s, "0", NUMBER, 21, 21, 3, 15)
-	assertScannerScanned(t, s, ")", RPAREN, 22, 22, 3, 16)
-	assertScannerScanned(t, s, "\n  ", WHITESPACE, 25, 25, 4, 2)
-	assertScannerScanned(t, s, "(", LPAREN, 26, 26, 4, 3)
-	assertScannerScanned(t, s, "=", SYMBOL, 27, 27, 4, 4)
-	assertScannerScanned(t, s, " ", WHITESPACE, 28, 28, 4, 5)
-	assertScannerScanned(t, s, "my-parameter", SYMBOL, 40, 40, 4, 17)
-	assertScannerScanned(t, s, " ", WHITESPACE, 41, 41, 4, 18)
-	assertScannerScanned(t, s, "fudge sundae", STRING, 55, 55, 4, 32)
-	assertScannerScanned(t, s, ")", RPAREN, 56, 56, 4, 33)
-	assertScannerScanned(t, s, ")", RPAREN, 57, 57, 4, 34)
-	assertScannerScanned(t, s, " ", WHITESPACE, 58, 58, 4, 35)
-	assertScannerScanned(t, s, " Crazy", COMMENT, 66, 66, 5, 0)
-	assertScannerScanned(t, s, "", EOF, 66, 66, 5, 0)
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "\n",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         2,
+		EndCharInLine:   0,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       2,
+		StartCharInLine: 0,
+		EndByte:         2,
+		EndChar:         2,
+		EndLine:         2,
+		EndCharInLine:   1,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "and",
+		Token:           SYMBOL,
+		StartByte:       2,
+		StartChar:       2,
+		StartLine:       2,
+		StartCharInLine: 1,
+		EndByte:         5,
+		EndChar:         5,
+		EndLine:         2,
+		EndCharInLine:   5,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "\n  ",
+		Token:           WHITESPACE,
+		StartByte:       5,
+		StartChar:       5,
+		StartLine:       2,
+		StartCharInLine: 6,
+		EndByte:         8,
+		EndChar:         8,
+		EndLine:         3,
+		EndCharInLine:   2,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       8,
+		StartChar:       8,
+		StartLine:       3,
+		StartCharInLine: 2,
+		EndByte:         9,
+		EndChar:         9,
+		EndLine:         3,
+		EndCharInLine:   3,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "=",
+		Token:           SYMBOL,
+		StartByte:       9,
+		StartChar:       9,
+		StartLine:       3,
+		StartCharInLine: 3,
+		EndByte:         10,
+		EndChar:         10,
+		EndLine:         3,
+		EndCharInLine:   4,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       10,
+		StartChar:       10,
+		StartLine:       3,
+		StartCharInLine: 4,
+		EndByte:         11,
+		EndChar:         11,
+		EndLine:         3,
+		EndCharInLine:   5,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       11,
+		StartChar:       11,
+		StartLine:       3,
+		StartCharInLine: 5,
+		EndByte:         12,
+		EndChar:         12,
+		EndLine:         3,
+		EndCharInLine:   6,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "+",
+		Token:           SYMBOL,
+		StartByte:       12,
+		StartChar:       12,
+		StartLine:       3,
+		StartCharInLine: 6,
+		EndByte:         13,
+		EndChar:         13,
+		EndLine:         3,
+		EndCharInLine:   7,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       13,
+		StartChar:       13,
+		StartLine:       3,
+		StartCharInLine: 7,
+		EndByte:         14,
+		EndChar:         14,
+		EndLine:         3,
+		EndCharInLine:   8,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "1",
+		Token:           NUMBER,
+		StartByte:       14,
+		StartChar:       14,
+		StartLine:       3,
+		StartCharInLine: 8,
+		EndByte:         15,
+		EndChar:         15,
+		EndLine:         3,
+		EndCharInLine:   9,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       15,
+		StartChar:       15,
+		StartLine:       3,
+		StartCharInLine: 9,
+		EndByte:         16,
+		EndChar:         16,
+		EndLine:         3,
+		EndCharInLine:   10,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "-1",
+		Token:           NUMBER,
+		StartByte:       16,
+		StartChar:       16,
+		StartLine:       3,
+		StartCharInLine: 10,
+		EndByte:         18,
+		EndChar:         18,
+		EndLine:         3,
+		EndCharInLine:   12,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         ")",
+		Token:           RPAREN,
+		StartByte:       18,
+		StartChar:       18,
+		StartLine:       3,
+		StartCharInLine: 12,
+		EndByte:         19,
+		EndChar:         19,
+		EndLine:         3,
+		EndCharInLine:   13,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       19,
+		StartChar:       19,
+		StartLine:       3,
+		StartCharInLine: 13,
+		EndByte:         20,
+		EndChar:         20,
+		EndLine:         3,
+		EndCharInLine:   14,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "0",
+		Token:           NUMBER,
+		StartByte:       20,
+		StartChar:       20,
+		StartLine:       3,
+		StartCharInLine: 14,
+		EndByte:         21,
+		EndChar:         21,
+		EndLine:         3,
+		EndCharInLine:   15,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         ")",
+		Token:           RPAREN,
+		StartByte:       21,
+		StartChar:       21,
+		StartLine:       3,
+		StartCharInLine: 15,
+		EndByte:         22,
+		EndChar:         22,
+		EndLine:         3,
+		EndCharInLine:   16,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "\n  ",
+		Token:           WHITESPACE,
+		StartByte:       22,
+		StartChar:       22,
+		StartLine:       3,
+		StartCharInLine: 17,
+		EndByte:         25,
+		EndChar:         25,
+		EndLine:         4,
+		EndCharInLine:   2,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       25,
+		StartChar:       25,
+		StartLine:       4,
+		StartCharInLine: 2,
+		EndByte:         26,
+		EndChar:         26,
+		EndLine:         4,
+		EndCharInLine:   3,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "=",
+		Token:           SYMBOL,
+		StartByte:       26,
+		StartChar:       26,
+		StartLine:       4,
+		StartCharInLine: 3,
+		EndByte:         27,
+		EndChar:         27,
+		EndLine:         4,
+		EndCharInLine:   4,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       27,
+		StartChar:       27,
+		StartLine:       4,
+		StartCharInLine: 4,
+		EndByte:         28,
+		EndChar:         28,
+		EndLine:         4,
+		EndCharInLine:   5,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "my-parameter",
+		Token:           SYMBOL,
+		StartByte:       28,
+		StartChar:       28,
+		StartLine:       4,
+		StartCharInLine: 5,
+		EndByte:         40,
+		EndChar:         40,
+		EndLine:         4,
+		EndCharInLine:   17,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       40,
+		StartChar:       40,
+		StartLine:       4,
+		StartCharInLine: 17,
+		EndByte:         41,
+		EndChar:         41,
+		EndLine:         4,
+		EndCharInLine:   18,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "fudge sundae",
+		Token:           STRING,
+		StartByte:       42,
+		StartChar:       42,
+		StartLine:       4,
+		StartCharInLine: 19,
+		EndByte:         55,
+		EndChar:         55,
+		EndLine:         4,
+		EndCharInLine:   32,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         ")",
+		Token:           RPAREN,
+		StartByte:       55,
+		StartChar:       55,
+		StartLine:       4,
+		StartCharInLine: 32,
+		EndByte:         56,
+		EndChar:         56,
+		EndLine:         4,
+		EndCharInLine:   33,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         ")",
+		Token:           RPAREN,
+		StartByte:       56,
+		StartChar:       56,
+		StartLine:       4,
+		StartCharInLine: 33,
+		EndByte:         57,
+		EndChar:         57,
+		EndLine:         4,
+		EndCharInLine:   34,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       57,
+		StartChar:       57,
+		StartLine:       4,
+		StartCharInLine: 34,
+		EndByte:         58,
+		EndChar:         58,
+		EndLine:         4,
+		EndCharInLine:   35,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " Crazy",
+		Token:           COMMENT,
+		StartByte:       59,
+		StartChar:       59,
+		StartLine:       4,
+		StartCharInLine: 36,
+		EndByte:         66,
+		EndChar:         66,
+		EndLine:         5,
+		EndCharInLine:   0,
+	})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "",
+		Token:           EOF,
+		StartByte:       66,
+		StartChar:       66,
+		StartLine:       5,
+		StartCharInLine: 0,
+		EndByte:         66,
+		EndChar:         66,
+		EndLine:         5,
+		EndCharInLine:   0,
+	})
 }
 
 func TestScannerScanReturnsScanError(t *testing.T) {
@@ -344,9 +1041,49 @@ func TestScannerScanReturnsScanError(t *testing.T) {
 (= "toffee`
 	b := bytes.NewBufferString(input)
 	s := NewScanner(b)
-	assertScannerScanned(t, s, "\n", WHITESPACE, 1, 1, 2, 0)
-	assertScannerScanned(t, s, "(", LPAREN, 2, 2, 2, 1)
-	assertScannerScanned(t, s, "=", SYMBOL, 3, 3, 2, 2)
-	assertScannerScanned(t, s, " ", WHITESPACE, 4, 4, 2, 3)
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "\n",
+		Token:           WHITESPACE,
+		StartByte:       0,
+		StartChar:       0,
+		StartLine:       1,
+		StartCharInLine: 1,
+		EndByte:         1,
+		EndChar:         1,
+		EndLine:         2,
+		EndCharInLine:   0})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "(",
+		Token:           LPAREN,
+		StartByte:       1,
+		StartChar:       1,
+		StartLine:       2,
+		StartCharInLine: 0,
+		EndByte:         2,
+		EndChar:         2,
+		EndLine:         2,
+		EndCharInLine:   1})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         "=",
+		Token:           SYMBOL,
+		StartByte:       2,
+		StartChar:       2,
+		StartLine:       2,
+		StartCharInLine: 1,
+		EndByte:         3,
+		EndChar:         3,
+		EndLine:         2,
+		EndCharInLine:   2})
+	assertScannerScanned(t, s, lexicalElement{
+		Literal:         " ",
+		Token:           WHITESPACE,
+		StartByte:       3,
+		StartChar:       3,
+		StartLine:       2,
+		StartCharInLine: 2,
+		EndByte:         4,
+		EndChar:         4,
+		EndLine:         2,
+		EndCharInLine:   3})
 	assertScannerScanFailed(t, s, "Error:2,10: unterminated string constant")
 }
