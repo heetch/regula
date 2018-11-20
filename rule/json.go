@@ -23,7 +23,9 @@ func (o *operator) Same(c ComparableExpression) bool {
 				return false
 			}
 			for i := 0; i < len1; i++ {
-				if !o.operands[i].Same(ops[i]) {
+				ce1 := o.operands[i].(ComparableExpression)
+				ce2 := ops[i].(ComparableExpression)
+				if !ce1.Same(ce2) {
 					return false
 				}
 			}

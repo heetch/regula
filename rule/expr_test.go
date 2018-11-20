@@ -242,19 +242,19 @@ func TestExprSame(t *testing.T) {
 	expr1 := rule.Eq(
 		rule.Int64Value(1),
 		rule.Int64Value(1),
-	)
+	).(rule.ComparableExpression)
 	expr2 := rule.Eq(
 		rule.Int64Value(1),
 		rule.Int64Value(1),
-	)
+	).(rule.ComparableExpression)
 	expr3 := rule.Eq(
 		rule.Int64Value(1),
 		rule.Int64Value(2),
-	)
+	).(rule.ComparableExpression)
 	expr4 := rule.And(
 		rule.BoolValue(true),
 		rule.BoolValue(true),
-	)
+	).(rule.ComparableExpression)
 
 	assert.True(t, expr1.Same(expr2))
 	assert.False(t, expr1.Same(expr3))
@@ -276,7 +276,7 @@ func TestExprTreeSame(t *testing.T) {
 			rule.BoolValue(true),
 		),
 		rule.BoolValue(false),
-	)
+	).(rule.ComparableExpression)
 	expr2 := rule.Eq(
 		rule.And(
 			rule.And(
@@ -291,7 +291,7 @@ func TestExprTreeSame(t *testing.T) {
 			rule.BoolValue(true),
 		),
 		rule.BoolValue(false),
-	)
+	).(rule.ComparableExpression)
 
 	expr3 := rule.Eq(
 		rule.And(
@@ -307,7 +307,7 @@ func TestExprTreeSame(t *testing.T) {
 			rule.BoolValue(false),
 		),
 		rule.BoolValue(false),
-	)
+	).(rule.ComparableExpression)
 
 	assert.True(t, expr1.Same(expr1))
 	assert.False(t, expr1.Same(expr2))

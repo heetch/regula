@@ -8,7 +8,6 @@ import (
 
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
-	ComparableExpression
 	Eval(Params) (*Value, error)
 }
 
