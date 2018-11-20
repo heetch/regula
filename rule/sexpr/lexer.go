@@ -31,10 +31,34 @@ type lexicalElement struct {
 	Literal string // The Literal stores the string that was read
 	// from the source code that is associated with
 	// the lexicalElement.
+	StartByte       int
+	EndByte         int
+	StartChar       int
+	EndChar         int
+	StartLine       int
+	EndLine         int
+	StartCharInLine int
+	EndCharInLine   int
 }
 
-func newLE(tok Token, lit string) lexicalElement {
-	return lexicalElement{Token: tok, Literal: lit}
+func newLE(tok Token, lit string) *lexicalElement {
+	return &lexicalElement{Token: tok, Literal: lit}
+}
+
+// markStart records the start position of a lexical element
+func (le *lexicalElement) markStart(startByte, startChar, startLine, startCharInLine int) {
+	le.StartByte = startByte
+	le.StartChar = startChar
+	le.StartLine = startLine
+	le.StartCharInLine = startCharInLine
+}
+
+// markEnd records the end position of a lexical element
+func (le *lexicalElement) markEnd(endByte, endChar, endLine, endCharInLine int) {
+	le.EndByte = endByte
+	le.EndChar = endChar
+	le.EndLine = endLine
+	le.EndCharInLine = endCharInLine
 }
 
 // isWhitespace returns true if the rune is the first rune of a
@@ -108,20 +132,30 @@ func NewScanner(r io.Reader) *Scanner {
 }
 
 // Scan returns the next lexical token found in the Scanner's io.Reader.
-func (s *Scanner) Scan() (lexicalElement, error) {
+func (s *Scanner) Scan() (*lexicalElement, error) {
+	le := newLE(EOF, "")
+	s.markStart(le)
 	rn, err := s.readRune()
 	if err != nil {
+		s.markEnd(le)
 		se := err.(*ScanError)
 		if se.EOF {
-			return newLE(EOF, ""), nil
+
+			return le, nil
 		}
-		return newLE(EOF, ""), err
+		return le, err
 	}
 	switch {
 	case isLParen(rn):
-		return newLE(LPAREN, "("), nil
+		le.Token = LPAREN
+		le.Literal = "("
+		s.markEnd(le)
+		return le, nil
 	case isRParen(rn):
-		return newLE(RPAREN, ")"), nil
+		le.Token = RPAREN
+		le.Literal = ")"
+		s.markEnd(le)
+		return le, nil
 	case isWhitespace(rn):
 		s.unreadRune(rn)
 		return s.scanWhitespace()
@@ -139,7 +173,17 @@ func (s *Scanner) Scan() (lexicalElement, error) {
 		return s.scanSymbol()
 	}
 
-	return newLE(EOF, string(rn)), s.newScanError("Illegal character scanned")
+	le.Literal = string(rn)
+	s.markEnd(le)
+	return le, s.newScanError("Illegal character scanned")
+}
+
+func (s *Scanner) markStart(le *lexicalElement) {
+	le.markStart(s.byteCount, s.charCount, s.lineCount, s.lineCharCount)
+}
+
+func (s *Scanner) markEnd(le *lexicalElement) {
+	le.markEnd(s.byteCount, s.charCount, s.lineCount, s.lineCharCount)
 }
 
 // readRune pulls the next rune from the input sequence.
@@ -195,21 +239,25 @@ func (s *Scanner) unreadRune(rn rune) {
 // scanWhitespace scans a contiguous sequence of whitespace
 // characters.  Note that this will consume newlines as it goes,
 // lexically speaking they're insignificant to the language.
-func (s *Scanner) scanWhitespace() (lexicalElement, error) {
+func (s *Scanner) scanWhitespace() (*lexicalElement, error) {
+	le := newLE(WHITESPACE, "")
+	s.markStart(le)
 	var b bytes.Buffer
 	for {
 		rn, err := s.readRune()
 		if err != nil {
+			le.Literal = b.String()
+			s.markEnd(le)
 			se := err.(*ScanError)
 			if se.EOF {
 				// We'll get EOF next time we try to
 				// read a rune anyway, so we don't
 				// have to care about it here, which
 				// simplifies things.
-				return newLE(WHITESPACE, b.String()), nil
+				return le, nil
 
 			}
-			return newLE(WHITESPACE, b.String()), err
+			return le, err
 
 		}
 		if !isWhitespace(rn) {
@@ -218,24 +266,30 @@ func (s *Scanner) scanWhitespace() (lexicalElement, error) {
 		}
 		b.WriteRune(rn)
 	}
-	return newLE(WHITESPACE, b.String()), nil
+	le.Literal = b.String()
+	s.markEnd(le)
+	return le, nil
 }
 
 // scanString returns the contents of single, contiguous, double-quote delimited string constant.
-func (s *Scanner) scanString() (lexicalElement, error) {
+func (s *Scanner) scanString() (*lexicalElement, error) {
 	var b bytes.Buffer
+	le := newLE(STRING, "")
+	s.markStart(le)
 	escape := false
 	for {
 		rn, err := s.readRune()
 		if err != nil {
+			s.markEnd(le)
+			le.Literal = b.String()
 			se := err.(*ScanError)
 			if se.EOF {
 				// we reached the end of the file
 				// without seeing a terminator, that's
 				// an error.
-				return newLE(STRING, b.String()), s.newScanError("unterminated string constant")
+				return le, s.newScanError("unterminated string constant")
 			}
-			return newLE(STRING, b.String()), err
+			return le, err
 		}
 		if escape {
 			b.WriteRune(rn)
@@ -250,7 +304,9 @@ func (s *Scanner) scanString() (lexicalElement, error) {
 			b.WriteRune(rn)
 		}
 	}
-	return newLE(STRING, b.String()), nil
+	le.Literal = b.String()
+	s.markEnd(le)
+	return le, nil
 }
 
 // scanNumber scans a contiguous string representing a number.  As we
@@ -260,15 +316,18 @@ func (s *Scanner) scanString() (lexicalElement, error) {
 // that confusion is resolved by scanNumber, and should it consider
 // the latter case to be true it will return a SYMBOL rather than a
 // NUMBER.
-func (s *Scanner) scanNumber() (lexicalElement, error) {
+func (s *Scanner) scanNumber() (*lexicalElement, error) {
 	var b bytes.Buffer
+	le := newLE(NUMBER, "")
+	s.markStart(le)
 
 	// We can be certain this isn't EOF because we will already
 	// have read and unread the rune before arriving here.
 	rn, err := s.readRune()
 	if err != nil {
 		// Something drastic happened, because we read this fine the first time.
-		return newLE(NUMBER, ""), err
+		s.markEnd(le)
+		return le, err
 	}
 
 	// Whatever happens we'll want the rune.
@@ -286,6 +345,8 @@ func (s *Scanner) scanNumber() (lexicalElement, error) {
 		rn, err := s.readRune()
 
 		if err != nil {
+			le.Literal = b.String()
+			s.markEnd(le)
 			se := err.(*ScanError)
 			if se.EOF {
 				// In reality having '-' as the final
@@ -293,9 +354,10 @@ func (s *Scanner) scanNumber() (lexicalElement, error) {
 				// but this is the sort of error we
 				// should catch in the Parser, not the
 				// scanner.
-				return newLE(SYMBOL, b.String()), nil
+				le.Token = SYMBOL
+				return le, nil
 			}
-			return newLE(NUMBER, b.String()), err
+			return le, err
 		}
 
 		// We've stored the rune, and we know we'll want to
@@ -309,7 +371,10 @@ func (s *Scanner) scanNumber() (lexicalElement, error) {
 		// errors and we'll leave that for the Parser to
 		// handle.
 		if !unicode.IsDigit(rn) {
-			return newLE(SYMBOL, b.String()), nil
+			le.Literal = b.String()
+			le.Token = SYMBOL
+			s.markEnd(le)
+			return le, nil
 		}
 	}
 
@@ -318,17 +383,21 @@ func (s *Scanner) scanNumber() (lexicalElement, error) {
 	for {
 		rn, err := s.readRune()
 		if err != nil {
+			le.Literal = b.String()
+			s.markEnd(le)
 			se := err.(*ScanError)
 			if se.EOF {
 				// EOF is a valid terminator for a number
-				return newLE(NUMBER, b.String()), nil
+				return le, nil
 			}
-			return newLE(NUMBER, b.String()), err
+			return le, err
 		}
 		if rn == '-' {
 			// As we said before '-' can't appear in the
 			// body of a number, this is an error.
-			return newLE(NUMBER, b.String()), s.newScanError("invalid number format (minus can only appear at the beginning of a number)")
+			le.Literal = b.String()
+			s.markEnd(le)
+			return le, s.newScanError("invalid number format (minus can only appear at the beginning of a number)")
 		}
 
 		// Valid number parts are written to the buffer
@@ -340,16 +409,18 @@ func (s *Scanner) scanNumber() (lexicalElement, error) {
 		s.unreadRune(rn)
 		break
 	}
-	return newLE(NUMBER, b.String()), nil
+	le.Literal = b.String()
+	s.markEnd(le)
+	return le, nil
 }
 
 // scanBool scans the contiguous characters following the '#' symbol,
 // it they are either 'true', or 'false' a BOOL is returned, otherwise
 // an ScanError will be returned.
-func (s *Scanner) scanBool() (lexicalElement, error) {
-
+func (s *Scanner) scanBool() (*lexicalElement, error) {
 	var b bytes.Buffer
-
+	le := newLE(BOOL, "")
+	s.markStart(le)
 	for {
 		rn, err := s.readRune()
 		if err != nil {
@@ -358,7 +429,9 @@ func (s *Scanner) scanBool() (lexicalElement, error) {
 				// EOF is a valid terminator for a boolean
 				break
 			}
-			return newLE(BOOL, b.String()), err
+			le.Literal = b.String()
+			s.markEnd(le)
+			return le, err
 		}
 
 		// isSymbol is handy shorthand for "it's not anything else"
@@ -370,18 +443,23 @@ func (s *Scanner) scanBool() (lexicalElement, error) {
 	}
 
 	symbol := b.String()
+	le.Literal = symbol
+	s.markEnd(le)
+
 	if symbol == "true" || symbol == "false" {
-		return newLE(BOOL, symbol), nil
+		return le, nil
 	}
 	if len(symbol) > 0 {
-		return newLE(BOOL, symbol), s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
+		return le, s.newScanError(fmt.Sprintf("invalid boolean: %s", symbol))
 	}
-	return newLE(BOOL, symbol), s.newScanError("invalid boolean")
+	return le, s.newScanError("invalid boolean")
 }
 
 // scanComment will scan to the end of the current line, consuming any and all chars prior to '\n'.
-func (s *Scanner) scanComment() (lexicalElement, error) {
+func (s *Scanner) scanComment() (*lexicalElement, error) {
 	var b bytes.Buffer
+	le := newLE(COMMENT, "")
+	s.markStart(le)
 
 	for {
 		rn, err := s.readRune()
@@ -391,7 +469,9 @@ func (s *Scanner) scanComment() (lexicalElement, error) {
 				// EOF is a valid terminator for a Comment
 				break
 			}
-			return newLE(COMMENT, b.String()), err
+			le.Literal = b.String()
+			s.markEnd(le)
+			return le, err
 		}
 
 		if rn == '\n' {
@@ -400,12 +480,17 @@ func (s *Scanner) scanComment() (lexicalElement, error) {
 
 		b.WriteRune(rn)
 	}
-	return newLE(COMMENT, b.String()), nil
+	le.Literal = b.String()
+	s.markEnd(le)
+	return le, nil
 }
 
 // scanSymbol scans a contiguous block of symbol characters. Any non-symbol character will terminate it.
-func (s *Scanner) scanSymbol() (lexicalElement, error) {
+func (s *Scanner) scanSymbol() (*lexicalElement, error) {
 	var b bytes.Buffer
+
+	le := newLE(SYMBOL, "")
+	s.markStart(le)
 
 	for {
 		rn, err := s.readRune()
@@ -415,7 +500,9 @@ func (s *Scanner) scanSymbol() (lexicalElement, error) {
 				// EOF is a valid terminator for a Symbol
 				break
 			}
-			return newLE(SYMBOL, b.String()), err
+			le.Literal = b.String()
+			s.markEnd(le)
+			return le, err
 		}
 		// Again, we have to special case '-', which can't start a symbol, but can appear in it.
 		// Likewise numbers.
@@ -425,8 +512,9 @@ func (s *Scanner) scanSymbol() (lexicalElement, error) {
 		}
 		b.WriteRune(rn)
 	}
-
-	return newLE(SYMBOL, b.String()), nil
+	le.Literal = b.String()
+	s.markEnd(le)
+	return le, nil
 }
 
 // newScanError returns a ScanError initialised with the current
