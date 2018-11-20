@@ -309,9 +309,12 @@ func TestExprTreeSame(t *testing.T) {
 		rule.BoolValue(false),
 	).(rule.ComparableExpression)
 
+	expr4 := rule.Not(rule.BoolValue(false)).(rule.ComparableExpression)
+
 	assert.True(t, expr1.Same(expr1))
 	assert.False(t, expr1.Same(expr2))
 	assert.False(t, expr1.Same(expr3))
+	assert.False(t, expr1.Same(expr4))
 }
 
 // A Value is a ComparableExpression
