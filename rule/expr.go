@@ -31,14 +31,14 @@ type Params interface {
 }
 
 type exprNot struct {
-	*operator
+	operator
 }
 
 // Not creates an expression that evaluates the given operand e and returns its opposite.
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
 	return &exprNot{
-		operator: &operator{
+		operator: operator{
 			kind:     "not",
 			operands: []Expr{e},
 		},
