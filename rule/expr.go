@@ -304,6 +304,23 @@ type Param struct {
 	Name string `json:"name"`
 }
 
+// Contract returns the Contract of a param (which is simply a
+// ReturnType that matches the param).  Thus Params implement the
+// TypedExpression interface.
+func (p *Param) Contract() Contract {
+	switch p.Type {
+	case "bool":
+		return Contract{ReturnType: BOOLEAN}
+	case "string":
+		return Contract{ReturnType: STRING}
+	case "int64":
+		return Contract{ReturnType: INTEGER}
+	case "float64":
+		return Contract{ReturnType: FLOAT}
+	}
+	panic(fmt.Sprintf("invalid value type: %q", p.Type))
+}
+
 // StringParam creates a Param that looks up in the set of params passed during evaluation and returns the value
 // of the variable that corresponds to the given name.
 // The corresponding value must be a string. If not found it returns an error.
