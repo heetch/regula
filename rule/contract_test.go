@@ -1,0 +1,103 @@
+package rule_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/heetch/regula/rule"
+	"github.com/stretchr/testify/require"
+)
+
+func TestTermIsFulfilledBy(t *testing.T) {
+	boolean := rule.BoolValue(true)
+	integer := rule.Int64Value(1)
+	float := rule.Float64Value(1.1)
+	str := rule.StringValue("foo")
+
+	testCases := []struct {
+		name                string
+		positiveExpressions []rule.TypedExpression
+		negativeExpressions []rule.TypedExpression
+		term                rule.Term
+	}{
+		{
+			name: "Boolean",
+			positiveExpressions: []rule.TypedExpression{
+				boolean,
+				rule.Not(boolean).(rule.TypedExpression),
+				rule.Or(boolean, boolean).(rule.TypedExpression),
+				rule.And(boolean, boolean).(rule.TypedExpression),
+				rule.Eq(boolean, boolean).(rule.TypedExpression),
+				rule.In(boolean, boolean, boolean).(rule.TypedExpression),
+			},
+			negativeExpressions: []rule.TypedExpression{
+				str,
+				integer,
+				float,
+			},
+			term: rule.Term{Type: rule.BOOLEAN},
+		},
+		{
+			name: "String",
+			positiveExpressions: []rule.TypedExpression{
+				str,
+			},
+			negativeExpressions: []rule.TypedExpression{
+				boolean,
+				integer,
+				float,
+				rule.Or(boolean, boolean).(rule.TypedExpression),
+				rule.And(boolean, boolean).(rule.TypedExpression),
+				rule.Eq(boolean, boolean).(rule.TypedExpression),
+				rule.In(boolean, boolean, boolean).(rule.TypedExpression),
+			},
+			term: rule.Term{Type: rule.STRING},
+		},
+		{
+			name: "Integer",
+			positiveExpressions: []rule.TypedExpression{
+				integer,
+			},
+			negativeExpressions: []rule.TypedExpression{
+				boolean,
+				str,
+				float,
+				rule.Or(boolean, boolean).(rule.TypedExpression),
+				rule.And(boolean, boolean).(rule.TypedExpression),
+				rule.Eq(boolean, boolean).(rule.TypedExpression),
+				rule.In(boolean, boolean, boolean).(rule.TypedExpression),
+			},
+			term: rule.Term{Type: rule.INTEGER},
+		},
+		{
+			name: "Float",
+			positiveExpressions: []rule.TypedExpression{
+				float,
+			},
+			negativeExpressions: []rule.TypedExpression{
+				boolean,
+				str,
+				integer,
+				rule.Or(boolean, boolean).(rule.TypedExpression),
+				rule.And(boolean, boolean).(rule.TypedExpression),
+				rule.Eq(boolean, boolean).(rule.TypedExpression),
+				rule.In(boolean, boolean, boolean).(rule.TypedExpression),
+			},
+			term: rule.Term{Type: rule.FLOAT},
+		},
+	}
+	for i, tc := range testCases {
+		for j, pc := range tc.positiveExpressions {
+			t.Run(fmt.Sprintf("%s[%d] positive case %d", tc.name, i, j),
+				func(t *testing.T) {
+					require.True(t, tc.term.IsFulfilledBy(pc))
+				})
+		}
+		for k, nc := range tc.negativeExpressions {
+			t.Run(fmt.Sprintf("%s[%d] negative case %d", tc.name, i, k),
+				func(t *testing.T) {
+					require.False(t, tc.term.IsFulfilledBy(nc))
+				})
+		}
+	}
+}
