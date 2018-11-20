@@ -153,6 +153,114 @@ func TestList(t *testing.T) {
 	})
 }
 
+func TestListPaths(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdRulesetService(t)
+	defer cleanup()
+
+	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+
+	t.Run("Root", func(t *testing.T) {
+		createRuleset(t, s, "a", rs)
+		createRuleset(t, s, "b", rs)
+		createRuleset(t, s, "a/1", rs)
+		createRuleset(t, s, "c", rs)
+		createRuleset(t, s, "a", rs)
+		createRuleset(t, s, "a/1", rs)
+		createRuleset(t, s, "a/2", rs)
+		createRuleset(t, s, "d", rs)
+
+		paths := []string{"a", "a/1", "a/2", "b", "c", "d"}
+
+		entries, err := s.ListPaths(context.Background(), "", 0, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+			require.Zero(t, e.Ruleset)
+			require.Zero(t, e.Version)
+		}
+		require.NotEmpty(t, entries.Revision)
+		require.Zero(t, entries.Continue)
+	})
+
+	t.Run("Prefix", func(t *testing.T) {
+		createRuleset(t, s, "x", rs)
+		createRuleset(t, s, "xx", rs)
+		createRuleset(t, s, "x/1", rs)
+		createRuleset(t, s, "xy", rs)
+		createRuleset(t, s, "xy/ab", rs)
+		createRuleset(t, s, "xyz", rs)
+
+		paths := []string{"xy", "xy/ab", "xyz"}
+
+		entries, err := s.ListPaths(context.Background(), "xy", 0, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+			require.Zero(t, e.Ruleset)
+			require.Zero(t, e.Version)
+		}
+		require.NotEmpty(t, entries.Revision)
+		require.Zero(t, entries.Continue)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		_, err := s.ListPaths(context.Background(), "doesntexist", 0, "")
+		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("Paging", func(t *testing.T) {
+		createRuleset(t, s, "foo", rs)
+		createRuleset(t, s, "foo/bar", rs)
+		createRuleset(t, s, "foo/bar/baz", rs)
+		createRuleset(t, s, "foo/bar", rs)
+		createRuleset(t, s, "foo/babar", rs)
+		createRuleset(t, s, "foo", rs)
+
+		entries, err := s.ListPaths(context.Background(), "f", 2, "")
+		require.NoError(t, err)
+		paths := []string{"foo", "foo/babar"}
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+			require.Zero(t, e.Ruleset)
+			require.Zero(t, e.Version)
+		}
+		require.NotEmpty(t, entries.Revision)
+		require.NotEmpty(t, entries.Continue)
+
+		entries, err = s.ListPaths(context.Background(), "f", 2, entries.Continue)
+		require.NoError(t, err)
+		paths = []string{"foo/bar", "foo/bar/baz"}
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+			require.Zero(t, e.Ruleset)
+			require.Zero(t, e.Version)
+		}
+		require.NotEmpty(t, entries.Revision)
+		require.Zero(t, entries.Continue)
+
+		_, err = s.ListPaths(context.Background(), "f", 2, "bad token")
+		require.Equal(t, store.ErrInvalidContinueToken, err)
+
+		entries, err = s.ListPaths(context.Background(), "f", -10, "")
+		require.NoError(t, err)
+		paths = []string{"foo", "foo/babar", "foo/bar", "foo/bar/baz"}
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+			require.Zero(t, e.Ruleset)
+			require.Zero(t, e.Version)
+		}
+		require.NotEmpty(t, entries.Revision)
+		require.Zero(t, entries.Continue)
+	})
+}
+
 func TestLatest(t *testing.T) {
 	t.Parallel()
 

@@ -9,6 +9,7 @@ import (
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -85,6 +86,67 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	// we want to start immediately after the last key
 	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
+
+	return &entries, nil
+}
+
+// ListPaths returns all rulesets path under the given prefix.
+func (s *RulesetService) ListPaths(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
+	options := make([]clientv3.OpOption, 0, 3)
+
+	var key string
+
+	if limit < 0 || limit > 100 {
+		limit = 50 // TODO(asdine): make this configurable in future releases.
+	}
+
+	if continueToken != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
+		if err != nil {
+			return nil, store.ErrInvalidContinueToken
+		}
+
+		key = string(lastPath)
+
+		rangeEnd := clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+
+		options = append(options, clientv3.WithRange(rangeEnd))
+	} else {
+		key = prefix
+		options = append(options, clientv3.WithPrefix())
+	}
+
+	options = append(options, clientv3.WithKeysOnly())
+	options = append(options, clientv3.WithLimit(int64(limit)))
+
+	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), options...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch all entries")
+	}
+
+	// if a prefix is provided it must always return results
+	// otherwise it doesn't exist.
+	if resp.Count == 0 && prefix != "" {
+		return nil, store.ErrNotFound
+	}
+
+	var entries store.RulesetEntries
+	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	for _, pair := range resp.Kvs {
+		sk := strings.Split(string(pair.Key), "/")
+		// we remove the first three items of the key which correspond to the namespace
+		sk = sk[3:]
+		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: path.Join(sk...)})
+	}
+
+	if len(entries.Entries) < limit || !resp.More {
+		return &entries, nil
+	}
+
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// we want to start immediately after the last key
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
 	return &entries, nil
 }
