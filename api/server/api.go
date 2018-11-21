@@ -60,8 +60,9 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // list fetches all the rulesets from the store and writes them to the http response.
 func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
-		err   error
-		limit int
+		entries *store.RulesetEntries
+		err     error
+		limit   int
 	)
 
 	if l := r.URL.Query().Get("limit"); l != "" {
@@ -73,7 +74,12 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 	}
 
 	continueToken := r.URL.Query().Get("continue")
-	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken)
+	if _, ok := r.URL.Query()["paths"]; ok {
+		entries, err = s.rulesets.ListPaths(r.Context(), prefix, limit, continueToken)
+	} else {
+		entries, err = s.rulesets.List(r.Context(), prefix, limit, continueToken)
+	}
+
 	if err != nil {
 		if err == store.ErrNotFound {
 			writeError(w, r, err, http.StatusNotFound)

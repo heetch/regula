@@ -64,6 +64,13 @@ func TestAPI(t *testing.T) {
 			}
 			defer func() { s.ListFn = nil }()
 
+			s.ListPathsFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(lm))
+				assert.Equal(t, token, tk)
+				return l, err
+			}
+			defer func() { s.ListPathsFn = nil }()
+
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", u, nil)
 			h.ServeHTTP(w, r)
@@ -90,6 +97,14 @@ func TestAPI(t *testing.T) {
 
 		t.Run("WithPrefix", func(t *testing.T) {
 			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
+		})
+
+		t.Run("PathsOnly", func(t *testing.T) {
+			call(t, "/rulesets/?list&paths", http.StatusOK, &l, nil)
+		})
+
+		t.Run("PathsOnlyWithPrefix", func(t *testing.T) {
+			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
