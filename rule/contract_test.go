@@ -47,7 +47,7 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			positiveExpressions: []rule.TypedExpression{str, stringParam},
 			negativeExpressions: []rule.TypedExpression{
 				boolean, integer, float, boolParam, intParam, floatParam,
-				or, and, eq, in},
+				or, and, eq, in, not},
 			term: rule.Term{Type: rule.STRING},
 		},
 		{
@@ -55,7 +55,7 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			positiveExpressions: []rule.TypedExpression{integer, intParam},
 			negativeExpressions: []rule.TypedExpression{
 				boolean, str, float, boolParam, stringParam, floatParam,
-				or, and, eq, in},
+				or, and, eq, in, not},
 			term: rule.Term{Type: rule.INTEGER},
 		},
 		{
@@ -63,8 +63,17 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			positiveExpressions: []rule.TypedExpression{float, floatParam},
 			negativeExpressions: []rule.TypedExpression{
 				boolean, str, integer, boolParam, stringParam, intParam,
-				or, and, eq, in},
+				or, and, eq, in, not},
 			term: rule.Term{Type: rule.FLOAT},
+		},
+		{
+			name: "Number",
+			positiveExpressions: []rule.TypedExpression{
+				integer, intParam, float, floatParam},
+			negativeExpressions: []rule.TypedExpression{
+				boolean, str, boolParam, stringParam, or, and, eq, not,
+			},
+			term: rule.Term{Type: rule.NUMBER},
 		},
 	}
 
