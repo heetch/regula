@@ -61,7 +61,7 @@ type Contract struct {
 // A TypedExpression is an expression that declares the Type Contract
 // it makes with the context in which it appears, and with any
 // sub-expressions that it contains.  This Contract can be inspected
-// by called the Contract method of the TypedExpression interface.
+// by calling the Contract method of the TypedExpression interface.
 type TypedExpression interface {
 	Contract() Contract
 }
