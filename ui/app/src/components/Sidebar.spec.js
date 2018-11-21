@@ -1,29 +1,27 @@
 import { expect } from 'chai';
-import Sidebar from '@/components/Sidebar.vue';
+import { rulesetsToTree } from '@/components/Sidebar.vue';
 
 describe('Sidebar.vue', () => {
-  it('renders props.msg when passed', () => {
-    Sidebar.methods.rulesetsToTree({ rulesets: [{ path: 'a/b' }, { path: 'a/c' }, { path: 'a/d/e' }] });
-    expect(Sidebar.data.items).to.equal([{
+  it('builds tree correctly', () => {
+    const items = rulesetsToTree([{ path: 'a/b' }, { path: 'a/c' }, { path: 'a/d/e' }]);
+    expect(items).to.eql([{
       name: 'a',
-      children: {
-        children: [
-          {
-            name: 'b',
-          },
-          {
-            name: 'c',
-          },
-          {
-            name: 'd',
-            children: [
-              {
-                name: 'e',
-              },
-            ],
-          },
-        ],
-      },
+      children: [
+        {
+          name: 'b',
+        },
+        {
+          name: 'c',
+        },
+        {
+          name: 'd',
+          children: [
+            {
+              name: 'e',
+            },
+          ],
+        },
+      ],
     }]);
   });
 });
