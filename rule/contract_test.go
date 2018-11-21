@@ -75,6 +75,16 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			},
 			term: rule.Term{Type: rule.NUMBER},
 		},
+		{
+			name: "Any",
+			positiveExpressions: []rule.TypedExpression{
+				integer, intParam, float, floatParam,
+				boolean, str, boolParam, stringParam,
+				or, and, eq, not,
+			},
+			negativeExpressions: nil,
+			term:                rule.Term{Type: rule.ANY},
+		},
 	}
 
 	// Run "IsFullfilledBy" for each test case with each positive and negative expression.
