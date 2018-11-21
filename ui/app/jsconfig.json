@@ -1,8 +1,7 @@
 {
     "compilerOptions": {
         "target": "esnext",
-        "allowSyntheticDefaultImports": false,
-        "baseUrl": "./",
+        "baseUrl": ".",
         "paths": {
             "@/*": ["./src/*"]
         }
