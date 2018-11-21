@@ -2,6 +2,7 @@ package rule
 
 import (
 	"errors"
+	"fmt"
 	"go/token"
 	"strconv"
 )
@@ -66,6 +67,14 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+// Contract returns the Contract for exprNot, and makes it comply with the TypedExpression interface.
+func (n *exprNot) Contract() Contract {
+	return Contract{
+		ReturnType: BOOLEAN,
+		Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
+	}
+}
+
 type exprOr struct {
 	operator
 }
@@ -114,6 +123,14 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
+}
+
+// Contract returns the Contract for exprOr, and makes it comply with the TypedExpression interface.
+func (n *exprOr) Contract() Contract {
+	return Contract{
+		ReturnType: BOOLEAN,
+		Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
+	}
 }
 
 type exprAnd struct {
@@ -166,6 +183,19 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+// Contract returns the Contract for exprAnd, and makes it comply with the TypedExpression interface.
+func (n *exprAnd) Contract() Contract {
+	return Contract{
+		ReturnType: BOOLEAN,
+		Terms: []Term{
+			{
+				Type:        BOOLEAN,
+				Cardinality: MANY,
+			},
+		},
+	}
+}
+
 type exprEq struct {
 	operator
 }
@@ -205,6 +235,19 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+// Contract returns the Contract for exprEq, and makes it comply with the TypedExpression interface.
+func (n *exprEq) Contract() Contract {
+	return Contract{
+		ReturnType: BOOLEAN,
+		Terms: []Term{
+			{
+				Type:        ANY,
+				Cardinality: MANY,
+			},
+		},
+	}
+}
+
 type exprIn struct {
 	operator
 }
@@ -242,6 +285,23 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
+}
+
+// Contract returns the Contract for exprIn, and makes it comply with the TypedExpression interface.
+func (n *exprIn) Contract() Contract {
+	return Contract{
+		ReturnType: BOOLEAN,
+		Terms: []Term{
+			{
+				Type:        ANY,
+				Cardinality: ONE,
+			},
+			{
+				Type:        ANY,
+				Cardinality: MANY,
+			},
+		},
+	}
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
@@ -363,19 +423,36 @@ func newValue(typ, data string) *Value {
 	}
 }
 
-//
+// Compares a Value with a ComparableExpression, without evaluating
+// either.  This is required by the ComparableExpression interface.
 func (v *Value) Same(c ComparableExpression) bool {
 	if v.Kind == c.GetKind() {
 		v2, ok := c.(*Value)
 		return ok && v.Type == v2.Type && v.Data == v2.Data
 	}
 	return false
-
 }
 
-//
+// GetKind returns the Value's kind, and is required by the ComparableExpression interface.
 func (v *Value) GetKind() string {
 	return v.Kind
+}
+
+// Contract returns the Contract of a value (which is simply a
+// ReturnType that matches the value).  Thus Values implement the
+// TypedExpression interface.
+func (v *Value) Contract() Contract {
+	switch v.Type {
+	case "bool":
+		return Contract{ReturnType: BOOLEAN}
+	case "string":
+		return Contract{ReturnType: STRING}
+	case "int64":
+		return Contract{ReturnType: INTEGER}
+	case "float64":
+		return Contract{ReturnType: FLOAT}
+	}
+	panic(fmt.Sprintf("invalid value type: %q", v.Type))
 }
 
 // BoolValue creates a bool type value.
