@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// IsFulfilledBy indicates whether a given TypedExpression fulfils a Term.
 func TestTermIsFulfilledBy(t *testing.T) {
 	// We'll express a few fundamental TypedExpressions, to avoid repetition in the test cases.
 	boolean := rule.BoolValue(true)
