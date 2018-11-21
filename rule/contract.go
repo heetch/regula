@@ -30,6 +30,11 @@ const (
 	ONE  = 1
 )
 
+// Term represents the contract for an operand, or for a repeated
+// sequence of operands.  A term can be fulfilled by a Value, Param or
+// Expr, so long as their own Contract specifies a ReturnType that
+// matches the Term's Type, or can be promoted to that Type.  Every
+// Term also has Cardinality.
 type Term struct {
 	Type        Type
 	Cardinality Cardinality
