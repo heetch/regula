@@ -16,4 +16,4 @@ testrace:
 	go test -v -race -cover -timeout=2m ./...
 
 run: build
-	LOG_LEVEL=debug regula -etcd-namespace regula-local
+	LOG_LEVEL=debug regula -etcd-namespace shared/regula
