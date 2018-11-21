@@ -30,6 +30,7 @@ type RulesetService struct {
 }
 
 // List returns all the rulesets entries under the given prefix.
+// If the prefix is empty, it returns **all** the rulesets entries.
 func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 2)
 
@@ -90,7 +91,8 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 	return &entries, nil
 }
 
-// ListPaths returns all rulesets path under the given prefix.
+// ListPaths returns all rulesets paths under the given prefix.
+// If the prefix is empty, it returns **all** the rulesets paths.
 func (s *RulesetService) ListPaths(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 

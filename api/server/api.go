@@ -57,7 +57,8 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-// list fetches all the rulesets from the store and writes them to the http response.
+// list fetches all the rulesets from the store and writes them to the http response if
+// the paths parameter is not given otherwise it fetches the rulesets paths only.
 func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
 		entries *store.RulesetEntries

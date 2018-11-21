@@ -36,6 +36,7 @@ func IsValidationError(err error) bool {
 // RulesetService manages rulesets.
 type RulesetService interface {
 	// List returns all the rulesets entries under the given prefix.
+	// If the prefix is empty, it returns **all** the rulesets entries.
 	List(ctx context.Context, prefix string, limit int, continueToken string) (*RulesetEntries, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
