@@ -311,6 +311,9 @@ type Param struct {
 	Name string `json:"name"`
 }
 
+// Same compares the Param with a ComparableExpression to see if they
+// are identical.  This is required by the ComparableExpression
+// interface.
 func (p *Param) Same(c ComparableExpression) bool {
 	if p.Kind == c.GetKind() {
 		p2, ok := c.(*Param)
@@ -319,8 +322,27 @@ func (p *Param) Same(c ComparableExpression) bool {
 	return false
 }
 
+// GetKind returns the Param's Kind in the way required by the
+// ComparableExpression interface.
 func (p *Param) GetKind() string {
 	return p.Kind
+}
+
+// Contract returns the Contract of a param (which is simply a
+// ReturnType that matches the param).  Thus Params implement the
+// TypedExpression interface.
+func (p *Param) Contract() Contract {
+	switch p.Type {
+	case "bool":
+		return Contract{ReturnType: BOOLEAN}
+	case "string":
+		return Contract{ReturnType: STRING}
+	case "int64":
+		return Contract{ReturnType: INTEGER}
+	case "float64":
+		return Contract{ReturnType: FLOAT}
+	}
+	panic(fmt.Sprintf("invalid value type: %q", p.Type))
 }
 
 // StringParam creates a Param that looks up in the set of params passed during evaluation and returns the value

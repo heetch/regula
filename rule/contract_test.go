@@ -13,6 +13,10 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	integer := rule.Int64Value(1)
 	float := rule.Float64Value(1.1)
 	str := rule.StringValue("foo")
+	boolParam := rule.BoolParam("foo")
+	stringParam := rule.StringParam("foo")
+	intParam := rule.Int64Param("foo")
+	floatParam := rule.Float64Param("foo")
 
 	testCases := []struct {
 		name                string
@@ -24,6 +28,7 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			name: "Boolean",
 			positiveExpressions: []rule.TypedExpression{
 				boolean,
+				boolParam,
 				rule.Not(boolean).(rule.TypedExpression),
 				rule.Or(boolean, boolean).(rule.TypedExpression),
 				rule.And(boolean, boolean).(rule.TypedExpression),
@@ -34,6 +39,9 @@ func TestTermIsFulfilledBy(t *testing.T) {
 				str,
 				integer,
 				float,
+				stringParam,
+				intParam,
+				floatParam,
 			},
 			term: rule.Term{Type: rule.BOOLEAN},
 		},
@@ -41,11 +49,15 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			name: "String",
 			positiveExpressions: []rule.TypedExpression{
 				str,
+				stringParam,
 			},
 			negativeExpressions: []rule.TypedExpression{
 				boolean,
 				integer,
 				float,
+				boolParam,
+				intParam,
+				floatParam,
 				rule.Or(boolean, boolean).(rule.TypedExpression),
 				rule.And(boolean, boolean).(rule.TypedExpression),
 				rule.Eq(boolean, boolean).(rule.TypedExpression),
@@ -57,11 +69,15 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			name: "Integer",
 			positiveExpressions: []rule.TypedExpression{
 				integer,
+				intParam,
 			},
 			negativeExpressions: []rule.TypedExpression{
 				boolean,
 				str,
 				float,
+				boolParam,
+				stringParam,
+				floatParam,
 				rule.Or(boolean, boolean).(rule.TypedExpression),
 				rule.And(boolean, boolean).(rule.TypedExpression),
 				rule.Eq(boolean, boolean).(rule.TypedExpression),
@@ -73,11 +89,15 @@ func TestTermIsFulfilledBy(t *testing.T) {
 			name: "Float",
 			positiveExpressions: []rule.TypedExpression{
 				float,
+				floatParam,
 			},
 			negativeExpressions: []rule.TypedExpression{
 				boolean,
 				str,
 				integer,
+				boolParam,
+				stringParam,
+				intParam,
 				rule.Or(boolean, boolean).(rule.TypedExpression),
 				rule.And(boolean, boolean).(rule.TypedExpression),
 				rule.Eq(boolean, boolean).(rule.TypedExpression),
