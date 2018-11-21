@@ -38,7 +38,15 @@ type Term struct {
 // IsFulfilledBy returns true when a provided TypedExpression has a return type
 // that matches the Term's Type.
 func (t Term) IsFulfilledBy(te TypedExpression) bool {
-	return te.Contract().ReturnType == t.Type
+	rt := te.Contract().ReturnType
+	// Switch to handle promotable abstract types.
+	switch t.Type {
+	case ANY:
+		return true
+	case NUMBER:
+		return rt == INTEGER || rt == FLOAT
+	}
+	return rt == t.Type
 }
 
 // A Contract declares the Type compatibility of an expression.  Every
