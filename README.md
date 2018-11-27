@@ -16,18 +16,24 @@ https://regula.readthedocs.io/en/latest/
 
 ## Building from source
 
-### API
+### Server
 
-Install dependencies
+Installing dependencies
 
 ```sh
 dep ensure
 ```
 
-Build
+Building
 
 ```sh
 make
+```
+
+Running the server
+
+```sh
+make run
 ```
 
 ### UI
@@ -44,8 +50,9 @@ Running the UI dev-server
 make run-ui
 ```
 
-Building UI for production
+### Running the server with the UI
 
 ```sh
 make build-ui
+make run
 ```

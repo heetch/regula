@@ -16,7 +16,7 @@ testrace:
 	go test -v -race -cover -timeout=2m ./...
 
 run: build
-	LOG_LEVEL=debug regula -etcd-namespace regula-local
+	regula -log-level debug -etcd-namespace regula-local -server-dist-path ./ui/app/dist
 
 run-ui:
 	cd ./ui/app && yarn serve
