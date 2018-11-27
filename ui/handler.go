@@ -18,13 +18,16 @@ var (
 func NewHandler(service store.RulesetService, distPath string) http.Handler {
 	var mux http.ServeMux
 
+	// internal API
 	mux.Handle("/i/", http.StripPrefix("/i", newInternalHandler(service)))
 
+	// static files
 	fs := http.FileServer(http.Dir(distPath))
 	mux.Handle("/css/", fs)
 	mux.Handle("/js/", fs)
 	mux.Handle("/fonts/", fs)
 
+	// catch all url that deleguates the routing to the front app router
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(distPath, "index.html"))
 	})
@@ -65,11 +68,14 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 	}
 	var mux http.ServeMux
 
+	// router for the internal API
 	mux.Handle("/rulesets/", h.rulesetsHandler())
 
 	return &mux
 }
 
+// Returns an http handler that lists all existing rulesets paths.
+// Uses RulesetService.List for now, until the new ruleset path API is published.
 func (h *internalHandler) rulesetsHandler() http.Handler {
 	type ruleset struct {
 		Path string `json:"path"`

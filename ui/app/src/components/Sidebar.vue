@@ -48,7 +48,7 @@ export default {
 
   methods: {
     fetchRulesets() {
-      fetch('/i/rulesets/')
+      fetch('i/rulesets/')
         .then(stream => stream.json())
         .then(({ rulesets = [] }) => {
           this.items = rulesetsToTree(rulesets);
