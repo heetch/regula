@@ -7,14 +7,6 @@ import (
 	"strconv"
 )
 
-var allOperators []string = []string{
-	"not",
-	"or",
-	"and",
-	"eq",
-	"in",
-}
-
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
@@ -25,17 +17,6 @@ type Expr interface {
 type ComparableExpression interface {
 	Same(ComparableExpression) bool
 	GetKind() string
-}
-
-// IsOperator is a convenience function that identifies expressions that are operators.
-func IsOperator(e Expr) bool {
-	kind := e.GetKind()
-	for _, op := range allOperators {
-		if op == kind {
-			return true
-		}
-	}
-	return false
 }
 
 // A Params is a set of parameters passed on rule evaluation.
