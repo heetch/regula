@@ -104,3 +104,32 @@ func TestTermIsFulfilledBy(t *testing.T) {
 		}
 	}
 }
+
+func TestTermEqual(t *testing.T) {
+	t1 := rule.Term{Type: rule.STRING, Cardinality: rule.ONE}
+	t2 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.ONE}
+	t3 := rule.Term{Type: rule.STRING, Cardinality: rule.MANY}
+	t4 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.MANY}
+
+	require.True(t, t1.Equal(t1))
+	require.False(t, t1.Equal(t2))
+	require.False(t, t1.Equal(t3))
+	require.False(t, t1.Equal(t4))
+}
+
+// GetTypedExpression returns a TypedExpression by name
+func TestGetTypedExpression(t *testing.T) {
+	expected, ok := rule.Eq(rule.BoolValue(true), rule.BoolValue(true)).(rule.TypedExpression)
+	require.True(t, ok)
+	te, err := rule.GetTypedExpression("eq")
+	require.NoError(t, err)
+	ec := expected.Contract()
+	ac := te.Contract()
+	require.True(t, ec.Equal(ac))
+}
+
+// Providing a non-existent expression name to GetTypedExpression results in an error.
+func TestGetTypedExpressionBadName(t *testing.T) {
+	_, err := rule.GetTypedExpression("dave")
+	require.EqualError(t, err, `No TypedExpression called "dave" exists`)
+}

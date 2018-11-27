@@ -1,15 +1,18 @@
 package sexpr
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/heetch/regula/rule"
 )
 
+var errVal = rule.BoolValue(false)
+
 // Parser
 type Parser struct {
 	s        *Scanner
-	buf      lexicalElement
+	buf      *lexicalElement
 	buffered bool
 }
 

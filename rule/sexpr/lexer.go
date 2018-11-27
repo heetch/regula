@@ -13,6 +13,32 @@ import (
 // Every scanned element will be assigned a token type.
 type Token int
 
+// String returns a human readable description of the token type.
+// This makes Token comply with the Stringer interface.
+func (t Token) String() string {
+	switch t {
+	case EOF:
+		return "end of file"
+	case WHITESPACE:
+		return "white space"
+	case LPAREN: // (
+		return "left parenthesis"
+	case RPAREN: // )
+		return "right parenthesis"
+	case STRING:
+		return "string"
+	case NUMBER:
+		return "number"
+	case BOOL:
+		return "Boolean"
+	case COMMENT:
+		return "comment"
+	case SYMBOL:
+		return "symbol"
+	}
+	return "invalid symbol"
+}
+
 const (
 	EOF Token = iota
 	WHITESPACE
