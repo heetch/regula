@@ -1,5 +1,7 @@
 package rule
 
+import "fmt"
+
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
 type Type int
@@ -104,7 +106,7 @@ func (c *Contract) GetTerm(pos int) (Term, error) {
 }
 
 //Equal returns true when two contracts are identical.
-func (c *Contract) Equal(other Contract) bool {
+func (c Contract) Equal(other Contract) bool {
 	if c.ReturnType != other.ReturnType {
 		return false
 	}
