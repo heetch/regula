@@ -70,6 +70,7 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 // Contract returns the Contract for exprNot, and makes it comply with the TypedExpression interface.
 func (n *exprNot) Contract() Contract {
 	return Contract{
+		Name:       "not",
 		ReturnType: BOOLEAN,
 		Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
 	}
@@ -128,6 +129,7 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 // Contract returns the Contract for exprOr, and makes it comply with the TypedExpression interface.
 func (n *exprOr) Contract() Contract {
 	return Contract{
+		Name:       "or",
 		ReturnType: BOOLEAN,
 		Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
 	}
@@ -186,6 +188,7 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 // Contract returns the Contract for exprAnd, and makes it comply with the TypedExpression interface.
 func (n *exprAnd) Contract() Contract {
 	return Contract{
+		Name:       "and",
 		ReturnType: BOOLEAN,
 		Terms: []Term{
 			{
@@ -238,6 +241,7 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 // Contract returns the Contract for exprEq, and makes it comply with the TypedExpression interface.
 func (n *exprEq) Contract() Contract {
 	return Contract{
+		Name:       "eq",
 		ReturnType: BOOLEAN,
 		Terms: []Term{
 			{
@@ -290,6 +294,7 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 // Contract returns the Contract for exprIn, and makes it comply with the TypedExpression interface.
 func (n *exprIn) Contract() Contract {
 	return Contract{
+		Name:       "in",
 		ReturnType: BOOLEAN,
 		Terms: []Term{
 			{
@@ -334,13 +339,13 @@ func (p *Param) GetKind() string {
 func (p *Param) Contract() Contract {
 	switch p.Type {
 	case "bool":
-		return Contract{ReturnType: BOOLEAN}
+		return Contract{Name: "param", ReturnType: BOOLEAN}
 	case "string":
-		return Contract{ReturnType: STRING}
+		return Contract{Name: "param", ReturnType: STRING}
 	case "int64":
-		return Contract{ReturnType: INTEGER}
+		return Contract{Name: "param", ReturnType: INTEGER}
 	case "float64":
-		return Contract{ReturnType: FLOAT}
+		return Contract{Name: "param", ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", p.Type))
 }
@@ -466,13 +471,13 @@ func (v *Value) GetKind() string {
 func (v *Value) Contract() Contract {
 	switch v.Type {
 	case "bool":
-		return Contract{ReturnType: BOOLEAN}
+		return Contract{Name: "value", ReturnType: BOOLEAN}
 	case "string":
-		return Contract{ReturnType: STRING}
+		return Contract{Name: "value", ReturnType: STRING}
 	case "int64":
-		return Contract{ReturnType: INTEGER}
+		return Contract{Name: "value", ReturnType: INTEGER}
 	case "float64":
-		return Contract{ReturnType: FLOAT}
+		return Contract{Name: "value", ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", v.Type))
 }
