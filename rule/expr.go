@@ -343,13 +343,13 @@ func (p *Param) GetKind() string {
 func (p *Param) Contract() Contract {
 	switch p.Type {
 	case "bool":
-		return Contract{ReturnType: BOOLEAN}
+		return Contract{Name: "param", ReturnType: BOOLEAN}
 	case "string":
-		return Contract{ReturnType: STRING}
+		return Contract{Name: "param", ReturnType: STRING}
 	case "int64":
-		return Contract{ReturnType: INTEGER}
+		return Contract{Name: "param", ReturnType: INTEGER}
 	case "float64":
-		return Contract{ReturnType: FLOAT}
+		return Contract{Name: "param", ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", p.Type))
 }
@@ -475,13 +475,13 @@ func (v *Value) GetKind() string {
 func (v *Value) Contract() Contract {
 	switch v.Type {
 	case "bool":
-		return Contract{ReturnType: BOOLEAN}
+		return Contract{Name: "value", ReturnType: BOOLEAN}
 	case "string":
-		return Contract{ReturnType: STRING}
+		return Contract{Name: "value", ReturnType: STRING}
 	case "int64":
-		return Contract{ReturnType: INTEGER}
+		return Contract{Name: "value", ReturnType: INTEGER}
 	case "float64":
-		return Contract{ReturnType: FLOAT}
+		return Contract{Name: "value", ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", v.Type))
 }
