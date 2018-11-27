@@ -93,3 +93,23 @@ func (c *Contract) Equal(other Contract) bool {
 type TypedExpression interface {
 	Contract() Contract
 }
+
+// GetTypedExpression returns a TypedExpression that matches the
+// provided name. If no matching expression exists, and error will be
+// returned.
+func GetTypedExpression(name string) (TypedExpression, error) {
+	switch name {
+	case "eq":
+		return &exprEq{}, nil
+	case "not":
+		return &exprNot{}, nil
+	case "and":
+		return &exprAnd{}, nil
+	case "or":
+		return &exprOr{}, nil
+	case "in":
+		return &exprIn{}, nil
+
+	}
+	return nil, fmt.Errorf("No TypedExpression called %q exists", name)
+}
