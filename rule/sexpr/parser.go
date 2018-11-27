@@ -30,10 +30,12 @@ func makeSymbolMap() *opCodeMap {
 	return sm
 }
 
+var errVal = rule.BoolValue(false)
+
 // Parser
 type Parser struct {
 	s        *Scanner
-	buf      lexicalElement
+	buf      *lexicalElement
 	buffered bool
 }
 

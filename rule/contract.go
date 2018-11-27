@@ -75,6 +75,11 @@ func (t Term) IsFulfilledBy(e Expr) bool {
 	return rt == t.Type
 }
 
+//Equal returns true when two Terms are identical
+func (t Term) Equal(other Term) bool {
+	return t.Type == other.Type && t.Cardinality == other.Cardinality
+}
+
 // A Contract declares the Type compatibility of an expression.  Every
 // expression has a ReturnType (it's value type, in place when
 // evaluated) and zero, one or many Terms.  Each Term is in turn
@@ -96,5 +101,28 @@ func (c *Contract) GetTerm(pos int) (Term, error) {
 		return lastTerm, nil
 	}
 	return lastTerm, ArityError{OpCode: c.OpCode, ErrorPos: pos + 1, MaxPos: extent}
+}
 
+//Equal returns true when two contracts are identical.
+func (c *Contract) Equal(other Contract) bool {
+	if c.ReturnType != other.ReturnType {
+		return false
+	}
+	if len(c.Terms) != len(other.Terms) {
+		return false
+	}
+	for i, ct := range c.Terms {
+		if !ct.Equal(other.Terms[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// A TypedExpression is an expression that declares the Type Contract
+// it makes with the context in which it appears, and with any
+// sub-expressions that it contains.  This Contract can be inspected
+// by calling the Contract method of the TypedExpression interface.
+type TypedExpression interface {
+	Contract() Contract
 }
