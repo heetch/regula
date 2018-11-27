@@ -3,7 +3,6 @@ sudo: required
 services:
   - docker
 
-
 matrix:
   include:
     - language: go

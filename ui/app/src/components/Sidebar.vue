@@ -13,6 +13,7 @@
 </template>
 
 <script>
+// turns a list of rulesets to a tree compatible with the TreeView component
 export const rulesetsToTree = (rulesets = []) => {
   const tree = {};
 

@@ -25,8 +25,9 @@ import (
 // Config holds the server configuration.
 type Config struct {
 	Etcd struct {
-		Endpoints []string `config:"etcd-endpoints"`
-		Namespace string   `config:"etcd-namespace,required"`
+		Endpoints   []string      `config:"etcd-endpoints"`
+		Namespace   string        `config:"etcd-namespace,required"`
+		DialTimeout time.Duration `config:"etcd-dial-timemout"`
 	}
 	Server struct {
 		Address      string        `config:"addr"`
@@ -42,6 +43,7 @@ func LoadConfig() (*Config, error) {
 	var cfg Config
 	cfg.LogLevel = zerolog.DebugLevel.String()
 	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
+	cfg.Etcd.DialTimeout = 5 * time.Second
 	cfg.Server.Address = "0.0.0.0:5331"
 	cfg.Server.Timeout = 5 * time.Second
 	cfg.Server.WatchTimeout = 30 * time.Second

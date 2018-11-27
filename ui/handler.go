@@ -20,6 +20,11 @@ func NewHandler(service store.RulesetService, distPath string) http.Handler {
 
 	mux.Handle("/i/", http.StripPrefix("/i", newInternalHandler(service)))
 
+	fs := http.FileServer(http.Dir(distPath))
+	mux.Handle("/css/", fs)
+	mux.Handle("/js/", fs)
+	mux.Handle("/fonts/", fs)
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(distPath, "index.html"))
 	})
