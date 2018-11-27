@@ -58,6 +58,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
 	reghttp.EncodeJSON(w, r, &uiError{Err: err.Error()}, code)
 }
 
+// handler serving the UI internal API.
 type internalHandler struct {
 	service store.RulesetService
 }
@@ -89,6 +90,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 		var resp response
 		var token string
 
+		// simulate a Do-While loop in Go
 		for i := 0; i == 0 || token != ""; i++ {
 			list, err := h.service.List(r.Context(), "", 100, token)
 			if err != nil {

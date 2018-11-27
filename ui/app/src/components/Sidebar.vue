@@ -17,6 +17,9 @@
 export const rulesetsToTree = (rulesets = []) => {
   const tree = {};
 
+  // turns each ruleset path in the form a/b/c into a
+  // temporary tree of this form:
+  // {a: {b: {c: []}}} and fills the tree variable
   rulesets.forEach(({ path }) => {
     let node = tree;
 
@@ -29,6 +32,8 @@ export const rulesetsToTree = (rulesets = []) => {
     });
   });
 
+  // walk is a private function that walks through a given object and returns
+  // a tree compatible with the TreeView component
   const walk = (o = {}) => Object.keys(o)
     .map(k => ({ name: k, ...(!Array.isArray(o[k]) && { children: walk(o[k]) }) }));
 

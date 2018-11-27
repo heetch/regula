@@ -4,4 +4,5 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 import Vue from 'vue';
 
+// Setup Font Awesome icon font library
 Vue.component('fa-icon', FontAwesomeIcon);

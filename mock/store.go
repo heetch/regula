@@ -8,7 +8,7 @@ import (
 	"github.com/heetch/regula/store"
 )
 
-// Ensure BoardSRulesetServiceervice implements store.RulesetService.
+// Ensure RulesetService implements store.RulesetService.
 var _ store.RulesetService = new(RulesetService)
 
 // RulesetService mocks the store.RulesetService interface.

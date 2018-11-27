@@ -1,5 +1,5 @@
 module.exports = {
-  // serve static files from relative url
+  // serve static files from a relative url
   baseUrl: './',
   // proxy any unknown requests (requests that did not match a static file)
   devServer: {

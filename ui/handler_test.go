@@ -23,10 +23,15 @@ func doRequest(h http.Handler, method, path string, body io.Reader) *httptest.Re
 
 func TestInternalHandler(t *testing.T) {
 	t.Run("Rulesets", func(t *testing.T) {
+		// this test checks if the handler deals with pagination correctly
+		// and returns the right payload
 		t.Run("OK", func(t *testing.T) {
 			s := new(mock.RulesetService)
+
+			// simulate a two page result
 			s.ListFn = func(ctx context.Context, _ string, limit int, token string) (*store.RulesetEntries, error) {
 				var entries store.RulesetEntries
+
 				switch token {
 				case "":
 					for i := 0; i < 2; i++ {
@@ -53,6 +58,7 @@ func TestInternalHandler(t *testing.T) {
 			require.JSONEq(t, `{"rulesets": [{"path": "Path0"},{"path": "Path1"},{"path": "Path2"}]}`, rec.Body.String())
 		})
 
+		// this test checks if the handler returns a 500 if a random error occurs in the ruleset service.
 		t.Run("Error", func(t *testing.T) {
 			s := new(mock.RulesetService)
 			s.ListFn = func(ctx context.Context, _ string, limit int, token string) (*store.RulesetEntries, error) {
