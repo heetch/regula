@@ -13,3 +13,39 @@ Regula is an open source Business Rules Engine solution.
 Comprehensive documentation is viewable on Read the Docs:
 
 https://regula.readthedocs.io/en/latest/
+
+## Building from source
+
+### API
+
+Install dependencies
+
+```sh
+dep ensure
+```
+
+Build
+
+```sh
+make
+```
+
+### UI
+
+Installing dependencies
+
+```sh
+cd ./ui/app && yarn install
+```
+
+Running the UI dev-server
+
+```sh
+make run-ui
+```
+
+Building UI for production
+
+```sh
+make build-ui
+```

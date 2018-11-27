@@ -1,4 +1,4 @@
-# Regula
+# Regula UI
 
 ## Project setup
 
@@ -21,7 +21,7 @@ yarn run build
 ### Run your tests
 
 ```sh
-yarn run test
+yarn run test:unit
 ```
 
 ### Lints and fixes files

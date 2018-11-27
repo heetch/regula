@@ -1,6 +1,6 @@
 NAME := regula
 
-.PHONY: all $(NAME) test testrace run build
+.PHONY: all $(NAME) test testrace run build run-ui build-ui
 
 all: $(NAME)
 
@@ -17,3 +17,9 @@ testrace:
 
 run: build
 	LOG_LEVEL=debug regula -etcd-namespace regula-local
+
+run-ui:
+	cd ./ui/app && yarn serve
+
+build-ui:
+	cd ./ui/app && yarn build
