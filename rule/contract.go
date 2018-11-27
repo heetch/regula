@@ -66,12 +66,13 @@ func (t Term) Equal(other Term) bool {
 // evaluated) and zero, one or many Terms.  Each Term is in turn
 // typed, and has a defined cardinality.
 type Contract struct {
+	Name       string
 	ReturnType Type
 	Terms      []Term
 }
 
 //Equal returns true when two contracts are identical.
-func (c *Contract) Equal(other Contract) bool {
+func (c Contract) Equal(other Contract) bool {
 	if c.ReturnType != other.ReturnType {
 		return false
 	}
