@@ -320,6 +320,11 @@ type Param struct {
 	Name string `json:"name"`
 }
 
+//PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
+func (v *Param) PushExpr(e Expr) {
+	panic("You can't push an Expr onto a Param")
+}
+
 // Same compares the Param with a ComparableExpression to see if they
 // are identical.  This is required by the ComparableExpression
 // interface.
@@ -452,6 +457,11 @@ func newValue(typ, data string) *Value {
 		Type: typ,
 		Data: data,
 	}
+}
+
+//PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
+func (v *Value) PushExpr(e Expr) {
+	panic("You can't push an Expr onto a Value")
 }
 
 // Compares a Value with a ComparableExpression, without evaluating
