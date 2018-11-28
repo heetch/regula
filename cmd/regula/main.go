@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/rs/zerolog"
 
@@ -32,10 +31,12 @@ func main() {
 	}
 }
 
+// Prepares the server by connecting to etcd and setting up routes for the API and the UI,
+// then runs it.
 func runServer(cfg *cli.Config, logger zerolog.Logger) error {
 	etcdCli, err := clientv3.New(clientv3.Config{
 		Endpoints:   cfg.Etcd.Endpoints,
-		DialTimeout: 5 * time.Second,
+		DialTimeout: cfg.Etcd.DialTimeout,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to etcd cluster")
@@ -54,12 +55,15 @@ func runServer(cfg *cli.Config, logger zerolog.Logger) error {
 	var mux http.ServeMux
 
 	mux.Handle("/rulesets/", server.NewHandler(&service, server.Config{
-		Timeout:        cfg.Server.Timeout,
-		WatchTimeout:   cfg.Server.WatchTimeout,
+		Timeout:      cfg.Server.Timeout,
+		WatchTimeout: cfg.Server.WatchTimeout,
+		// when the server will shutdown, it will cancel the OnShutdownCtx context.
+		// we'll use this to stop any running watchers but still getting graceful shutdown
+		// for other requests.
 		WatchCancelCtx: srv.OnShutdownCtx,
 	}))
 
-	mux.Handle("/ui/", http.StripPrefix("/ui", ui.NewHandler(logger, cfg.Server.DistPath)))
+	mux.Handle("/ui/", http.StripPrefix("/ui", ui.NewHandler(&service, cfg.Server.DistPath)))
 
 	// Add middlewares and set the handler to the server
 	srv.Handler = reghttp.NewHandler(logger, &mux)

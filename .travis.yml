@@ -1,27 +1,30 @@
 sudo: required
 
-language: go
-
 services:
   - docker
 
-before_install:
-  - mkdir -p $GOPATH/bin
-  - wget -O $GOPATH/bin/dep "https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64"
-  - chmod +x $GOPATH/bin/dep
-  - export PATH="$GOPATH/bin:$PATH"
-  - docker run -d -p 2379:2379 quay.io/coreos/etcd /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379
-
-install: dep ensure
-
-go:
-  - 1.9
-  - '1.10'
-  - '1.11'
-  - tip
-
-script:
-  - go test -v -race -cover -timeout=1m ./...
+matrix:
+  include:
+    - language: go
+      before_install:
+        - mkdir -p $GOPATH/bin
+        - wget -O $GOPATH/bin/dep "https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64"
+        - chmod +x $GOPATH/bin/dep
+        - export PATH="$GOPATH/bin:$PATH"
+        - docker run -d -p 2379:2379 quay.io/coreos/etcd /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379
+      install: dep ensure
+      go:
+        - 1.9
+        - '1.10'
+        - '1.11'
+        - tip
+      script:
+        - go test -v -race -cover -timeout=1m ./...
+    - language: node_js
+      node_js:
+        - "node"
+      script:
+        - cd ui/app/ && yarn install && yarn test:unit
 
 deploy:
   provider: script
