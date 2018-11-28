@@ -90,7 +90,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 		var resp response
 		var token string
 
-		// simulate a Do-While loop in Go
+		// run the loop at least once, no matter of the value of token
 		for i := 0; i == 0 || token != ""; i++ {
 			list, err := h.service.List(r.Context(), "", 100, token)
 			if err != nil {

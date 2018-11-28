@@ -17,13 +17,15 @@
 export const rulesetsToTree = (rulesets = []) => {
   const tree = {};
 
-  // turns each ruleset path in the form a/b/c into a
-  // temporary tree of this form:
-  // {a: {b: {c: []}}} and fills the tree variable
+  // turns all ruleset paths into a single tree.
+  // ex: two rulesets a/b/c and a/b/d will produce the following tree
+  // {a: {b: {c: [], d: []}}}
   rulesets.forEach(({ path }) => {
     let node = tree;
 
     path.split('/').forEach((chunk, idx, list) => {
+      // check if the chunk already exists in the tree
+      // to avoid overriding an existing node
       if (!Object.prototype.hasOwnProperty.call(node, chunk)) {
         node[chunk] = idx + 1 < list.length ? {} : [];
       }
