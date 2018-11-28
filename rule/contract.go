@@ -149,22 +149,21 @@ type TypedExpression interface {
 	Contract() Contract
 }
 
-// GetTypedExpression returns a TypedExpression that matches the
-// provided name. If no matching expression exists, and error will be
-// returned.
-func GetTypedExpression(name string) (TypedExpression, error) {
+// GetOperatorExpr returns an Expr that matches the provided operator
+// name. If no matching expression exists, and error will be returned.
+func GetOperatorExpr(name string) (Expr, error) {
 	switch name {
 	case "eq":
-		return &exprEq{}, nil
+		return newExprEq(), nil
 	case "not":
-		return &exprNot{}, nil
+		return newExprNot(), nil
 	case "and":
-		return &exprAnd{}, nil
+		return newExprAnd(), nil
 	case "or":
-		return &exprOr{}, nil
+		return newExprOr(), nil
 	case "in":
-		return &exprIn{}, nil
+		return newExprIn(), nil
 
 	}
-	return nil, fmt.Errorf("No TypedExpression called %q exists", name)
+	return nil, fmt.Errorf("No operator Expression called %q exists", name)
 }
