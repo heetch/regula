@@ -54,12 +54,55 @@ func TestUnscanLexicalElement(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	b := bytes.NewBufferString(`(= 1 1)`)
+	b := bytes.NewBufferString(`(not #true)`)
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
 	expr, err = p.Parse()
 	require.NoError(t, err)
-	require.True(t, ok)
+	ce1 := expr.(rule.ComparableExpression)
+	expected := rule.Not(rule.BoolValue(true)).(rule.ComparableExpression)
+	require.True(t, ce1.Same(expected))
+}
 
+func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
+	b := bytes.NewBufferString(`(#false)`)
+	p := NewParser(b)
+	_, err := p.Parse()
+	require.EqualError(t, err, `Expected an operator, but got the Boolean "false"`)
+}
+
+func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
+	b := bytes.NewBufferString(`(wobbly)`)
+	p := NewParser(b)
+	_, err := p.Parse()
+	require.EqualError(t, err, `Expected an operator, but got the Symbol "wobbly"`)
+}
+
+func TestParseOperatorExpectationsMatch(t *testing.T) {
+	b := bytes.NewBufferString(`(= #true #true)`)
+	p := NewParser(b)
+	expr, err := p.Parse()
+	require.NoError(t, err)
+	ce := expr.(rule.ComparableExpression)
+	ee := rule.Eq(rule.BoolValue(true), rule.BoolValue(true)).(rule.ComparableExpression)
+	require.True(t, ee.Same(ce))
+}
+
+// GetOperatorExpr returns a TypedExpression representing the named operator.
+func TestGetOperatorExprForSymbol(t *testing.T) {
+	o, err := getOperatorExprForSymbol("=")
+	require.NoError(t, err)
+	te := o.(rule.TypedExpression)
+	c := rule.Contract{
+		Name:       "eq",
+		ReturnType: rule.BOOLEAN,
+		Terms: []rule.Term{
+			{
+				Type:        rule.ANY,
+				Cardinality: rule.MANY,
+			},
+		},
+	}
+	require.True(t, te.Contract().Equal(c))
 }
