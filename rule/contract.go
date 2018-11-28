@@ -6,6 +6,26 @@ import "fmt"
 // a return type, and some expressions also receive typed parameters.
 type Type int
 
+// String returns a string representation of the Type.  This makes
+// Type implement the Stringer interface.
+func (t Type) String() string {
+	switch t {
+	case BOOLEAN:
+		return "BOOLEAN"
+	case STRING:
+		return "STRING"
+	case INTEGER:
+		return "INTEGER"
+	case FLOAT:
+		return "FLOAT"
+	case NUMBER:
+		return "NUMBER"
+	case ANY:
+		return "ANY"
+	}
+	return "Invalid Type"
+}
+
 // These constants represent the complete set of abstract types usable
 // in expressions within Regula.  Not that these abstract types don't
 // necessary equate directly to concrete types that you might think
