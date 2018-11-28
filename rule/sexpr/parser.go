@@ -45,10 +45,22 @@ func NewParser(r io.Reader) *Parser {
 
 // scan returns the next lexicalElement from the text to be parsed, or
 // the buffered element if unscan was called prior to scan.
-func (p *Parser) scan() (lexicalElement, error) {
+func (p *Parser) scan() (*lexicalElement, error) {
 	var err error
 	if !p.buffered {
-		p.buf, err = p.s.Scan()
+		var next *lexicalElement
+		for {
+			next, err = p.s.Scan()
+			if err != nil {
+				break
+			}
+			// Ignore white-space
+			if next.Token != WHITESPACE {
+				p.buf = next
+				break
+			}
+		}
+
 	}
 	p.buffered = false
 	return p.buf, err
