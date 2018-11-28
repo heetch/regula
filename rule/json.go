@@ -12,6 +12,10 @@ type operator struct {
 	operands []Expr
 }
 
+func (o *operator) PushExpr(e Expr) {
+	o.operands = append(o.operands, e)
+}
+
 func (o *operator) Same(c ComparableExpression) bool {
 	if o.kind == c.GetKind() {
 		o2, ok := c.(operander)
