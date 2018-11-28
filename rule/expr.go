@@ -10,6 +10,7 @@ import (
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
+	PushExpr(e Expr)
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -34,15 +35,19 @@ type exprNot struct {
 	operator
 }
 
+func newExprNot() *exprNot {
+	return &exprNot{
+		operator: operator{
+			kind: "not",
+		}}
+}
+
 // Not creates an expression that evaluates the given operand e and returns its opposite.
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
-	return &exprNot{
-		operator: operator{
-			kind:     "not",
-			operands: []Expr{e},
-		},
-	}
+	expr := newExprNot()
+	expr.PushExpr(e)
+	return expr
 }
 
 func (n *exprNot) Eval(params Params) (*Value, error) {
@@ -80,15 +85,24 @@ type exprOr struct {
 	operator
 }
 
+func newExprOr() *exprOr {
+	return &exprOr{
+		operator: operator{
+			kind: "or",
+		},
+	}
+}
+
 // Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
 // All the given operands must evaluate to a boolean.
 func Or(v1, v2 Expr, vN ...Expr) Expr {
-	return &exprOr{
-		operator: operator{
-			kind:     "or",
-			operands: append([]Expr{v1, v2}, vN...),
-		},
+	e := newExprOr()
+	e.PushExpr(v1)
+	e.PushExpr(v2)
+	for _, v := range vN {
+		e.PushExpr(v)
 	}
+	return e
 }
 
 func (n *exprOr) Eval(params Params) (*Value, error) {
@@ -139,15 +153,24 @@ type exprAnd struct {
 	operator
 }
 
+func newExprAnd() *exprAnd {
+	return &exprAnd{
+		operator: operator{
+			kind: "and",
+		},
+	}
+}
+
 // And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
 // All the given operands must evaluate to a boolean.
 func And(v1, v2 Expr, vN ...Expr) Expr {
-	return &exprAnd{
-		operator: operator{
-			kind:     "and",
-			operands: append([]Expr{v1, v2}, vN...),
-		},
+	e := newExprAnd()
+	e.PushExpr(v1)
+	e.PushExpr(v2)
+	for _, v := range vN {
+		e.PushExpr(v)
 	}
+	return e
 }
 
 func (n *exprAnd) Eval(params Params) (*Value, error) {
@@ -203,14 +226,23 @@ type exprEq struct {
 	operator
 }
 
-// Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
-func Eq(v1, v2 Expr, vN ...Expr) Expr {
+func newExprEq() *exprEq {
 	return &exprEq{
 		operator: operator{
-			kind:     "eq",
-			operands: append([]Expr{v1, v2}, vN...),
+			kind: "eq",
 		},
 	}
+}
+
+// Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
+func Eq(v1, v2 Expr, vN ...Expr) Expr {
+	e := newExprEq()
+	e.PushExpr(v1)
+	e.PushExpr(v2)
+	for _, v := range vN {
+		e.PushExpr(v)
+	}
+	return e
 }
 
 func (n *exprEq) Eval(params Params) (*Value, error) {
@@ -256,14 +288,23 @@ type exprIn struct {
 	operator
 }
 
-// In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
-func In(v, e1 Expr, eN ...Expr) Expr {
+func newExprIn() *exprIn {
 	return &exprIn{
 		operator: operator{
-			kind:     "in",
-			operands: append([]Expr{v, e1}, eN...),
+			kind: "in",
 		},
 	}
+}
+
+// In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
+func In(v, e1 Expr, eN ...Expr) Expr {
+	e := newExprIn()
+	e.PushExpr(v)
+	e.PushExpr(e1)
+	for _, eX := range eN {
+		e.PushExpr(eX)
+	}
+	return e
 }
 
 func (n *exprIn) Eval(params Params) (*Value, error) {
@@ -314,6 +355,11 @@ type Param struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
+}
+
+//PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
+func (v *Param) PushExpr(e Expr) {
+	panic("You can't push an Expr onto a Param")
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -448,6 +494,11 @@ func newValue(typ, data string) *Value {
 		Type: typ,
 		Data: data,
 	}
+}
+
+//PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
+func (v *Value) PushExpr(e Expr) {
+	panic("You can't push an Expr onto a Value")
 }
 
 // Compares a Value with a ComparableExpression, without evaluating
