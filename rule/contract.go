@@ -1,5 +1,7 @@
 package rule
 
+import "fmt"
+
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
 type Type int
@@ -69,4 +71,23 @@ type Contract struct {
 // by calling the Contract method of the TypedExpression interface.
 type TypedExpression interface {
 	Contract() Contract
+}
+
+// GetOperatorExpr returns an Expr that matches the provided operator
+// name. If no matching expression exists, and error will be returned.
+func GetOperatorExpr(name string) (Expr, error) {
+	switch name {
+	case "eq":
+		return &exprEq{}, nil
+	case "not":
+		return &exprNot{}, nil
+	case "and":
+		return &exprAnd{}, nil
+	case "or":
+		return &exprOr{}, nil
+	case "in":
+		return &exprIn{}, nil
+
+	}
+	return nil, fmt.Errorf("No operator Expression called %q exists", name)
 }
