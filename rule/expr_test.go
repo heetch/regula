@@ -17,6 +17,10 @@ type mockExpr struct {
 	lastParams rule.Params
 }
 
+func (m *mockExpr) PushExpr(expr rule.Expr) {
+	return
+}
+
 func (m *mockExpr) Eval(params rule.Params) (*rule.Value, error) {
 	m.evalCount++
 	m.lastParams = params

@@ -131,5 +131,5 @@ func GetOperatorExpr(name string) (Expr, error) {
 		return newExprIn(), nil
 
 	}
-	return nil, fmt.Errorf("No operator Expression called %q exists", name)
+	return nil, fmt.Errorf("No operator called %q exists", name)
 }
