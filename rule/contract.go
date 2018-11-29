@@ -74,7 +74,7 @@ type TypedExpression interface {
 }
 
 // GetOperatorExpr returns an Expr that matches the provided operator
-// name. If no matching expression exists, and error will be returned.
+// name. If no matching expression exists, an error will be returned.
 func GetOperatorExpr(name string) (Expr, error) {
 	switch name {
 	case "eq":
