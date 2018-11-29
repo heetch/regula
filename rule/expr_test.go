@@ -40,6 +40,10 @@ func (m *mockExpr) MarshalJSON() ([]byte, error) {
 	return []byte(`{"kind": "mock"}`), nil
 }
 
+func (m *mockExpr) PushExpr(e rule.Expr) {
+	return
+}
+
 func TestNot(t *testing.T) {
 	t.Run("Eval/true", func(t *testing.T) {
 		m1 := mockExpr{val: rule.BoolValue(true)}
@@ -335,4 +339,16 @@ func TestParamSameness(t *testing.T) {
 	require.True(t, p1.Same(p1))
 	require.False(t, p1.Same(p2))
 	require.False(t, p1.Same(p3))
+}
+
+func TestValuePushExpPanics(t *testing.T) {
+	v := rule.StringValue("foo")
+	require.PanicsWithValue(t, "You can't push an Expr onto a Value",
+		func() { v.PushExpr(rule.StringValue("bar")) })
+}
+
+func TestParamPushExpPanics(t *testing.T) {
+	v := rule.StringParam("mystring")
+	require.PanicsWithValue(t, "You can't push an Expr onto a Param",
+		func() { v.PushExpr(rule.StringValue("bar")) })
 }
