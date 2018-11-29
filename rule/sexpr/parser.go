@@ -3,8 +3,8 @@ package sexpr
 // makeSymbolMap returns a mapOp with the full map of the built-in
 // symbols of our symbolic expression language to their implementation
 // as regula rule.Exprs.
-func makeSymbolMap() *mapOp {
-	sm = newMapOp()
+func makeSymbolMap() *opMap {
+	sm := newOpMap()
 	sm.mapSymbol("=", "eq")
 	sm.mapSymbol("+", "add")
 	sm.mapSymbol("-", "sub")
