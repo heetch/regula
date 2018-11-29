@@ -1,6 +1,10 @@
 package sexpr
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/heetch/regula/rule"
+)
 
 // opMap is a structure used to hold the core mapping between the
 // symbollic expression language operators and the actual Expr
@@ -46,4 +50,14 @@ func (om *opMap) getOpForSymbol(symbol string) (string, error) {
 		return "invalid symbol", fmt.Errorf("%q is not a valid symbol", symbol)
 	}
 	return op, nil
+}
+
+//getExprForSymbol returns the rule.Expr that is mapped to a symbol in
+//our symbolic expression language.
+func (om *opMap) getExprForSymbol(symbol string) (rule.Expr, error) {
+	op, err := om.getOpForSymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+	return rule.getOperatorExpr(op)
 }
