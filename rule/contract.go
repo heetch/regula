@@ -89,5 +89,5 @@ func GetOperatorExpr(name string) (Expr, error) {
 		return &exprIn{}, nil
 
 	}
-	return nil, fmt.Errorf("No operator Expression called %q exists", name)
+	return nil, fmt.Errorf("no operator Expression called %q exists", name)
 }
