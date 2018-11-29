@@ -39,7 +39,12 @@ func newExprNot() *exprNot {
 	return &exprNot{
 		operator: operator{
 			kind: "not",
-		}}
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
+			},
+		},
+	}
 }
 
 // Not creates an expression that evaluates the given operand e and returns its opposite.
@@ -72,14 +77,6 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprNot, and makes it comply with the TypedExpression interface.
-func (n *exprNot) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
-	}
-}
-
 type exprOr struct {
 	operator
 }
@@ -88,6 +85,10 @@ func newExprOr() *exprOr {
 	return &exprOr{
 		operator: operator{
 			kind: "or",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
+			},
 		},
 	}
 }
@@ -139,14 +140,6 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-// Contract returns the Contract for exprOr, and makes it comply with the TypedExpression interface.
-func (n *exprOr) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
-	}
-}
-
 type exprAnd struct {
 	operator
 }
@@ -155,6 +148,15 @@ func newExprAnd() *exprAnd {
 	return &exprAnd{
 		operator: operator{
 			kind: "and",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        BOOLEAN,
+						Cardinality: MANY,
+					},
+				},
+			},
 		},
 	}
 }
@@ -206,19 +208,6 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprAnd, and makes it comply with the TypedExpression interface.
-func (n *exprAnd) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        BOOLEAN,
-				Cardinality: MANY,
-			},
-		},
-	}
-}
-
 type exprEq struct {
 	operator
 }
@@ -227,6 +216,15 @@ func newExprEq() *exprEq {
 	return &exprEq{
 		operator: operator{
 			kind: "eq",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+					},
+				},
+			},
 		},
 	}
 }
@@ -267,19 +265,6 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprEq, and makes it comply with the TypedExpression interface.
-func (n *exprEq) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: MANY,
-			},
-		},
-	}
-}
-
 type exprIn struct {
 	operator
 }
@@ -288,6 +273,19 @@ func newExprIn() *exprIn {
 	return &exprIn{
 		operator: operator{
 			kind: "in",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: ONE,
+					},
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+					},
+				},
+			},
 		},
 	}
 }
@@ -326,23 +324,6 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
-}
-
-// Contract returns the Contract for exprIn, and makes it comply with the TypedExpression interface.
-func (n *exprIn) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: ONE,
-			},
-			{
-				Type:        ANY,
-				Cardinality: MANY,
-			},
-		},
-	}
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
