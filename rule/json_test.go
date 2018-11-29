@@ -178,3 +178,15 @@ func TestOperatorSameness(t *testing.T) {
 	require.True(t, o1.Same(o2))
 	require.False(t, o1.Same(o3))
 }
+
+func TestOperatorPushExpr(t *testing.T) {
+	not := newExprNot()
+	not.PushExpr(BoolValue(false))
+
+	expected := Not(BoolValue(false))
+	notCE := ComparableExpression(not)
+	expectedCE := expected.(ComparableExpression)
+
+	require.True(t, notCE.Same(expectedCE))
+
+}
