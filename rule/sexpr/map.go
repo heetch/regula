@@ -59,5 +59,5 @@ func (om *opMap) getExprForSymbol(symbol string) (rule.Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rule.getOperatorExpr(op)
+	return rule.GetOperatorExpr(op)
 }
