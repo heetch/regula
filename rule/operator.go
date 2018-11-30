@@ -1,6 +1,9 @@
 package rule
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // The operator is the representation of an operation to be performed
 // on some given set of operands.  Some Exprs are operators, but Value
@@ -15,11 +18,27 @@ type operator struct {
 	operands []Expr
 }
 
-func (o *operator) PushExpr(e Expr) {
+// PushExpr is used to add an Expr as an operand to the operator.
+// Each call to PushExpr will check the new operand against the
+// operators Contract, in the event that the new operand does not
+// fulfil the appropriate Term of the Contract, and error will be
+// returned.
+func (o *operator) PushExpr(e Expr) error {
+	pos := len(o.operands)
+	term, err := o.contract.GetTerm(pos, o.kind)
+	if err != nil {
+		return err
+	}
+	if !term.IsFulfilledBy(e.(TypedExpression)) {
+		return fmt.Errorf("TODO a type error here")
+	}
 	o.operands = append(o.operands, e)
+	return nil
 }
 
-//
+// Contract returns the operators Contract.  This makes operator
+// implement the TypedExpression interface.  Its intent is to allow
+// all operator Expr types to implement that interface (indirectly).
 func (o *operator) Contract() Contract {
 	return o.contract
 }
@@ -64,8 +83,16 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	o.operands = node.Operands.Exprs
+	tmpExpr, err := GetOperatorExpr(node.Kind)
+	if err != nil {
+		return err
+	}
 	o.kind = node.Kind
+	o.contract = tmpExpr.(TypedExpression).Contract()
+
+	for _, expr := range node.Operands.Exprs {
+		o.PushExpr(expr)
+	}
 
 	return nil
 }
@@ -87,4 +114,14 @@ func (o *operator) Eval(params Params) (*Value, error) {
 
 func (o *operator) Operands() []Expr {
 	return o.operands
+}
+
+// Support contract checking in the legacy Go interface for rule
+// expression by panicking if something breaks the contract.  This
+// works to the explicit assumption that developers won't release
+// panicking code into production.
+func (o *operator) pushExprOrPanic(e Expr) {
+	if err := o.PushExpr(e); err != nil {
+		panic(err.Error())
+	}
 }

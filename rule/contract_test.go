@@ -104,3 +104,21 @@ func TestTermIsFulfilledBy(t *testing.T) {
 		}
 	}
 }
+
+func TestPushExprEnforcesType(t *testing.T) {
+	// Happy case
+	not, err := rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+
+	// Sad case (one two many operands)
+	// We already pushed a bool onto this 'not', and it only wants one operand.
+	err = not.PushExpr(rule.BoolValue(true))
+	require.Error(t, err)
+	ae, ok := err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "not", ae.OpCode)
+	require.Equal(t, 1, ae.MaxPos)
+	require.Equal(t, 2, ae.ErrorPos)
+}

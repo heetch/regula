@@ -65,6 +65,20 @@ type Contract struct {
 	Terms      []Term
 }
 
+//
+func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
+	extent := len(c.Terms)
+	if pos < extent {
+		return c.Terms[pos], nil
+	}
+	lastTerm := c.Terms[extent-1]
+	if lastTerm.Cardinality == MANY {
+		return lastTerm, nil
+	}
+	return lastTerm, ArityError{OpCode: opCode, ErrorPos: pos + 1, MaxPos: extent}
+
+}
+
 // A TypedExpression is an expression that declares the Type Contract
 // it makes with the context in which it appears, and with any
 // sub-expressions that it contains.  This Contract can be inspected
@@ -78,15 +92,15 @@ type TypedExpression interface {
 func GetOperatorExpr(name string) (Expr, error) {
 	switch name {
 	case "eq":
-		return &exprEq{}, nil
+		return newExprEq(), nil
 	case "not":
-		return &exprNot{}, nil
+		return newExprNot(), nil
 	case "and":
-		return &exprAnd{}, nil
+		return newExprAnd(), nil
 	case "or":
-		return &exprOr{}, nil
+		return newExprOr(), nil
 	case "in":
-		return &exprIn{}, nil
+		return newExprIn(), nil
 
 	}
 	return nil, fmt.Errorf("no operator Expression called %q exists", name)

@@ -40,8 +40,8 @@ func (m *mockExpr) MarshalJSON() ([]byte, error) {
 	return []byte(`{"kind": "mock"}`), nil
 }
 
-func (m *mockExpr) PushExpr(e rule.Expr) {
-	return
+func (m *mockExpr) PushExpr(e rule.Expr) error {
+	return nil
 }
 
 func TestNot(t *testing.T) {
