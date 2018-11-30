@@ -44,6 +44,10 @@ func (m *mockExpr) PushExpr(e rule.Expr) error {
 	return nil
 }
 
+func (m *mockExpr) Finalise() error {
+	return nil
+}
+
 func TestNot(t *testing.T) {
 	t.Run("Eval/true", func(t *testing.T) {
 		m1 := mockExpr{val: rule.BoolValue(true)}

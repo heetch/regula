@@ -40,6 +40,7 @@ const (
 type Term struct {
 	Type        Type
 	Cardinality Cardinality
+	Min         int // For Terms with Cardinality == MANY, we can specify a minimum number
 }
 
 // IsFulfilledBy returns true when a provided TypedExpression has a return type

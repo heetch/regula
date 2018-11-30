@@ -22,7 +22,8 @@ type operator struct {
 // Each call to PushExpr will check the new operand against the
 // operators Contract, in the event that the new operand does not
 // fulfil the appropriate Term of the Contract, and error will be
-// returned.
+// returned. This causes operator to implement the Expr interface, and
+// all operation expressions use it indirectly to do the same.
 func (o *operator) PushExpr(e Expr) error {
 	pos := len(o.operands)
 	term, err := o.contract.GetTerm(pos, o.kind)
@@ -33,6 +34,29 @@ func (o *operator) PushExpr(e Expr) error {
 		return fmt.Errorf("TODO a type error here")
 	}
 	o.operands = append(o.operands, e)
+	return nil
+}
+
+// Finalise tells the operator that we're done pushing Exprs to use as
+// operands, and in doing so gives the operator a chance to check that
+// we've pushed enough operands to fulfil the operators Contract.  In
+// the case that we haven't pushed enough operands, an ArityError will
+// be returned.  This causes operator to implement the Expr interface,
+// and indirectly all of the operation expressions use it to do the
+// same.
+func (o *operator) Finalise() error {
+	pos := len(o.operands)
+	extent := len(o.contract.Terms)
+	lastTerm := o.contract.Terms[extent-1]
+	minPos := extent
+	if lastTerm.Cardinality == MANY {
+		// First we subtract one, because MANY can mean zero,
+		// then we add on the minimum required.
+		minPos = (minPos - 1) + lastTerm.Min
+	}
+	if pos < minPos {
+		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.kind}
+	}
 	return nil
 }
 

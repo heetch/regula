@@ -105,20 +105,64 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	}
 }
 
-func TestPushExprEnforcesType(t *testing.T) {
-	// Happy case
+func TestPushExprEnforcesArity(t *testing.T) {
+	// Happy case (one expected, one given)
 	not, err := rule.GetOperatorExpr("not")
 	require.NoError(t, err)
 	err = not.PushExpr(rule.BoolValue(true))
 	require.NoError(t, err)
+	err = not.Finalise()
+	require.NoError(t, err)
 
-	// Sad case (one two many operands)
+	// Happy case (many expected)
+	and, err := rule.GetOperatorExpr("and")
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	//... we could go on until we run out of memory ☺
+	err = and.Finalise()
+	require.NoError(t, err)
+
+	// Sad case (one two many operands - one expected, two given)
+	not, err = rule.GetOperatorExpr("not")
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
 	// We already pushed a bool onto this 'not', and it only wants one operand.
 	err = not.PushExpr(rule.BoolValue(true))
-	require.Error(t, err)
+	require.EqualError(t, err, `attempted to call "not" with 2 arguments, but it requires 1 argument`)
 	ae, ok := err.(rule.ArityError)
 	require.True(t, ok)
 	require.Equal(t, "not", ae.OpCode)
 	require.Equal(t, 1, ae.MaxPos)
 	require.Equal(t, 2, ae.ErrorPos)
+
+	// Sad case (not enough operands, expected 2, but got 1)
+	and, err = rule.GetOperatorExpr("and")
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	err = and.Finalise()
+	require.EqualError(t, err, `attempted to call "and" with 1 argument, but it requires 2 arguments`)
+	ae, ok = err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "and", ae.OpCode)
+	require.Equal(t, 2, ae.MinPos)
+	require.Equal(t, 1, ae.ErrorPos)
+
+	// Sad case (not enough operands expected 1, got 0)
+	not, err = rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.Finalise()
+	require.EqualError(t, err, `attempted to call "not" with 0 arguments, but it requires 1 argument`)
+	ae, ok = err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "not", ae.OpCode)
+	require.Equal(t, 1, ae.MinPos)
+	require.Equal(t, 0, ae.ErrorPos)
+
 }

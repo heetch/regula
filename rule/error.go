@@ -7,6 +7,7 @@ import "fmt"
 // expected.
 type ArityError struct {
 	OpCode   string
+	MinPos   int
 	MaxPos   int
 	ErrorPos int
 }
@@ -14,5 +15,19 @@ type ArityError struct {
 //Error returns a string representation of the ArityError.  This makes
 //ArityError implement the Error interface.
 func (ae ArityError) Error() string {
-	return fmt.Sprintf("attempted to pass an argument in position %d to %q operator, which only accepts %d arguments", ae.ErrorPos, ae.OpCode, ae.MaxPos)
+	const template = "attempted to call %q with %d %s, but it requires %d %s"
+	argNoun := func(count int) string {
+		if count == 1 {
+			return "argument"
+		}
+		return "arguments"
+	}
+
+	var pos int
+	if ae.MaxPos > 0 && ae.ErrorPos > ae.MaxPos {
+		pos = ae.MaxPos
+	} else {
+		pos = ae.MinPos
+	}
+	return fmt.Sprintf(template, ae.OpCode, ae.ErrorPos, argNoun(ae.ErrorPos), pos, argNoun(pos))
 }

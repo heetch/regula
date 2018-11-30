@@ -11,6 +11,7 @@ import (
 type Expr interface {
 	Eval(Params) (*Value, error)
 	PushExpr(e Expr) error
+	Finalise() error
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -87,7 +88,7 @@ func newExprOr() *exprOr {
 			kind: "or",
 			contract: Contract{
 				ReturnType: BOOLEAN,
-				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY, Min: 2}},
 			},
 		},
 	}
@@ -154,6 +155,7 @@ func newExprAnd() *exprAnd {
 					{
 						Type:        BOOLEAN,
 						Cardinality: MANY,
+						Min:         2,
 					},
 				},
 			},
@@ -222,6 +224,7 @@ func newExprEq() *exprEq {
 					{
 						Type:        ANY,
 						Cardinality: MANY,
+						Min:         2,
 					},
 				},
 			},
@@ -283,6 +286,7 @@ func newExprIn() *exprIn {
 					{
 						Type:        ANY,
 						Cardinality: MANY,
+						Min:         1,
 					},
 				},
 			},
@@ -336,6 +340,11 @@ type Param struct {
 //PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
 func (v *Param) PushExpr(e Expr) error {
 	return fmt.Errorf("You can't push an Expr onto a Param")
+}
+
+// Finalise makes Params implement the Expr interface.  It's a no-op.
+func (v *Param) Finalise() error {
+	return nil
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -475,6 +484,11 @@ func newValue(typ, data string) *Value {
 //PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
 func (v *Value) PushExpr(e Expr) error {
 	return fmt.Errorf("You can't push an Expr onto a Value")
+}
+
+// Finalise makes Values implement the Expr interface.  It's a no-op.
+func (v *Value) Finalise() error {
+	return nil
 }
 
 // Compares a Value with a ComparableExpression, without evaluating
