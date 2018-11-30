@@ -105,7 +105,9 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	}
 }
 
-func TestPushExprEnforcesArity(t *testing.T) {
+// PushExpr and Finalise will return ArityError if the number of Exprs
+// pushed via PushExpr is at odds to the Arity of the Contract.
+func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	// Happy case (one expected, one given)
 	not, err := rule.GetOperatorExpr("not")
 	require.NoError(t, err)
@@ -164,5 +166,41 @@ func TestPushExprEnforcesArity(t *testing.T) {
 	require.Equal(t, "not", ae.OpCode)
 	require.Equal(t, 1, ae.MinPos)
 	require.Equal(t, 0, ae.ErrorPos)
+}
+
+func TestPushExprEnforcesTermType(t *testing.T) {
+	// Happy case
+	not, err := rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+
+	// Sad case
+	not, err = rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.StringValue("pants"))
+	require.EqualError(t, err, `attempt to call "not" with a String in position 1, but it requires a Boolean`)
+	te, ok := err.(rule.TypeError)
+	require.True(t, ok)
+	require.Equal(t, 1, te.ErrorPos)
+	require.Equal(t, "not", te.OpCode)
+	require.Equal(t, rule.STRING, te.ReceivedType)
+	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
+
+	// Sad case for an operand that matches a Term with Cardinality=MANY
+	or, err := rule.GetOperatorExpr("or")
+	require.NoError(t, err)
+	for i := 0; i < 4; i++ {
+		err = or.PushExpr(rule.BoolValue(true))
+		require.NoError(t, err)
+	}
+	err = or.PushExpr(rule.Int64Value(100))
+	require.EqualError(t, err, `attempt to call "or" with a Integer in position 5, but it requires a Boolean`)
+	te, ok = err.(rule.TypeError)
+	require.True(t, ok)
+	require.Equal(t, 5, te.ErrorPos)
+	require.Equal(t, "or", te.OpCode)
+	require.Equal(t, rule.INTEGER, te.ReceivedType)
+	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
 
 }

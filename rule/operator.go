@@ -2,7 +2,6 @@ package rule
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // The operator is the representation of an operation to be performed
@@ -30,8 +29,14 @@ func (o *operator) PushExpr(e Expr) error {
 	if err != nil {
 		return err
 	}
-	if !term.IsFulfilledBy(e.(TypedExpression)) {
-		return fmt.Errorf("TODO a type error here")
+	te := e.(TypedExpression)
+	if !term.IsFulfilledBy(te) {
+		return TypeError{
+			OpCode:       o.kind,
+			ErrorPos:     pos + 1,
+			ExpectedType: term.Type,
+			ReceivedType: te.Contract().ReturnType,
+		}
 	}
 	o.operands = append(o.operands, e)
 	return nil
