@@ -23,8 +23,8 @@ func TestOperands(t *testing.T) {
 		err := ops.UnmarshalJSON([]byte(`[
 			{"kind": "value"},
 			{"kind": "param"},
-			{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]},
-			{"kind": "in","operands": [{"kind": "value"}, {"kind": "param"}]}
+			{"kind": "eq","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]},
+			{"kind": "in","operands": [{"kind": "value", "type": "string"}, {"kind": "param", "type": "string"}]}
 		]`))
 		require.NoError(t, err)
 		require.Len(t, ops.Ops, 4)
@@ -49,11 +49,11 @@ func TestUnmarshalExpr(t *testing.T) {
 			data []byte
 			typ  interface{}
 		}{
-			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprEq)},
-			{"in", []byte(`{"kind":"in","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprIn)},
-			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprNot)},
-			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprAnd)},
-			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprOr)},
+			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprEq)},
+			{"in", []byte(`{"kind":"in","operands": [{"kind": "value", "type": "string"}, {"kind": "param", "type": "string"}]}`), new(exprIn)},
+			{"not", []byte(`{"kind":"not","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprNot)},
+			{"and", []byte(`{"kind":"and","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprAnd)},
+			{"or", []byte(`{"kind":"or","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprOr)},
 			{"param", []byte(`{"kind":"param"}`), new(Param)},
 			{"value", []byte(`{"kind":"value"}`), new(Value)},
 		}
