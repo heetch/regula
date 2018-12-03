@@ -60,6 +60,8 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.
 	return e
 }
 
+// TestList tests all different cases when calling List method with
+// the pathsOnly parameter set to false.
 func TestList(t *testing.T) {
 	t.Parallel()
 
@@ -68,6 +70,7 @@ func TestList(t *testing.T) {
 
 	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
+	// Root tests the basic behaviour without prefix.
 	t.Run("Root", func(t *testing.T) {
 		createRuleset(t, s, "c", rs)
 		createRuleset(t, s, "a", rs)
@@ -86,6 +89,7 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	// Prefix tests List with a given prefix.
 	t.Run("Prefix", func(t *testing.T) {
 		createRuleset(t, s, "x", rs)
 		createRuleset(t, s, "xx", rs)
@@ -103,11 +107,13 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	// NotFound tests List with a prefix which doesn't exist.
 	t.Run("NotFound", func(t *testing.T) {
 		_, err := s.List(context.Background(), "doesntexist", 0, "", false)
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
+	// Paging tests List with pagination.
 	t.Run("Paging", func(t *testing.T) {
 		createRuleset(t, s, "y", rs)
 		createRuleset(t, s, "yy", rs)
@@ -153,6 +159,9 @@ func TestList(t *testing.T) {
 	})
 }
 
+// TestList tests all different cases when calling List method with
+// the pathsOnly parameter set to true.
+// The intent is to retrieve the paths only without the rulesets entries.
 func TestListPaths(t *testing.T) {
 	t.Parallel()
 
@@ -161,6 +170,7 @@ func TestListPaths(t *testing.T) {
 
 	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
+	// Root is the basic behaviour without prefix with pathsOnly parameter set to true.
 	t.Run("Root", func(t *testing.T) {
 		createRuleset(t, s, "a", rs)
 		createRuleset(t, s, "b", rs)
@@ -185,6 +195,7 @@ func TestListPaths(t *testing.T) {
 		require.Zero(t, entries.Continue)
 	})
 
+	// Prefix tests List with a given prefix with pathsOnly parameter set to true.
 	t.Run("Prefix", func(t *testing.T) {
 		createRuleset(t, s, "x", rs)
 		createRuleset(t, s, "xx", rs)
@@ -207,11 +218,13 @@ func TestListPaths(t *testing.T) {
 		require.Zero(t, entries.Continue)
 	})
 
+	// NotFound tests List with a prefix which doesn't exist with pathsOnly parameter set to true.
 	t.Run("NotFound", func(t *testing.T) {
 		_, err := s.List(context.Background(), "doesntexist", 0, "", true)
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
+	// Paging tests List with pagination with pathsOnly parameter set to true.
 	t.Run("Paging", func(t *testing.T) {
 		createRuleset(t, s, "foo", rs)
 		createRuleset(t, s, "foo/bar", rs)
