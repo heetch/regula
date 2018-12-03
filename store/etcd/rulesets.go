@@ -85,10 +85,8 @@ func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limi
 	var entries store.RulesetEntries
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	for _, pair := range resp.Kvs {
-		sk := strings.Split(string(pair.Key), "/")
-		// we remove the first three items of the key which correspond to the namespace
-		sk = sk[3:]
-		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: path.Join(sk...)})
+		p := strings.TrimPrefix(string(pair.Key), path.Join(s.Namespace, "rulesets", "latest")+"/")
+		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
 	}
 
 	if len(entries.Entries) < limit || !resp.More {
