@@ -76,7 +76,6 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 }
 
 // Returns an http handler that lists all existing rulesets paths.
-// Uses RulesetService.List for now, until the new ruleset path API is published.
 func (h *internalHandler) rulesetsHandler() http.Handler {
 	type ruleset struct {
 		Path string `json:"path"`
@@ -92,7 +91,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 
 		// run the loop at least once, no matter of the value of token
 		for i := 0; i == 0 || token != ""; i++ {
-			list, err := h.service.List(r.Context(), "", 100, token)
+			list, err := h.service.List(r.Context(), "", 100, token, true)
 			if err != nil {
 				writeError(w, r, err, http.StatusInternalServerError)
 				return
