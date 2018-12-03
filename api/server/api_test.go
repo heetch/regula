@@ -57,7 +57,7 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))
 				assert.Equal(t, token, tk)
 				return l, err
@@ -138,12 +138,12 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListPathsFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))
 				assert.Equal(t, token, tk)
 				return l, err
 			}
-			defer func() { s.ListPathsFn = nil }()
+			defer func() { s.ListFn = nil }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", u, nil)

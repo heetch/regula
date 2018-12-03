@@ -75,11 +75,8 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 	}
 
 	continueToken := r.URL.Query().Get("continue")
-	if _, ok := r.URL.Query()["paths"]; ok {
-		entries, err = s.rulesets.ListPaths(r.Context(), prefix, limit, continueToken)
-	} else {
-		entries, err = s.rulesets.List(r.Context(), prefix, limit, continueToken)
-	}
+	_, ok := r.URL.Query()["paths"]
+	entries, err = s.rulesets.List(r.Context(), prefix, limit, continueToken, ok)
 
 	if err != nil {
 		if err == store.ErrNotFound {
