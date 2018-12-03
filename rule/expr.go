@@ -174,6 +174,7 @@ func And(v1, v2 Expr, vN ...Expr) Expr {
 	for _, v := range vN {
 		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -242,6 +243,7 @@ func Eq(v1, v2 Expr, vN ...Expr) Expr {
 	for _, v := range vN {
 		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -304,6 +306,7 @@ func In(v, e1 Expr, eN ...Expr) Expr {
 	for _, eX := range eN {
 		e.pushExprOrPanic(eX)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
