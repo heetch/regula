@@ -1,6 +1,6 @@
 NAME := regula
 
-.PHONY: all $(NAME) test testrace run build
+.PHONY: all $(NAME) test testrace run build run-ui build-ui
 
 all: $(NAME)
 
@@ -16,4 +16,10 @@ testrace:
 	go test -v -race -cover -timeout=2m ./...
 
 run: build
-	LOG_LEVEL=debug regula -etcd-namespace regula-local
+	regula -log-level debug -etcd-namespace regula-local -server-dist-path ./ui/app/dist
+
+run-ui:
+	cd ./ui/app && yarn serve
+
+build-ui:
+	cd ./ui/app && yarn build

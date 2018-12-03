@@ -13,6 +13,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/mock"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ import (
 )
 
 func TestAPI(t *testing.T) {
-	s := new(mockRulesetService)
+	s := new(mock.RulesetService)
 	h := NewHandler(s, Config{
 		WatchTimeout: 1 * time.Second,
 	})
@@ -359,17 +360,13 @@ func TestAPI(t *testing.T) {
 	})
 }
 
-func resetStore(s *mockRulesetService) {
+func resetStore(s *mock.RulesetService) {
 	s.ListCount = 0
-	s.LatestCount = 0
-	s.OneByVersionCount = 0
 	s.WatchCount = 0
 	s.PutCount = 0
 	s.EvalCount = 0
 	s.EvalVersionCount = 0
 	s.ListFn = nil
-	s.LatestFn = nil
-	s.OneByVersionFn = nil
 	s.WatchFn = nil
 	s.PutFn = nil
 	s.EvalFn = nil

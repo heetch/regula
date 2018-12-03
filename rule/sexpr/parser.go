@@ -9,6 +9,30 @@ import (
 
 var errVal = rule.BoolValue(false)
 
+// makeSymbolMap returns a mapOp with the full map of the built-in
+// symbols of our symbolic expression language to their implementation
+// as regula rule.Exprs.
+func makeSymbolMap() *opMap {
+	sm := newOpMap()
+	sm.mapSymbol("=", "eq")
+	sm.mapSymbol("+", "add")
+	sm.mapSymbol("-", "sub")
+	sm.mapSymbol("*", "mult")
+	sm.mapSymbol("/", "div")
+	sm.mapSymbol("%", "mod")
+	sm.mapSymbol("in", "in")
+	sm.mapSymbol("and", "and")
+	sm.mapSymbol("or", "or")
+	sm.mapSymbol("not", "not")
+	sm.mapSymbol(">", "gt")
+	sm.mapSymbol(">=", "gte")
+	sm.mapSymbol("<", "lt")
+	sm.mapSymbol("<=", "lte")
+	sm.mapSymbol("hash", "hash")
+	sm.mapSymbol("percentile", "percentile")
+	return sm
+}
+
 // Parser
 type Parser struct {
 	s        *Scanner
@@ -180,46 +204,4 @@ func (p *Parser) parseOperator() (rule.Expr, error) {
 	}
 
 	return op, nil
-}
-
-// Return the operator Expr representing the operator provided.
-// Note that our symbolic expressions notation for operators is not
-// an exact match for the naming of the expressions internally, so this
-// is the definitive mapping.
-func getOperatorExprForSymbol(symbolName string) (rule.Expr, error) {
-	switch symbolName {
-	case "=":
-		return rule.GetOperatorExpr("eq")
-	case "+":
-		return rule.GetOperatorExpr("add")
-	case "-":
-		return rule.GetOperatorExpr("sub")
-	case "*":
-		return rule.GetOperatorExpr("mult")
-	case "/":
-		return rule.GetOperatorExpr("div")
-	case "%":
-		return rule.GetOperatorExpr("mod")
-	case "in":
-		return rule.GetOperatorExpr("in")
-	case "and":
-		return rule.GetOperatorExpr("and")
-	case "or":
-		return rule.GetOperatorExpr("or")
-	case "not":
-		return rule.GetOperatorExpr("not")
-	case ">":
-		return rule.GetOperatorExpr("gt")
-	case ">=":
-		return rule.GetOperatorExpr("gte")
-	case "<":
-		return rule.GetOperatorExpr("lt")
-	case "<=":
-		return rule.GetOperatorExpr("lte")
-	case "hash":
-		return rule.GetOperatorExpr("hash")
-	case "percentile":
-		return rule.GetOperatorExpr("percentile")
-	}
-	return nil, fmt.Errorf("Expected an operator, but got the Symbol %q", symbolName)
 }

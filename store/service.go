@@ -37,10 +37,6 @@ func IsValidationError(err error) bool {
 type RulesetService interface {
 	// List returns all the rulesets entries under the given prefix.
 	List(ctx context.Context, prefix string, limit int, continueToken string) (*RulesetEntries, error)
-	// Latest returns the latest version of the ruleset entry which corresponds to the given path.
-	Latest(ctx context.Context, path string) (*RulesetEntry, error)
-	// OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
-	OneByVersion(ctx context.Context, path, version string) (*RulesetEntry, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
 	// Put is used to store a ruleset version.
