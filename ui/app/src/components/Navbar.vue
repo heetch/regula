@@ -17,7 +17,7 @@
     >
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
       <v-toolbar-title class="headline">
-        <span>Regula</span>
+        <router-link to="/">Regula</router-link>
       </v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn
@@ -58,3 +58,16 @@ export default {
   },
 };
 </script>
+
+<style lang="scss" scoped>
+  .headline {
+    a {
+      text-decoration: none;
+      color: rgba(0,0,0,0.87);
+
+      &:visited {
+        color: rgba(0,0,0,0.87);
+      }
+    }
+  }
+</style>
