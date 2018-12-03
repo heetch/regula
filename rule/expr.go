@@ -53,6 +53,7 @@ func newExprNot() *exprNot {
 func Not(e Expr) Expr {
 	expr := newExprNot()
 	expr.pushExprOrPanic(e)
+	expr.finaliseOrPanic()
 	return expr
 }
 
@@ -103,6 +104,7 @@ func Or(v1, v2 Expr, vN ...Expr) Expr {
 	for _, v := range vN {
 		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 

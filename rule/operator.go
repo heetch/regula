@@ -154,3 +154,13 @@ func (o *operator) pushExprOrPanic(e Expr) {
 		panic(err.Error())
 	}
 }
+
+// Support contract checking in the legacy Go interface for rule
+// expression by panicking if something breaks the contract.  This
+// works to the explicit assumption that developers won't release
+// panicking code into production.
+func (o *operator) finaliseOrPanic() {
+	if err := o.Finalise(); err != nil {
+		panic(err.Error())
+	}
+}
