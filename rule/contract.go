@@ -1,7 +1,5 @@
 package rule
 
-import "fmt"
-
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
 type Type int
@@ -63,10 +61,10 @@ type Term struct {
 	Min         int // For Terms with Cardinality == MANY, we can specify a minimum number
 }
 
-// IsFulfilledBy returns true when a provided TypedExpression has a return type
+// IsFulfilledBy returns true when a provided Expr has a return type
 // that matches the Term's Type.
-func (t Term) IsFulfilledBy(te TypedExpression) bool {
-	rt := te.Contract().ReturnType
+func (t Term) IsFulfilledBy(e Expr) bool {
+	rt := e.Contract().ReturnType
 	// Switch to handle promotable abstract types.
 	switch t.Type {
 	case ANY:
@@ -98,31 +96,4 @@ func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
 	}
 	return lastTerm, ArityError{OpCode: opCode, ErrorPos: pos + 1, MaxPos: extent}
 
-}
-
-// A TypedExpression is an expression that declares the Type Contract
-// it makes with the context in which it appears, and with any
-// sub-expressions that it contains.  This Contract can be inspected
-// by calling the Contract method of the TypedExpression interface.
-type TypedExpression interface {
-	Contract() Contract
-}
-
-// GetOperatorExpr returns an Expr that matches the provided operator
-// name. If no matching expression exists, an error will be returned.
-func GetOperatorExpr(name string) (Expr, error) {
-	switch name {
-	case "eq":
-		return newExprEq(), nil
-	case "not":
-		return newExprNot(), nil
-	case "and":
-		return newExprAnd(), nil
-	case "or":
-		return newExprOr(), nil
-	case "in":
-		return newExprIn(), nil
-
-	}
-	return nil, fmt.Errorf("no operator Expression called %q exists", name)
 }

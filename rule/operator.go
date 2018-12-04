@@ -2,7 +2,33 @@ package rule
 
 import (
 	"encoding/json"
+	"fmt"
 )
+
+// An Operator is an Expr that is also an Operander.
+type Operator interface {
+	Expr
+	Operander
+}
+
+// GetOperator returns an Operator that matches the provided operator
+// name. If no matching expression exists, an error will be returned.
+func GetOperator(name string) (Operator, error) {
+	switch name {
+	case "eq":
+		return newExprEq(), nil
+	case "not":
+		return newExprNot(), nil
+	case "and":
+		return newExprAnd(), nil
+	case "or":
+		return newExprOr(), nil
+	case "in":
+		return newExprIn(), nil
+
+	}
+	return nil, fmt.Errorf("no operator Expression called %q exists", name)
+}
 
 // The operator is the representation of an operation to be performed
 // on some given set of operands.  Some Exprs are operators, but Value
@@ -29,13 +55,12 @@ func (o *operator) PushExpr(e Expr) error {
 	if err != nil {
 		return err
 	}
-	te := e.(TypedExpression)
-	if !term.IsFulfilledBy(te) {
+	if !term.IsFulfilledBy(e) {
 		return TypeError{
 			OpCode:       o.kind,
 			ErrorPos:     pos + 1,
 			ExpectedType: term.Type,
-			ReceivedType: te.Contract().ReturnType,
+			ReceivedType: e.Contract().ReturnType,
 		}
 	}
 	o.operands = append(o.operands, e)
@@ -74,7 +99,7 @@ func (o *operator) Contract() Contract {
 
 func (o *operator) Same(c ComparableExpression) bool {
 	if o.kind == c.GetKind() {
-		o2, ok := c.(operander)
+		o2, ok := c.(Operander)
 		if ok {
 			ops := o2.Operands()
 			len1 := len(o.operands)
@@ -112,12 +137,12 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tmpExpr, err := GetOperatorExpr(node.Kind)
+	tmpExpr, err := GetOperator(node.Kind)
 	if err != nil {
 		return err
 	}
 	o.kind = node.Kind
-	o.contract = tmpExpr.(TypedExpression).Contract()
+	o.contract = tmpExpr.Contract()
 
 	for _, expr := range node.Operands.Exprs {
 		o.PushExpr(expr)

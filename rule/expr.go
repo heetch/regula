@@ -10,8 +10,7 @@ import (
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
-	PushExpr(e Expr) error
-	Finalise() error
+	Contract() Contract
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -342,16 +341,6 @@ type Param struct {
 	Name string `json:"name"`
 }
 
-//PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
-func (v *Param) PushExpr(e Expr) error {
-	return fmt.Errorf("You can't push an Expr onto a Param")
-}
-
-// Finalise makes Params implement the Expr interface.  It's a no-op.
-func (v *Param) Finalise() error {
-	return nil
-}
-
 // Same compares the Param with a ComparableExpression to see if they
 // are identical.  This is required by the ComparableExpression
 // interface.
@@ -486,16 +475,6 @@ func newValue(typ, data string) *Value {
 	}
 }
 
-//PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
-func (v *Value) PushExpr(e Expr) error {
-	return fmt.Errorf("You can't push an Expr onto a Value")
-}
-
-// Finalise makes Values implement the Expr interface.  It's a no-op.
-func (v *Value) Finalise() error {
-	return nil
-}
-
 // Compares a Value with a ComparableExpression, without evaluating
 // either.  This is required by the ComparableExpression interface.
 func (v *Value) Same(c ComparableExpression) bool {
@@ -566,8 +545,15 @@ func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
 
-type operander interface {
+// Operander is an interface for managing the operands of an
+// Expr that is an operation.
+type Operander interface {
+	// Operands returns of an operations Operands
 	Operands() []Expr
+	// PushExpr adds an Expr as an operand.
+	PushExpr(e Expr) error
+	// Finalise indicates that we are done pushing Expr's to the operation.  This allows for arity checking.
+	Finalise() error
 }
 
 func walk(expr Expr, fn func(Expr) error) error {
@@ -576,7 +562,7 @@ func walk(expr Expr, fn func(Expr) error) error {
 		return err
 	}
 
-	if o, ok := expr.(operander); ok {
+	if o, ok := expr.(Operander); ok {
 		ops := o.Operands()
 		for _, op := range ops {
 			err := walk(op, fn)
