@@ -60,8 +60,7 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.
 	return e
 }
 
-// TestList tests all different cases when calling List method with
-// the pathsOnly parameter set to false.
+// List returns all rulesets entries or not depending on the query string.
 func TestList(t *testing.T) {
 	t.Parallel()
 
@@ -159,9 +158,8 @@ func TestList(t *testing.T) {
 	})
 }
 
-// TestList tests all different cases when calling List method with
-// the pathsOnly parameter set to true.
-// The intent is to retrieve the paths only without the rulesets entries.
+// List returns all rulesets paths because the pathsOnly parameter is set to true.
+// It returns all the entries or just a subset depending on the query string.
 func TestListPaths(t *testing.T) {
 	t.Parallel()
 
