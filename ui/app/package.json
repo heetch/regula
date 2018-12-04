@@ -9,11 +9,7 @@
     "test:unit": "vue-cli-service test:unit --require isomorphic-fetch --require babel-register './src/**/*.spec.js'"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.2.0",
-    "@fortawesome/fontawesome-svg-core": "^1.2.6",
-    "@fortawesome/free-brands-svg-icons": "^5.4.1",
-    "@fortawesome/free-solid-svg-icons": "^5.4.1",
-    "@fortawesome/vue-fontawesome": "^0.1.1",
+    "@mdi/font": "^3.2.89",
     "es6-promise": "^4.2.5",
     "isomorphic-fetch": "^2.2.1",
     "roboto-fontface": "^0.10.0",

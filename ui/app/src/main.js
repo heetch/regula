@@ -1,7 +1,8 @@
 import Vue from 'vue';
+import '@mdi/font/css/materialdesignicons.css';
+
 import './plugins/vuetify';
 import './plugins/fetch';
-import './plugins/font-awesome';
 import App from './App';
 import router from './router';
 
