@@ -134,3 +134,103 @@ func TestGetOperatorExprBadName(t *testing.T) {
 	_, err := rule.GetOperatorExpr("dave")
 	require.EqualError(t, err, `No operator called "dave" exists`)
 }
+
+// PushExpr and Finalise will return ArityError if the number of Exprs
+// pushed via PushExpr is at odds to the Arity of the Contract.
+func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
+	// Happy case (one expected, one given)
+	not, err := rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = not.Finalise()
+	require.NoError(t, err)
+
+	// Happy case (many expected)
+	and, err := rule.GetOperatorExpr("and")
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	//... we could go on until we run out of memory ☺
+	err = and.Finalise()
+	require.NoError(t, err)
+
+	// Sad case (one two many operands - one expected, two given)
+	not, err = rule.GetOperatorExpr("not")
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+	// We already pushed a bool onto this 'not', and it only wants one operand.
+	err = not.PushExpr(rule.BoolValue(true))
+	require.EqualError(t, err, `attempted to call "not" with 2 arguments, but it requires 1 argument`)
+	ae, ok := err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "not", ae.OpCode)
+	require.Equal(t, 1, ae.MaxPos)
+	require.Equal(t, 2, ae.ErrorPos)
+
+	// Sad case (not enough operands, expected 2, but got 1)
+	and, err = rule.GetOperatorExpr("and")
+	require.NoError(t, err)
+	err = and.PushExpr(rule.BoolValue(true))
+	err = and.Finalise()
+	require.EqualError(t, err, `attempted to call "and" with 1 argument, but it requires 2 arguments`)
+	ae, ok = err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "and", ae.OpCode)
+	require.Equal(t, 2, ae.MinPos)
+	require.Equal(t, 1, ae.ErrorPos)
+
+	// Sad case (not enough operands expected 1, got 0)
+	not, err = rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.Finalise()
+	require.EqualError(t, err, `attempted to call "not" with 0 arguments, but it requires 1 argument`)
+	ae, ok = err.(rule.ArityError)
+	require.True(t, ok)
+	require.Equal(t, "not", ae.OpCode)
+	require.Equal(t, 1, ae.MinPos)
+	require.Equal(t, 0, ae.ErrorPos)
+}
+
+func TestPushExprEnforcesTermType(t *testing.T) {
+	// Happy case
+	not, err := rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.BoolValue(true))
+	require.NoError(t, err)
+
+	// Sad case
+	not, err = rule.GetOperatorExpr("not")
+	require.NoError(t, err)
+	err = not.PushExpr(rule.StringValue("pants"))
+	require.EqualError(t, err, `attempt to call "not" with a String in position 1, but it requires a Boolean`)
+	te, ok := err.(rule.TypeError)
+	require.True(t, ok)
+	require.Equal(t, 1, te.ErrorPos)
+	require.Equal(t, "not", te.OpCode)
+	require.Equal(t, rule.STRING, te.ReceivedType)
+	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
+
+	// Sad case for an operand that matches a Term with Cardinality=MANY
+	or, err := rule.GetOperatorExpr("or")
+	require.NoError(t, err)
+	for i := 0; i < 4; i++ {
+		err = or.PushExpr(rule.BoolValue(true))
+		require.NoError(t, err)
+	}
+	err = or.PushExpr(rule.Int64Value(100))
+	require.EqualError(t, err, `attempt to call "or" with a Integer in position 5, but it requires a Boolean`)
+	te, ok = err.(rule.TypeError)
+	require.True(t, ok)
+	require.Equal(t, 5, te.ErrorPos)
+	require.Equal(t, "or", te.OpCode)
+	require.Equal(t, rule.INTEGER, te.ReceivedType)
+	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
+
+}

@@ -38,10 +38,14 @@ type Parser struct {
 	s        *Scanner
 	buf      *lexicalElement
 	buffered bool
+	opMap    *opMap
 }
 
 func NewParser(r io.Reader) *Parser {
-	return &Parser{s: NewScanner(r)}
+	return &Parser{
+		s:     NewScanner(r),
+		opMap: makeSymbolMap(),
+	}
 }
 
 // scan returns the next lexicalElement from the text to be parsed, or
@@ -95,7 +99,12 @@ func (p *Parser) parseSubExpression(term rule.Term, parent string, pos int) (rul
 //
 func (p *Parser) parseSubExpressions(expr rule.Expr) error {
 	te := expr.(rule.TypedExpression)
+	ce := expr.(rule.ComparableExpression)
 	contract := te.Contract()
+	symbol, err := p.opMap.getSymbolForOp(ce.GetKind())
+	if err != nil {
+		
+	}
 
 	for pos, term := range contract.Terms {
 		switch term.Cardinality {
@@ -108,7 +117,7 @@ func (p *Parser) parseSubExpressions(expr rule.Expr) error {
 
 			if nextLE.Token == RPAREN || nextLE.Token == EOF {
 				return fmt.Errorf(
-					"Operation %q expected a %q in position %d, but intstead the expression was terminated", contract.Name, term.Type, pos+1)
+					"Operation %q expected a %q in position %d, but intstead the expression was terminated", , term.Type, pos+1)
 			}
 
 			subExpr, err := p.parseSubExpression(term, contract.Name, pos)
@@ -198,7 +207,7 @@ func (p *Parser) parseOperator() (rule.Expr, error) {
 		return errVal, fmt.Errorf("Expected an operator, but got the %s %q", le.Token, le.Literal)
 	}
 
-	op, err := getOperatorExprForSymbol(le.Literal)
+	op, err := p.opMap.getExprForSymbol(le.Literal)
 	if err != nil {
 		return errVal, err
 	}

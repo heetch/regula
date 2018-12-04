@@ -89,20 +89,29 @@ func TestParseOperatorExpectationsMatch(t *testing.T) {
 	require.True(t, ee.Same(ce))
 }
 
-// GetOperatorExpr returns a TypedExpression representing the named operator.
-func TestGetOperatorExprForSymbol(t *testing.T) {
-	o, err := getOperatorExprForSymbol("=")
-	require.NoError(t, err)
-	te := o.(rule.TypedExpression)
-	c := rule.Contract{
-		Name:       "eq",
-		ReturnType: rule.BOOLEAN,
-		Terms: []rule.Term{
-			{
-				Type:        rule.ANY,
-				Cardinality: rule.MANY,
-			},
-		},
-	}
-	require.True(t, te.Contract().Equal(c))
+// // GetOperatorExpr returns a TypedExpression representing the named operator.
+// func TestGetOperatorExprForSymbol(t *testing.T) {
+// 	o, err := getOperatorExprForSymbol("=")
+// 	require.NoError(t, err)
+// 	te := o.(rule.TypedExpression)
+// 	c := rule.Contract{
+// 		Name:       "eq",
+// 		ReturnType: rule.BOOLEAN,
+// 		Terms: []rule.Term{
+// 			{
+// 				Type:        rule.ANY,
+// 				Cardinality: rule.MANY,
+// 			},
+// 		},
+// 	}
+// 	require.True(t, te.Contract().Equal(c))
+// }
+
+func TestMakeSymbolMap(t *testing.T) {
+	sm := makeSymbolMap()
+	o, err := sm.getExprForSymbol("=")
+	require.NoError(err)
+	ce := o.(rule.ComparableExpression)
+	require.Equal(t, "eq", ce.Kind)
+
 }

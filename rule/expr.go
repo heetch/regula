@@ -10,7 +10,8 @@ import (
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
-	PushExpr(e Expr)
+	PushExpr(e Expr) error
+	Finalise() error
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -39,14 +40,20 @@ func newExprNot() *exprNot {
 	return &exprNot{
 		operator: operator{
 			kind: "not",
-		}}
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
+			},
+		},
+	}
 }
 
 // Not creates an expression that evaluates the given operand e and returns its opposite.
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
 	expr := newExprNot()
-	expr.PushExpr(e)
+	expr.pushExprOrPanic(e)
+	expr.finaliseOrPanic()
 	return expr
 }
 
@@ -72,15 +79,6 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprNot, and makes it comply with the TypedExpression interface.
-func (n *exprNot) Contract() Contract {
-	return Contract{
-		Name:       "not",
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
-	}
-}
-
 type exprOr struct {
 	operator
 }
@@ -89,6 +87,10 @@ func newExprOr() *exprOr {
 	return &exprOr{
 		operator: operator{
 			kind: "or",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY, Min: 2}},
+			},
 		},
 	}
 }
@@ -97,11 +99,12 @@ func newExprOr() *exprOr {
 // All the given operands must evaluate to a boolean.
 func Or(v1, v2 Expr, vN ...Expr) Expr {
 	e := newExprOr()
-	e.PushExpr(v1)
-	e.PushExpr(v2)
+	e.pushExprOrPanic(v1)
+	e.pushExprOrPanic(v2)
 	for _, v := range vN {
-		e.PushExpr(v)
+		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -140,15 +143,6 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-// Contract returns the Contract for exprOr, and makes it comply with the TypedExpression interface.
-func (n *exprOr) Contract() Contract {
-	return Contract{
-		Name:       "or",
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
-	}
-}
-
 type exprAnd struct {
 	operator
 }
@@ -157,6 +151,16 @@ func newExprAnd() *exprAnd {
 	return &exprAnd{
 		operator: operator{
 			kind: "and",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        BOOLEAN,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
 		},
 	}
 }
@@ -165,11 +169,12 @@ func newExprAnd() *exprAnd {
 // All the given operands must evaluate to a boolean.
 func And(v1, v2 Expr, vN ...Expr) Expr {
 	e := newExprAnd()
-	e.PushExpr(v1)
-	e.PushExpr(v2)
+	e.pushExprOrPanic(v1)
+	e.pushExprOrPanic(v2)
 	for _, v := range vN {
-		e.PushExpr(v)
+		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -208,20 +213,6 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprAnd, and makes it comply with the TypedExpression interface.
-func (n *exprAnd) Contract() Contract {
-	return Contract{
-		Name:       "and",
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        BOOLEAN,
-				Cardinality: MANY,
-			},
-		},
-	}
-}
-
 type exprEq struct {
 	operator
 }
@@ -230,6 +221,16 @@ func newExprEq() *exprEq {
 	return &exprEq{
 		operator: operator{
 			kind: "eq",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
 		},
 	}
 }
@@ -237,11 +238,12 @@ func newExprEq() *exprEq {
 // Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
 func Eq(v1, v2 Expr, vN ...Expr) Expr {
 	e := newExprEq()
-	e.PushExpr(v1)
-	e.PushExpr(v2)
+	e.pushExprOrPanic(v1)
+	e.pushExprOrPanic(v2)
 	for _, v := range vN {
-		e.PushExpr(v)
+		e.pushExprOrPanic(v)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -270,20 +272,6 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprEq, and makes it comply with the TypedExpression interface.
-func (n *exprEq) Contract() Contract {
-	return Contract{
-		Name:       "eq",
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: MANY,
-			},
-		},
-	}
-}
-
 type exprIn struct {
 	operator
 }
@@ -292,6 +280,20 @@ func newExprIn() *exprIn {
 	return &exprIn{
 		operator: operator{
 			kind: "in",
+			contract: Contract{
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: ONE,
+					},
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         1,
+					},
+				},
+			},
 		},
 	}
 }
@@ -299,11 +301,12 @@ func newExprIn() *exprIn {
 // In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
 func In(v, e1 Expr, eN ...Expr) Expr {
 	e := newExprIn()
-	e.PushExpr(v)
-	e.PushExpr(e1)
+	e.pushExprOrPanic(v)
+	e.pushExprOrPanic(e1)
 	for _, eX := range eN {
-		e.PushExpr(eX)
+		e.pushExprOrPanic(eX)
 	}
+	e.finaliseOrPanic()
 	return e
 }
 
@@ -332,24 +335,6 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-// Contract returns the Contract for exprIn, and makes it comply with the TypedExpression interface.
-func (n *exprIn) Contract() Contract {
-	return Contract{
-		Name:       "in",
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: ONE,
-			},
-			{
-				Type:        ANY,
-				Cardinality: MANY,
-			},
-		},
-	}
-}
-
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
 	Kind string `json:"kind"`
@@ -358,8 +343,13 @@ type Param struct {
 }
 
 //PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
-func (v *Param) PushExpr(e Expr) {
-	panic("You can't push an Expr onto a Param")
+func (v *Param) PushExpr(e Expr) error {
+	return fmt.Errorf("You can't push an Expr onto a Param")
+}
+
+// Finalise makes Params implement the Expr interface.  It's a no-op.
+func (v *Param) Finalise() error {
+	return nil
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -385,13 +375,13 @@ func (p *Param) GetKind() string {
 func (p *Param) Contract() Contract {
 	switch p.Type {
 	case "bool":
-		return Contract{Name: "param", ReturnType: BOOLEAN}
+		return Contract{ReturnType: BOOLEAN}
 	case "string":
-		return Contract{Name: "param", ReturnType: STRING}
+		return Contract{ReturnType: STRING}
 	case "int64":
-		return Contract{Name: "param", ReturnType: INTEGER}
+		return Contract{ReturnType: INTEGER}
 	case "float64":
-		return Contract{Name: "param", ReturnType: FLOAT}
+		return Contract{ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", p.Type))
 }
@@ -497,8 +487,13 @@ func newValue(typ, data string) *Value {
 }
 
 //PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
-func (v *Value) PushExpr(e Expr) {
-	panic("You can't push an Expr onto a Value")
+func (v *Value) PushExpr(e Expr) error {
+	return fmt.Errorf("You can't push an Expr onto a Value")
+}
+
+// Finalise makes Values implement the Expr interface.  It's a no-op.
+func (v *Value) Finalise() error {
+	return nil
 }
 
 // Compares a Value with a ComparableExpression, without evaluating
@@ -522,13 +517,13 @@ func (v *Value) GetKind() string {
 func (v *Value) Contract() Contract {
 	switch v.Type {
 	case "bool":
-		return Contract{Name: "value", ReturnType: BOOLEAN}
+		return Contract{ReturnType: BOOLEAN}
 	case "string":
-		return Contract{Name: "value", ReturnType: STRING}
+		return Contract{ReturnType: STRING}
 	case "int64":
-		return Contract{Name: "value", ReturnType: INTEGER}
+		return Contract{ReturnType: INTEGER}
 	case "float64":
-		return Contract{Name: "value", ReturnType: FLOAT}
+		return Contract{ReturnType: FLOAT}
 	}
 	panic(fmt.Sprintf("invalid value type: %q", v.Type))
 }

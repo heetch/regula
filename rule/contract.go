@@ -6,24 +6,24 @@ import "fmt"
 // a return type, and some expressions also receive typed parameters.
 type Type int
 
-// String returns a string representation of the Type.  This makes
-// Type implement the Stringer interface.
+//String returns a human readable representation of the Type.  This
+//makes Type implement the Stringer interface.
 func (t Type) String() string {
 	switch t {
 	case BOOLEAN:
-		return "BOOLEAN"
+		return "Boolean"
 	case STRING:
-		return "STRING"
+		return "String"
 	case INTEGER:
-		return "INTEGER"
+		return "Integer"
 	case FLOAT:
-		return "FLOAT"
+		return "Float"
 	case NUMBER:
-		return "NUMBER"
+		return "Number"
 	case ANY:
-		return "ANY"
+		return "Any"
 	}
-	return "Invalid Type"
+	return "invalid type"
 }
 
 // These constants represent the complete set of abstract types usable
@@ -60,6 +60,7 @@ const (
 type Term struct {
 	Type        Type
 	Cardinality Cardinality
+	Min         int // For Terms with Cardinality == MANY, we can specify a minimum number
 }
 
 // IsFulfilledBy returns true when a provided TypedExpression has a return type
@@ -86,7 +87,6 @@ func (t Term) Equal(other Term) bool {
 // evaluated) and zero, one or many Terms.  Each Term is in turn
 // typed, and has a defined cardinality.
 type Contract struct {
-	Name       string
 	ReturnType Type
 	Terms      []Term
 }
@@ -105,6 +105,20 @@ func (c Contract) Equal(other Contract) bool {
 		}
 	}
 	return true
+}
+
+//
+func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
+	extent := len(c.Terms)
+	if pos < extent {
+		return c.Terms[pos], nil
+	}
+	lastTerm := c.Terms[extent-1]
+	if lastTerm.Cardinality == MANY {
+		return lastTerm, nil
+	}
+	return lastTerm, ArityError{OpCode: opCode, ErrorPos: pos + 1, MaxPos: extent}
+
 }
 
 // A TypedExpression is an expression that declares the Type Contract

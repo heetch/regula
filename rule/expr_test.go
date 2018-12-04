@@ -15,6 +15,7 @@ type mockExpr struct {
 	evalFn     func(params rule.Params) (*rule.Value, error)
 	evalCount  int
 	lastParams rule.Params
+	returnType rule.Type
 }
 
 func (m *mockExpr) PushExpr(expr rule.Expr) {
@@ -44,9 +45,27 @@ func (m *mockExpr) MarshalJSON() ([]byte, error) {
 	return []byte(`{"kind": "mock"}`), nil
 }
 
+func (m *mockExpr) PushExpr(e rule.Expr) error {
+	return nil
+}
+
+func (m *mockExpr) Finalise() error {
+	return nil
+}
+
+//
+func (m *mockExpr) Contract() rule.Contract {
+	return rule.Contract{
+		ReturnType: m.returnType,
+		Terms: []rule.Term{
+			{Type: rule.ANY, Cardinality: rule.MANY},
+		},
+	}
+}
+
 func TestNot(t *testing.T) {
 	t.Run("Eval/true", func(t *testing.T) {
-		m1 := mockExpr{val: rule.BoolValue(true)}
+		m1 := mockExpr{val: rule.BoolValue(true), returnType: rule.BOOLEAN}
 		not := rule.Not(&m1)
 		val, err := not.Eval(nil)
 		require.NoError(t, err)
@@ -339,4 +358,16 @@ func TestParamSameness(t *testing.T) {
 	require.True(t, p1.Same(p1))
 	require.False(t, p1.Same(p2))
 	require.False(t, p1.Same(p3))
+}
+
+func TestValuePushExpPanics(t *testing.T) {
+	v := rule.StringValue("foo")
+	err := v.PushExpr(rule.StringValue("bar"))
+	require.EqualError(t, err, "You can't push an Expr onto a Value")
+}
+
+func TestParamPushExpPanics(t *testing.T) {
+	v := rule.StringParam("mystring")
+	err := v.PushExpr(rule.StringValue("bar"))
+	require.EqualError(t, err, "You can't push an Expr onto a Param")
 }
