@@ -22,29 +22,26 @@
       <v-spacer></v-spacer>
       <v-btn
         flat
+        icon
         href="https://github.com/heetch/regula"
         target="_blank"
       >
-        <fa-icon :icon="['fab', 'github']" size="2x" />
+        <v-icon>mdi-github-circle</v-icon>
       </v-btn>
       <v-btn
         flat
+        icon
         href="https://regula.readthedocs.io/en/latest/"
         target="_blank"
       >
-        <fa-icon :icon="['fas', 'book']" size="2x" />
+        <v-icon>mdi-book-open-outline</v-icon>
       </v-btn>
     </v-toolbar>
   </div>
 </template>
 
 <script>
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faGithub } from '@fortawesome/free-brands-svg-icons';
-import { faBook } from '@fortawesome/free-solid-svg-icons';
 import Sidebar from '@/components/Sidebar.vue';
-
-library.add(faGithub, faBook);
 
 export default {
   name: 'Navbar',
