@@ -1,6 +1,5 @@
 <template>
   <div id="sidebar">
-    <h2>Rulesets</h2>
     <v-treeview
       v-model="tree"
       :items="items"
@@ -9,6 +8,13 @@
       open-on-click
     >
     </v-treeview>
+    <div class="new-ruleset mt-5">
+      <router-link to="/rulesets/new">
+        <v-btn fab dark color="indigo">
+          <v-icon dark>mdi-plus</v-icon>
+        </v-btn>
+      </router-link>
+    </div>
   </div>
 </template>
 
@@ -55,7 +61,7 @@ export default {
 
   methods: {
     fetchRulesets() {
-      fetch('i/rulesets/')
+      fetch('/ui/i/rulesets/')
         .then(stream => stream.json())
         .then(({ rulesets = [] }) => {
           this.items = rulesetsToTree(rulesets);
@@ -66,7 +72,7 @@ export default {
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
   #sidebar {
     padding: 1em;
     overflow: auto;
