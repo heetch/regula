@@ -38,8 +38,8 @@ type exprNot struct {
 func newExprNot() *exprNot {
 	return &exprNot{
 		operator: operator{
-			kind: "not",
 			contract: Contract{
+				OpCode:     "not",
 				ReturnType: BOOLEAN,
 				Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
 			},
@@ -85,8 +85,8 @@ type exprOr struct {
 func newExprOr() *exprOr {
 	return &exprOr{
 		operator: operator{
-			kind: "or",
 			contract: Contract{
+				OpCode:     "or",
 				ReturnType: BOOLEAN,
 				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY, Min: 2}},
 			},
@@ -149,8 +149,8 @@ type exprAnd struct {
 func newExprAnd() *exprAnd {
 	return &exprAnd{
 		operator: operator{
-			kind: "and",
 			contract: Contract{
+				OpCode:     "and",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{
@@ -219,8 +219,8 @@ type exprEq struct {
 func newExprEq() *exprEq {
 	return &exprEq{
 		operator: operator{
-			kind: "eq",
 			contract: Contract{
+				OpCode:     "eq",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{
@@ -278,8 +278,8 @@ type exprIn struct {
 func newExprIn() *exprIn {
 	return &exprIn{
 		operator: operator{
-			kind: "in",
 			contract: Contract{
+				OpCode:     "in",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{

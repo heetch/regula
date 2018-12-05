@@ -34,11 +34,10 @@ func GetOperator(name string) (Operator, error) {
 // on some given set of operands.  Some Exprs are operators, but Value
 // and Param types are not.
 //
-// Operators have a "kind" (the name of the operation), and a slice of
-// operands (which are themselves Exprs).  Operands are added to an
-// operator by means of the PushExpr call.
+// Operators have a Contract , and a slice of operands (which are
+// themselves Exprs).  Operands are added to an operator by means of
+// the PushExpr call.
 type operator struct {
-	kind     string
 	contract Contract
 	operands []Expr
 }
@@ -51,13 +50,13 @@ type operator struct {
 // all operation expressions use it indirectly to do the same.
 func (o *operator) PushExpr(e Expr) error {
 	pos := len(o.operands)
-	term, err := o.contract.GetTerm(pos, o.kind)
+	term, err := o.contract.GetTerm(pos)
 	if err != nil {
 		return err
 	}
 	if !term.IsFulfilledBy(e) {
 		return TypeError{
-			OpCode:       o.kind,
+			OpCode:       o.GetKind(),
 			ErrorPos:     pos + 1,
 			ExpectedType: term.Type,
 			ReceivedType: e.Contract().ReturnType,
@@ -85,7 +84,7 @@ func (o *operator) Finalise() error {
 		minPos = (minPos - 1) + lastTerm.Min
 	}
 	if pos < minPos {
-		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.kind}
+		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.GetKind()}
 	}
 	return nil
 }
@@ -98,7 +97,7 @@ func (o *operator) Contract() Contract {
 }
 
 func (o *operator) Same(c ComparableExpression) bool {
-	if o.kind == c.GetKind() {
+	if o.GetKind() == c.GetKind() {
 		o2, ok := c.(Operander)
 		if ok {
 			ops := o2.Operands()
@@ -123,7 +122,7 @@ func (o *operator) Same(c ComparableExpression) bool {
 
 //
 func (o *operator) GetKind() string {
-	return o.kind
+	return o.contract.OpCode
 }
 
 func (o *operator) UnmarshalJSON(data []byte) error {
@@ -141,7 +140,6 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	o.kind = node.Kind
 	o.contract = tmpExpr.Contract()
 
 	for _, expr := range node.Operands.Exprs {
@@ -157,7 +155,7 @@ func (o *operator) MarshalJSON() ([]byte, error) {
 		Operands []Expr `json:"operands"`
 	}
 
-	op.Kind = o.kind
+	op.Kind = o.GetKind()
 	op.Operands = o.operands
 	return json.Marshal(&op)
 }

@@ -80,12 +80,13 @@ func (t Term) IsFulfilledBy(e Expr) bool {
 // evaluated) and zero, one or many Terms.  Each Term is in turn
 // typed, and has a defined cardinality.
 type Contract struct {
+	OpCode     string
 	ReturnType Type
 	Terms      []Term
 }
 
-//
-func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
+// GetTerm returns the Term of a contract that matches a particular position.  If no Term is available for a position then an ArityError will be returned
+func (c *Contract) GetTerm(pos int) (Term, error) {
 	extent := len(c.Terms)
 	if pos < extent {
 		return c.Terms[pos], nil
@@ -94,6 +95,6 @@ func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
 	if lastTerm.Cardinality == MANY {
 		return lastTerm, nil
 	}
-	return lastTerm, ArityError{OpCode: opCode, ErrorPos: pos + 1, MaxPos: extent}
+	return lastTerm, ArityError{OpCode: c.OpCode, ErrorPos: pos + 1, MaxPos: extent}
 
 }
