@@ -85,7 +85,7 @@ func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limi
 	var entries store.RulesetEntries
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	for _, pair := range resp.Kvs {
-		p := strings.TrimPrefix(string(pair.Key), path.Join(s.Namespace, "rulesets", "latest")+"/")
+		p := strings.TrimPrefix(string(pair.Key), s.latestRulesetPath("")+"/")
 		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
 	}
 
