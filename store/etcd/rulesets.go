@@ -29,6 +29,13 @@ type RulesetService struct {
 	Namespace string
 }
 
+func computeLimit(l int) int {
+	if l <= 0 || l > 100 {
+		return 50
+	}
+	return l
+}
+
 // List returns all the rulesets entries under the given prefix or only the rulesets path if pathsOnly is set to true.
 // If the prefix is empty, it returns **all** the rulesets entries.
 // Instead, a limit option can be passed to return a subset of the rulesets.
@@ -37,9 +44,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	var key string
 
-	if limit <= 0 || limit > 100 {
-		limit = 50 // TODO(asdine): make this configurable in future releases.
-	}
+	limit = computeLimit(limit)
 
 	if continueToken != "" {
 		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
