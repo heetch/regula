@@ -61,9 +61,8 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // the paths parameter is not given otherwise it fetches the rulesets paths only.
 func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
-		entries *store.RulesetEntries
-		err     error
-		limit   int
+		err   error
+		limit int
 	)
 
 	if l := r.URL.Query().Get("limit"); l != "" {
@@ -76,7 +75,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 
 	continueToken := r.URL.Query().Get("continue")
 	_, ok := r.URL.Query()["paths"]
-	entries, err = s.rulesets.List(r.Context(), prefix, limit, continueToken, ok)
+	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken, ok)
 
 	if err != nil {
 		if err == store.ErrNotFound {
