@@ -96,6 +96,12 @@ func (o *operator) Contract() Contract {
 	return o.contract
 }
 
+// Same returns true if the operator is the root of an abstract syntax
+// tree that exactly matches the one described by a provided
+// ComparableExpression.  This method is intended for use in test
+// cases making assertions about other ways of generating an abstract
+// syntax tree.  This makes operator implement the
+// ComparableExpression interface.
 func (o *operator) Same(c ComparableExpression) bool {
 	if o.GetKind() == c.GetKind() {
 		o2, ok := c.(Operander)
@@ -120,7 +126,8 @@ func (o *operator) Same(c ComparableExpression) bool {
 	return false
 }
 
-//
+// GetKind returns the kind of the operator.  This makes operator
+// implement the ComparableExpression interface.
 func (o *operator) GetKind() string {
 	return o.contract.OpCode
 }
@@ -164,6 +171,8 @@ func (o *operator) Eval(params Params) (*Value, error) {
 	return nil, nil
 }
 
+// Operands returns the operators Operands. This complies with the
+// Operander interface.
 func (o *operator) Operands() []Expr {
 	return o.operands
 }
