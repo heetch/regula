@@ -57,7 +57,7 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))
 				assert.Equal(t, token, tk)
 				return l, err
@@ -92,6 +92,10 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
 		})
 
+		t.Run("WithLimitAndContinue", func(t *testing.T) {
+			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, nil)
+		})
+
 		t.Run("NoResultOnRoot", func(t *testing.T) {
 			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil)
 		})
@@ -110,6 +114,69 @@ func TestAPI(t *testing.T) {
 
 		t.Run("InvalidLimit", func(t *testing.T) {
 			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil)
+		})
+	})
+
+	t.Run("ListPaths", func(t *testing.T) {
+		l := store.RulesetEntries{
+			Entries: []store.RulesetEntry{
+				{Path: "aa"},
+				{Path: "bb"},
+			},
+			Revision: "somerev",
+			Continue: "sometoken",
+		}
+
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
+			t.Helper()
+
+			uu, uerr := url.Parse(u)
+			require.NoError(t, uerr)
+			limit := uu.Query().Get("limit")
+			if limit == "" {
+				limit = "0"
+			}
+			token := uu.Query().Get("continue")
+
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(lm))
+				assert.Equal(t, token, tk)
+				return l, err
+			}
+			defer func() { s.ListFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", u, nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var res api.Rulesets
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				require.Equal(t, len(l.Entries), len(res.Rulesets))
+				for i := range l.Entries {
+					require.Equal(t, l.Entries[i].Path, res.Rulesets[i].Path)
+					require.Zero(t, l.Entries[i].Ruleset)
+					require.Zero(t, l.Entries[i].Version)
+				}
+				if len(l.Entries) > 0 {
+					require.Equal(t, "sometoken", res.Continue)
+				}
+			}
+		}
+
+		t.Run("Root", func(t *testing.T) {
+			call(t, "/rulesets/?list&paths", http.StatusOK, &l, nil)
+		})
+
+		t.Run("WithPrefix", func(t *testing.T) {
+			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil)
+		})
+
+		t.Run("WithLimitAndContinue", func(t *testing.T) {
+			call(t, "/rulesets/a?list&paths&limit=10&continue=abc123", http.StatusOK, &l, nil)
 		})
 	})
 

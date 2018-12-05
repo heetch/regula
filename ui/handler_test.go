@@ -29,7 +29,7 @@ func TestInternalHandler(t *testing.T) {
 			s := new(mock.RulesetService)
 
 			// simulate a two page result
-			s.ListFn = func(ctx context.Context, _ string, limit int, token string) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, _ string, limit int, token string, pathsOnly bool) (*store.RulesetEntries, error) {
 				var entries store.RulesetEntries
 
 				switch token {
@@ -61,7 +61,7 @@ func TestInternalHandler(t *testing.T) {
 		// this test checks if the handler returns a 500 if a random error occurs in the ruleset service.
 		t.Run("Error", func(t *testing.T) {
 			s := new(mock.RulesetService)
-			s.ListFn = func(ctx context.Context, _ string, limit int, token string) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, _ string, limit int, token string, pathsOnly bool) (*store.RulesetEntries, error) {
 				return nil, errors.New("some error")
 			}
 
