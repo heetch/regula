@@ -34,3 +34,49 @@ func TestGetOperator(t *testing.T) {
 	require.True(t, ok)
 
 }
+
+// consumeOperands will attempt to push a slice of operands (in the
+// form of Exprs) onto the operator.  If any operand breaches the
+// operators Contract the code will panic.
+func TestConsumeOperands(t *testing.T) {
+
+	// Happy case, one operand
+	not := newExprNot()
+	require.NotPanics(t, func() {
+		not.consumeOperands(
+			BoolValue(false),
+		)
+	})
+
+	// Happy case, multiple operands
+	and := newExprAnd()
+	require.NotPanics(t, func() {
+		and.consumeOperands(
+			BoolValue(true),
+			BoolValue(true),
+			BoolValue(true),
+			BoolValue(false),
+		)
+	})
+
+	// Sad case, type mismatch
+	not = newExprNot()
+	require.PanicsWithValue(t,
+		`attempt to call "not" with a String in position 1, but it requires a Boolean`,
+		func() {
+			not.consumeOperands(
+				StringValue("🐒"),
+			)
+		})
+
+	// Sad case, arity error
+	not = newExprNot()
+	require.PanicsWithValue(t,
+		`attempted to call "not" with 2 arguments, but it requires 1 argument`,
+		func() {
+			not.consumeOperands(
+				BoolValue(true),
+				BoolValue(true),
+			)
+		})
+}

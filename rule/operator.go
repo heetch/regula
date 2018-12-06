@@ -42,6 +42,16 @@ type operator struct {
 	operands []Expr
 }
 
+// consumeOperands allows us to populate the operator with Operands in
+// line with its Contract.  Should one of the Exprs provided not match
+// the terms of the Contract, this function will panic.
+func (o *operator) consumeOperands(e ...Expr) {
+	for _, ex := range e {
+		o.pushExprOrPanic(ex)
+	}
+	o.finaliseOrPanic()
+}
+
 // PushExpr is used to add an Expr as an operand to the operator.
 // Each call to PushExpr will check the new operand against the
 // operators Contract, in the event that the new operand does not
