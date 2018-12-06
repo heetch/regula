@@ -31,14 +31,14 @@ type RulesetService struct {
 
 func computeLimit(l int) int {
 	if l <= 0 || l > 100 {
-		return 50
+		return 50 // TODO: make this one configurable
 	}
 	return l
 }
 
-// List returns all the rulesets entries under the given prefix or only the rulesets path if pathsOnly is set to true.
-// If the prefix is empty, it returns **all** the rulesets entries.
-// Instead, a limit option can be passed to return a subset of the rulesets.
+// List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
+// If the prefix is empty it returns entries from the beginning following the lexical ordering.
+// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
 func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
