@@ -15,6 +15,7 @@ type mockExpr struct {
 	evalFn     func(params rule.Params) (*rule.Value, error)
 	evalCount  int
 	lastParams rule.Params
+	returnType rule.Type
 }
 
 func (m *mockExpr) Eval(params rule.Params) (*rule.Value, error) {
@@ -40,9 +41,27 @@ func (m *mockExpr) MarshalJSON() ([]byte, error) {
 	return []byte(`{"kind": "mock"}`), nil
 }
 
+func (m *mockExpr) PushExpr(e rule.Expr) error {
+	return nil
+}
+
+func (m *mockExpr) Finalise() error {
+	return nil
+}
+
+//
+func (m *mockExpr) Contract() rule.Contract {
+	return rule.Contract{
+		ReturnType: m.returnType,
+		Terms: []rule.Term{
+			{Type: rule.ANY, Cardinality: rule.MANY},
+		},
+	}
+}
+
 func TestNot(t *testing.T) {
 	t.Run("Eval/true", func(t *testing.T) {
-		m1 := mockExpr{val: rule.BoolValue(true)}
+		m1 := mockExpr{val: rule.BoolValue(true), returnType: rule.BOOLEAN}
 		not := rule.Not(&m1)
 		val, err := not.Eval(nil)
 		require.NoError(t, err)
