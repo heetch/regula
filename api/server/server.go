@@ -32,7 +32,7 @@ func New(service store.RulesetService, cfg Config) *Server {
 
 	srv.logger = *cfg.Logger
 
-	srv.server = &http.Server{Handler: srv.Mux}
+	srv.server = new(http.Server)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	// cancel context on shutdown to stop long running operations like watches.
@@ -46,6 +46,8 @@ func New(service store.RulesetService, cfg Config) *Server {
 // Run runs the server on the chosen address. The given context must be used to
 // gracefully stop the server.
 func (s *Server) Run(ctx context.Context, addr string) error {
+	s.server.Handler = s.Mux
+
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
