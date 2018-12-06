@@ -55,7 +55,7 @@ func (o *operator) consumeOperands(e ...Expr) {
 // PushExpr is used to add an Expr as an operand to the operator.
 // Each call to PushExpr will check the new operand against the
 // operators Contract, in the event that the new operand does not
-// fulfil the appropriate Term of the Contract, and error will be
+// fulfil the appropriate Term of the Contract, an error will be
 // returned. This causes operator to implement the Expr interface, and
 // all operation expressions use it indirectly to do the same.
 func (o *operator) PushExpr(e Expr) error {
