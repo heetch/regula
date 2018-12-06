@@ -527,11 +527,11 @@ func (v *Value) Equal(other *Value) bool {
 // Operander is an interface for managing the operands of an
 // Expr that is an operation.
 type Operander interface {
-	// Operands returns of an operations Operands
+	// Operands returns all of the operands currently held by the Operander.
 	Operands() []Expr
 	// PushExpr adds an Expr as an operand.
 	PushExpr(e Expr) error
-	// Finalise indicates that we are done pushing Expr's to the operation.  This allows for arity checking.
+	// Finalise indicates that we are done pushing Expr's to the Operander.  This allows for arity checking.
 	Finalise() error
 }
 
