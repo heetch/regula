@@ -36,7 +36,7 @@ func computeLimit(l int) int {
 	return l
 }
 
-// List returns the rulesets entries under the given prefix or only the rulesets path if pathsOnly is set to true.
+// List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
 func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
