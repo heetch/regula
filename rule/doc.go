@@ -28,7 +28,7 @@ package rule
 //
 // In this case our operator will have the "OpCode" "plus", it will
 // return a NUMBER (a special type that can be either float64 or
-// nit64).  The arguments we'll pass to "plus" will also be the Type
+// int64).  The arguments we'll pass to "plus" will also be the Type
 // NUMBER, and we'll indicate that we'll accept many of them, but that
 // we want a minimum of 2 of them.
 //
