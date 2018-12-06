@@ -172,7 +172,9 @@ func TestRuleUnmarshalling(t *testing.T) {
 
 // An operator is a ComparableExpression
 func TestOperatorSameness(t *testing.T) {
-	o1 := &operator{kind: "not", operands: []Expr{BoolValue(true)}}
+	o1 := &operator{
+		operands: []Expr{BoolValue(true)},
+		contract: Contract{OpCode: "not"}}
 	o2 := Not(BoolValue(true)).(ComparableExpression)
 	o3 := Or(BoolValue(true), BoolValue(false)).(ComparableExpression)
 	require.True(t, o1.Same(o2))

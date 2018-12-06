@@ -1,5 +1,6 @@
 package sexpr
 
+
 import (
 	"fmt"
 	"io"
@@ -9,11 +10,11 @@ import (
 
 var errVal = rule.BoolValue(false)
 
-// makeSymbolMap returns a mapOp with the full map of the built-in
+// makeSymbolMap returns a opCodeMap with the full map of the built-in
 // symbols of our symbolic expression language to their implementation
-// as regula rule.Exprs.
-func makeSymbolMap() *opMap {
-	sm := newOpMap()
+// as regula rule.Operators.
+func makeSymbolMap() *opCodeMap {
+	sm := newOpCodeMap()
 	sm.mapSymbol("=", "eq")
 	sm.mapSymbol("+", "add")
 	sm.mapSymbol("-", "sub")

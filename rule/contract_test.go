@@ -19,11 +19,11 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	stringParam := rule.StringParam("foo")
 	intParam := rule.Int64Param("foo")
 	floatParam := rule.Float64Param("foo")
-	not := rule.Not(boolean).(rule.TypedExpression)
-	or := rule.Or(boolean, boolean).(rule.TypedExpression)
-	and := rule.And(boolean, boolean).(rule.TypedExpression)
-	eq := rule.Eq(boolean, boolean).(rule.TypedExpression)
-	in := rule.In(boolean, boolean, boolean).(rule.TypedExpression)
+	not := rule.Not(boolean)
+	or := rule.Or(boolean, boolean)
+	and := rule.And(boolean, boolean)
+	eq := rule.Eq(boolean, boolean)
+	in := rule.In(boolean, boolean, boolean)
 
 	testCases := []struct {
 		// Test cases define a list of positive expressions
@@ -31,54 +31,54 @@ func TestTermIsFulfilledBy(t *testing.T) {
 		// negative expressions (those that do not fulfil the
 		// Term).  We are attempting to be exhaustive here.
 		name                string
-		positiveExpressions []rule.TypedExpression
-		negativeExpressions []rule.TypedExpression
+		positiveExpressions []rule.Expr
+		negativeExpressions []rule.Expr
 		term                rule.Term
 	}{
 		{
 			name: "Boolean",
-			positiveExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{
 				boolean, boolParam, not, or, and, eq, in},
-			negativeExpressions: []rule.TypedExpression{
+			negativeExpressions: []rule.Expr{
 				str, integer, float, stringParam, intParam, floatParam},
 			term: rule.Term{Type: rule.BOOLEAN},
 		},
 		{
 			name:                "String",
-			positiveExpressions: []rule.TypedExpression{str, stringParam},
-			negativeExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{str, stringParam},
+			negativeExpressions: []rule.Expr{
 				boolean, integer, float, boolParam, intParam, floatParam,
 				or, and, eq, in, not},
 			term: rule.Term{Type: rule.STRING},
 		},
 		{
 			name:                "Integer",
-			positiveExpressions: []rule.TypedExpression{integer, intParam},
-			negativeExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{integer, intParam},
+			negativeExpressions: []rule.Expr{
 				boolean, str, float, boolParam, stringParam, floatParam,
 				or, and, eq, in, not},
 			term: rule.Term{Type: rule.INTEGER},
 		},
 		{
 			name:                "Float",
-			positiveExpressions: []rule.TypedExpression{float, floatParam},
-			negativeExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{float, floatParam},
+			negativeExpressions: []rule.Expr{
 				boolean, str, integer, boolParam, stringParam, intParam,
 				or, and, eq, in, not},
 			term: rule.Term{Type: rule.FLOAT},
 		},
 		{
 			name: "Number",
-			positiveExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{
 				integer, intParam, float, floatParam},
-			negativeExpressions: []rule.TypedExpression{
+			negativeExpressions: []rule.Expr{
 				boolean, str, boolParam, stringParam, or, and, eq, not,
 			},
 			term: rule.Term{Type: rule.NUMBER},
 		},
 		{
 			name: "Any",
-			positiveExpressions: []rule.TypedExpression{
+			positiveExpressions: []rule.Expr{
 				integer, intParam, float, floatParam,
 				boolean, str, boolParam, stringParam,
 				or, and, eq, not,
@@ -139,7 +139,7 @@ func TestGetOperatorExprBadName(t *testing.T) {
 // pushed via PushExpr is at odds to the Arity of the Contract.
 func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	// Happy case (one expected, one given)
-	not, err := rule.GetOperatorExpr("not")
+	not, err := rule.GetOperator("not")
 	require.NoError(t, err)
 	err = not.PushExpr(rule.BoolValue(true))
 	require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	require.NoError(t, err)
 
 	// Happy case (many expected)
-	and, err := rule.GetOperatorExpr("and")
+	and, err := rule.GetOperator("and")
 	require.NoError(t, err)
 	err = and.PushExpr(rule.BoolValue(true))
 	require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	require.NoError(t, err)
 
 	// Sad case (one two many operands - one expected, two given)
-	not, err = rule.GetOperatorExpr("not")
+	not, err = rule.GetOperator("not")
 	err = not.PushExpr(rule.BoolValue(true))
 	require.NoError(t, err)
 	// We already pushed a bool onto this 'not', and it only wants one operand.
@@ -175,7 +175,7 @@ func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	require.Equal(t, 2, ae.ErrorPos)
 
 	// Sad case (not enough operands, expected 2, but got 1)
-	and, err = rule.GetOperatorExpr("and")
+	and, err = rule.GetOperator("and")
 	require.NoError(t, err)
 	err = and.PushExpr(rule.BoolValue(true))
 	err = and.Finalise()
@@ -187,7 +187,7 @@ func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 	require.Equal(t, 1, ae.ErrorPos)
 
 	// Sad case (not enough operands expected 1, got 0)
-	not, err = rule.GetOperatorExpr("not")
+	not, err = rule.GetOperator("not")
 	require.NoError(t, err)
 	err = not.Finalise()
 	require.EqualError(t, err, `attempted to call "not" with 0 arguments, but it requires 1 argument`)
@@ -200,13 +200,13 @@ func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
 
 func TestPushExprEnforcesTermType(t *testing.T) {
 	// Happy case
-	not, err := rule.GetOperatorExpr("not")
+	not, err := rule.GetOperator("not")
 	require.NoError(t, err)
 	err = not.PushExpr(rule.BoolValue(true))
 	require.NoError(t, err)
 
 	// Sad case
-	not, err = rule.GetOperatorExpr("not")
+	not, err = rule.GetOperator("not")
 	require.NoError(t, err)
 	err = not.PushExpr(rule.StringValue("pants"))
 	require.EqualError(t, err, `attempt to call "not" with a String in position 1, but it requires a Boolean`)
@@ -218,7 +218,7 @@ func TestPushExprEnforcesTermType(t *testing.T) {
 	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
 
 	// Sad case for an operand that matches a Term with Cardinality=MANY
-	or, err := rule.GetOperatorExpr("or")
+	or, err := rule.GetOperator("or")
 	require.NoError(t, err)
 	for i := 0; i < 4; i++ {
 		err = or.PushExpr(rule.BoolValue(true))

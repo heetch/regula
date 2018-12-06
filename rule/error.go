@@ -12,8 +12,8 @@ type ArityError struct {
 	ErrorPos int
 }
 
-//Error returns a string representation of the ArityError.  This makes
-//ArityError implement the Error interface.
+// Error returns a string representation of the ArityError.  This makes
+// ArityError implement the Error interface.
 func (ae ArityError) Error() string {
 	const template = "attempted to call %q with %d %s, but it requires %d %s"
 	argNoun := func(count int) string {

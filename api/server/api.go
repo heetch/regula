@@ -24,8 +24,7 @@ type rulesetAPI struct {
 }
 
 func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/rulesets")
-	path = strings.TrimPrefix(path, "/")
+	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
 	if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
 		ctx, cancel := context.WithTimeout(r.Context(), s.watchTimeout)
@@ -58,7 +57,8 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-// list fetches all the rulesets from the store and writes them to the http response.
+// list fetches all the rulesets from the store and writes them to the http response if
+// the paths parameter is not given otherwise it fetches the rulesets paths only.
 func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
 		err   error
@@ -74,7 +74,9 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 	}
 
 	continueToken := r.URL.Query().Get("continue")
-	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken)
+	_, ok := r.URL.Query()["paths"]
+	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken, ok)
+
 	if err != nil {
 		if err == store.ErrNotFound {
 			writeError(w, r, err, http.StatusNotFound)

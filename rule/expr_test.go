@@ -359,15 +359,3 @@ func TestParamSameness(t *testing.T) {
 	require.False(t, p1.Same(p2))
 	require.False(t, p1.Same(p3))
 }
-
-func TestValuePushExpPanics(t *testing.T) {
-	v := rule.StringValue("foo")
-	err := v.PushExpr(rule.StringValue("bar"))
-	require.EqualError(t, err, "You can't push an Expr onto a Value")
-}
-
-func TestParamPushExpPanics(t *testing.T) {
-	v := rule.StringParam("mystring")
-	err := v.PushExpr(rule.StringValue("bar"))
-	require.EqualError(t, err, "You can't push an Expr onto a Param")
-}

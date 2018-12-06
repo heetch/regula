@@ -1,13 +1,25 @@
 package rule
 
-import "fmt"
-
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
 type Type int
 
-//String returns a human readable representation of the Type.  This
-//makes Type implement the Stringer interface.
+// These constants represent the complete set of abstract types usable
+// in expressions within Regula.  Not that these abstract types don't
+// necessary equate directly to concrete types that you might think
+// about within Go.  In particular "NUMBER" and "ANY" exist to define
+// parameters that do not have to be of a fixed type.
+const (
+	BOOLEAN Type = iota
+	STRING
+	INTEGER
+	FLOAT
+	NUMBER // A special type that can be promoted to INTEGER or FLOAT
+	ANY    // A special type that can be promoted to any other.
+)
+
+// String returns a human readable representation of the Type.  This
+// makes Type implement the Stringer interface.
 func (t Type) String() string {
 	switch t {
 	case BOOLEAN:
@@ -25,20 +37,6 @@ func (t Type) String() string {
 	}
 	return "invalid type"
 }
-
-// These constants represent the complete set of abstract types usable
-// in expressions within Regula.  Not that these abstract types don't
-// necessary equate directly to concrete types that you might think
-// about within Go.  In particular "NUMBER" and "ANY" exist to define
-// parameters that do not have to be of a fixed type.
-const (
-	BOOLEAN Type = iota
-	STRING
-	INTEGER
-	FLOAT
-	NUMBER // A special type that can be promoted to INTEGER or FLOAT
-	ANY    // A special type that can be promoted to any other.
-)
 
 // Cardinality expresses the number of times a term might be repeated
 // in an expression.
@@ -63,10 +61,10 @@ type Term struct {
 	Min         int // For Terms with Cardinality == MANY, we can specify a minimum number
 }
 
-// IsFulfilledBy returns true when a provided TypedExpression has a return type
+// IsFulfilledBy returns true when a provided Expr has a return type
 // that matches the Term's Type.
-func (t Term) IsFulfilledBy(te TypedExpression) bool {
-	rt := te.Contract().ReturnType
+func (t Term) IsFulfilledBy(e Expr) bool {
+	rt := e.Contract().ReturnType
 	// Switch to handle promotable abstract types.
 	switch t.Type {
 	case ANY:
@@ -87,6 +85,7 @@ func (t Term) Equal(other Term) bool {
 // evaluated) and zero, one or many Terms.  Each Term is in turn
 // typed, and has a defined cardinality.
 type Contract struct {
+	OpCode     string
 	ReturnType Type
 	Terms      []Term
 }
@@ -107,8 +106,8 @@ func (c Contract) Equal(other Contract) bool {
 	return true
 }
 
-//
-func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
+// GetTerm returns the Term of a contract that matches a particular position.  If no Term is available for a position then an ArityError will be returned
+func (c *Contract) GetTerm(pos int) (Term, error) {
 	extent := len(c.Terms)
 	if pos < extent {
 		return c.Terms[pos], nil
@@ -117,33 +116,5 @@ func (c *Contract) GetTerm(pos int, opCode string) (Term, error) {
 	if lastTerm.Cardinality == MANY {
 		return lastTerm, nil
 	}
-	return lastTerm, ArityError{OpCode: opCode, ErrorPos: pos + 1, MaxPos: extent}
-
-}
-
-// A TypedExpression is an expression that declares the Type Contract
-// it makes with the context in which it appears, and with any
-// sub-expressions that it contains.  This Contract can be inspected
-// by calling the Contract method of the TypedExpression interface.
-type TypedExpression interface {
-	Contract() Contract
-}
-
-// GetOperatorExpr returns an Expr that matches the provided operator
-// name. If no matching expression exists, and error will be returned.
-func GetOperatorExpr(name string) (Expr, error) {
-	switch name {
-	case "eq":
-		return newExprEq(), nil
-	case "not":
-		return newExprNot(), nil
-	case "and":
-		return newExprAnd(), nil
-	case "or":
-		return newExprOr(), nil
-	case "in":
-		return newExprIn(), nil
-
-	}
-	return nil, fmt.Errorf("No operator called %q exists", name)
+	return lastTerm, ArityError{OpCode: c.OpCode, ErrorPos: pos + 1, MaxPos: extent}
 }

@@ -2,40 +2,74 @@ package rule
 
 import (
 	"encoding/json"
+	"fmt"
 )
+
+// An Operator is an Expr that is also an Operander.
+type Operator interface {
+	Expr
+	Operander
+}
+
+// GetOperator returns an Operator that matches the provided operator
+// name. If no matching expression exists, an error will be returned.
+func GetOperator(name string) (Operator, error) {
+	switch name {
+	case "eq":
+		return newExprEq(), nil
+	case "not":
+		return newExprNot(), nil
+	case "and":
+		return newExprAnd(), nil
+	case "or":
+		return newExprOr(), nil
+	case "in":
+		return newExprIn(), nil
+
+	}
+	return nil, fmt.Errorf("no operator Expression called %q exists", name)
+}
 
 // The operator is the representation of an operation to be performed
 // on some given set of operands.  Some Exprs are operators, but Vaule
 // and Param types are not.
 //
-// Operators have a "kind" (the name of the operation), and a slice of
-// operands (which are themselves Exprs).  Operands are added to an
-// operator by means of the PushExpr call.
+// Operators have a Contract , and a slice of operands (which are
+// themselves Exprs).  Operands are added to an operator by means of
+// the PushExpr call.
 type operator struct {
-	kind     string
 	contract Contract
 	operands []Expr
+}
+
+// consumeOperands allows us to populate the operator with Operands in
+// line with its Contract.  Should one of the Exprs provided not match
+// the terms of the Contract, this function will panic.
+func (o *operator) consumeOperands(e ...Expr) {
+	for _, ex := range e {
+		o.pushExprOrPanic(ex)
+	}
+	o.finaliseOrPanic()
 }
 
 // PushExpr is used to add an Expr as an operand to the operator.
 // Each call to PushExpr will check the new operand against the
 // operators Contract, in the event that the new operand does not
-// fulfil the appropriate Term of the Contract, and error will be
+// fulfil the appropriate Term of the Contract, an error will be
 // returned. This causes operator to implement the Expr interface, and
 // all operation expressions use it indirectly to do the same.
 func (o *operator) PushExpr(e Expr) error {
 	pos := len(o.operands)
-	term, err := o.contract.GetTerm(pos, o.kind)
+	term, err := o.contract.GetTerm(pos)
 	if err != nil {
 		return err
 	}
-	te := e.(TypedExpression)
-	if !term.IsFulfilledBy(te) {
+	if !term.IsFulfilledBy(e) {
 		return TypeError{
-			OpCode:       o.kind,
+			OpCode:       o.GetKind(),
 			ErrorPos:     pos + 1,
 			ExpectedType: term.Type,
-			ReceivedType: te.Contract().ReturnType,
+			ReceivedType: e.Contract().ReturnType,
 		}
 	}
 	o.operands = append(o.operands, e)
@@ -60,7 +94,7 @@ func (o *operator) Finalise() error {
 		minPos = (minPos - 1) + lastTerm.Min
 	}
 	if pos < minPos {
-		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.kind}
+		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.GetKind()}
 	}
 	return nil
 }
@@ -72,9 +106,15 @@ func (o *operator) Contract() Contract {
 	return o.contract
 }
 
+// Same returns true if the operator is the root of an abstract syntax
+// tree that exactly matches the one described by a provided
+// ComparableExpression.  This method is intended for use in test
+// cases making assertions about other ways of generating an abstract
+// syntax tree.  This makes operator implement the
+// ComparableExpression interface.
 func (o *operator) Same(c ComparableExpression) bool {
-	if o.kind == c.GetKind() {
-		o2, ok := c.(operander)
+	if o.GetKind() == c.GetKind() {
+		o2, ok := c.(Operander)
 		if ok {
 			ops := o2.Operands()
 			len1 := len(o.operands)
@@ -96,9 +136,10 @@ func (o *operator) Same(c ComparableExpression) bool {
 	return false
 }
 
-//
+// GetKind returns the kind of the operator.  This makes operator
+// implement the ComparableExpression interface.
 func (o *operator) GetKind() string {
-	return o.kind
+	return o.contract.OpCode
 }
 
 func (o *operator) UnmarshalJSON(data []byte) error {
@@ -112,12 +153,11 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tmpExpr, err := GetOperatorExpr(node.Kind)
+	tmpExpr, err := GetOperator(node.Kind)
 	if err != nil {
 		return err
 	}
-	o.kind = node.Kind
-	o.contract = tmpExpr.(TypedExpression).Contract()
+	o.contract = tmpExpr.Contract()
 
 	for _, expr := range node.Operands.Exprs {
 		o.PushExpr(expr)
@@ -132,7 +172,7 @@ func (o *operator) MarshalJSON() ([]byte, error) {
 		Operands []Expr `json:"operands"`
 	}
 
-	op.Kind = o.kind
+	op.Kind = o.GetKind()
 	op.Operands = o.operands
 	return json.Marshal(&op)
 }
@@ -141,6 +181,8 @@ func (o *operator) Eval(params Params) (*Value, error) {
 	return nil, nil
 }
 
+// Operands returns the operators Operands. This complies with the
+// Operander interface.
 func (o *operator) Operands() []Expr {
 	return o.operands
 }

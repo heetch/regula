@@ -10,8 +10,7 @@ import (
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
-	PushExpr(e Expr) error
-	Finalise() error
+	Contract() Contract
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -39,8 +38,8 @@ type exprNot struct {
 func newExprNot() *exprNot {
 	return &exprNot{
 		operator: operator{
-			kind: "not",
 			contract: Contract{
+				OpCode:     "not",
 				ReturnType: BOOLEAN,
 				Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
 			},
@@ -52,8 +51,7 @@ func newExprNot() *exprNot {
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
 	expr := newExprNot()
-	expr.pushExprOrPanic(e)
-	expr.finaliseOrPanic()
+	expr.consumeOperands(e)
 	return expr
 }
 
@@ -86,8 +84,8 @@ type exprOr struct {
 func newExprOr() *exprOr {
 	return &exprOr{
 		operator: operator{
-			kind: "or",
 			contract: Contract{
+				OpCode:     "or",
 				ReturnType: BOOLEAN,
 				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY, Min: 2}},
 			},
@@ -97,14 +95,9 @@ func newExprOr() *exprOr {
 
 // Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
 // All the given operands must evaluate to a boolean.
-func Or(v1, v2 Expr, vN ...Expr) Expr {
+func Or(vN ...Expr) Expr {
 	e := newExprOr()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -150,8 +143,8 @@ type exprAnd struct {
 func newExprAnd() *exprAnd {
 	return &exprAnd{
 		operator: operator{
-			kind: "and",
 			contract: Contract{
+				OpCode:     "and",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{
@@ -167,14 +160,9 @@ func newExprAnd() *exprAnd {
 
 // And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
 // All the given operands must evaluate to a boolean.
-func And(v1, v2 Expr, vN ...Expr) Expr {
+func And(vN ...Expr) Expr {
 	e := newExprAnd()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -220,8 +208,8 @@ type exprEq struct {
 func newExprEq() *exprEq {
 	return &exprEq{
 		operator: operator{
-			kind: "eq",
 			contract: Contract{
+				OpCode:     "eq",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{
@@ -236,14 +224,9 @@ func newExprEq() *exprEq {
 }
 
 // Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
-func Eq(v1, v2 Expr, vN ...Expr) Expr {
+func Eq(vN ...Expr) Expr {
 	e := newExprEq()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -279,8 +262,8 @@ type exprIn struct {
 func newExprIn() *exprIn {
 	return &exprIn{
 		operator: operator{
-			kind: "in",
 			contract: Contract{
+				OpCode:     "in",
 				ReturnType: BOOLEAN,
 				Terms: []Term{
 					{
@@ -299,14 +282,9 @@ func newExprIn() *exprIn {
 }
 
 // In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
-func In(v, e1 Expr, eN ...Expr) Expr {
+func In(vN ...Expr) Expr {
 	e := newExprIn()
-	e.pushExprOrPanic(v)
-	e.pushExprOrPanic(e1)
-	for _, eX := range eN {
-		e.pushExprOrPanic(eX)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -340,16 +318,6 @@ type Param struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
-}
-
-//PushExpr implements the Expr interface, but will panic if called as Param's can't have subexpressions.
-func (v *Param) PushExpr(e Expr) error {
-	return fmt.Errorf("You can't push an Expr onto a Param")
-}
-
-// Finalise makes Params implement the Expr interface.  It's a no-op.
-func (v *Param) Finalise() error {
-	return nil
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -486,16 +454,6 @@ func newValue(typ, data string) *Value {
 	}
 }
 
-//PushExpr implements the Expr interface, but will panic if called as Value's can't have subexpressions.
-func (v *Value) PushExpr(e Expr) error {
-	return fmt.Errorf("You can't push an Expr onto a Value")
-}
-
-// Finalise makes Values implement the Expr interface.  It's a no-op.
-func (v *Value) Finalise() error {
-	return nil
-}
-
 // Compares a Value with a ComparableExpression, without evaluating
 // either.  This is required by the ComparableExpression interface.
 func (v *Value) Same(c ComparableExpression) bool {
@@ -566,8 +524,15 @@ func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
 
-type operander interface {
+// Operander is an interface for managing the operands of an
+// Expr that is an operation.
+type Operander interface {
+	// Operands returns all of the operands currently held by the Operander.
 	Operands() []Expr
+	// PushExpr adds an Expr as an operand.
+	PushExpr(e Expr) error
+	// Finalise indicates that we are done pushing Expr's to the Operander.  This allows for arity checking.
+	Finalise() error
 }
 
 func walk(expr Expr, fn func(Expr) error) error {
@@ -576,7 +541,7 @@ func walk(expr Expr, fn func(Expr) error) error {
 		return err
 	}
 
-	if o, ok := expr.(operander); ok {
+	if o, ok := expr.(Operander); ok {
 		ops := o.Operands()
 		for _, op := range ops {
 			err := walk(op, fn)
