@@ -10,6 +10,7 @@ import (
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
 	Eval(Params) (*Value, error)
+	Contract() Contract
 }
 
 // ComparableExpression is a logical expression that can be compared
@@ -34,15 +35,24 @@ type exprNot struct {
 	operator
 }
 
+func newExprNot() *exprNot {
+	return &exprNot{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "not",
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
+			},
+		},
+	}
+}
+
 // Not creates an expression that evaluates the given operand e and returns its opposite.
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
-	return &exprNot{
-		operator: operator{
-			kind:     "not",
-			operands: []Expr{e},
-		},
-	}
+	expr := newExprNot()
+	expr.consumeOperands(e)
+	return expr
 }
 
 func (n *exprNot) Eval(params Params) (*Value, error) {
@@ -67,27 +77,28 @@ func (n *exprNot) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprNot, and makes it comply with the TypedExpression interface.
-func (n *exprNot) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: ONE}},
-	}
-}
-
 type exprOr struct {
 	operator
 }
 
-// Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
-// All the given operands must evaluate to a boolean.
-func Or(v1, v2 Expr, vN ...Expr) Expr {
+func newExprOr() *exprOr {
 	return &exprOr{
 		operator: operator{
-			kind:     "or",
-			operands: append([]Expr{v1, v2}, vN...),
+			contract: Contract{
+				OpCode:     "or",
+				ReturnType: BOOLEAN,
+				Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY, Min: 2}},
+			},
 		},
 	}
+}
+
+// Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
+// All the given operands must evaluate to a boolean.
+func Or(vN ...Expr) Expr {
+	e := newExprOr()
+	e.consumeOperands(vN...)
+	return e
 }
 
 func (n *exprOr) Eval(params Params) (*Value, error) {
@@ -125,27 +136,34 @@ func (n *exprOr) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-// Contract returns the Contract for exprOr, and makes it comply with the TypedExpression interface.
-func (n *exprOr) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms:      []Term{{Type: BOOLEAN, Cardinality: MANY}},
-	}
-}
-
 type exprAnd struct {
 	operator
 }
 
-// And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
-// All the given operands must evaluate to a boolean.
-func And(v1, v2 Expr, vN ...Expr) Expr {
+func newExprAnd() *exprAnd {
 	return &exprAnd{
 		operator: operator{
-			kind:     "and",
-			operands: append([]Expr{v1, v2}, vN...),
+			contract: Contract{
+				OpCode:     "and",
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        BOOLEAN,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
 		},
 	}
+}
+
+// And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
+// All the given operands must evaluate to a boolean.
+func And(vN ...Expr) Expr {
+	e := newExprAnd()
+	e.consumeOperands(vN...)
+	return e
 }
 
 func (n *exprAnd) Eval(params Params) (*Value, error) {
@@ -183,31 +201,33 @@ func (n *exprAnd) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprAnd, and makes it comply with the TypedExpression interface.
-func (n *exprAnd) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        BOOLEAN,
-				Cardinality: MANY,
+type exprEq struct {
+	operator
+}
+
+func newExprEq() *exprEq {
+	return &exprEq{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "eq",
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
 			},
 		},
 	}
 }
 
-type exprEq struct {
-	operator
-}
-
 // Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
-func Eq(v1, v2 Expr, vN ...Expr) Expr {
-	return &exprEq{
-		operator: operator{
-			kind:     "eq",
-			operands: append([]Expr{v1, v2}, vN...),
-		},
-	}
+func Eq(vN ...Expr) Expr {
+	e := newExprEq()
+	e.consumeOperands(vN...)
+	return e
 }
 
 func (n *exprEq) Eval(params Params) (*Value, error) {
@@ -235,31 +255,37 @@ func (n *exprEq) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
-// Contract returns the Contract for exprEq, and makes it comply with the TypedExpression interface.
-func (n *exprEq) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: MANY,
+type exprIn struct {
+	operator
+}
+
+func newExprIn() *exprIn {
+	return &exprIn{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "in",
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: ONE,
+					},
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         1,
+					},
+				},
 			},
 		},
 	}
 }
 
-type exprIn struct {
-	operator
-}
-
 // In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
-func In(v, e1 Expr, eN ...Expr) Expr {
-	return &exprIn{
-		operator: operator{
-			kind:     "in",
-			operands: append([]Expr{v, e1}, eN...),
-		},
-	}
+func In(vN ...Expr) Expr {
+	e := newExprIn()
+	e.consumeOperands(vN...)
+	return e
 }
 
 func (n *exprIn) Eval(params Params) (*Value, error) {
@@ -285,23 +311,6 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	}
 
 	return BoolValue(false), nil
-}
-
-// Contract returns the Contract for exprIn, and makes it comply with the TypedExpression interface.
-func (n *exprIn) Contract() Contract {
-	return Contract{
-		ReturnType: BOOLEAN,
-		Terms: []Term{
-			{
-				Type:        ANY,
-				Cardinality: ONE,
-			},
-			{
-				Type:        ANY,
-				Cardinality: MANY,
-			},
-		},
-	}
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
@@ -515,8 +524,15 @@ func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
 
-type operander interface {
+// Operander is an interface for managing the operands of an
+// Expr that is an operation.
+type Operander interface {
+	// Operands returns all of the operands currently held by the Operander.
 	Operands() []Expr
+	// PushExpr adds an Expr as an operand.
+	PushExpr(e Expr) error
+	// Finalise indicates that we are done pushing Expr's to the Operander.  This allows for arity checking.
+	Finalise() error
 }
 
 func walk(expr Expr, fn func(Expr) error) error {
@@ -525,7 +541,7 @@ func walk(expr Expr, fn func(Expr) error) error {
 		return err
 	}
 
-	if o, ok := expr.(operander); ok {
+	if o, ok := expr.(Operander); ok {
 		ops := o.Operands()
 		for _, op := range ops {
 			err := walk(op, fn)
