@@ -51,8 +51,7 @@ func newExprNot() *exprNot {
 // e must evaluate to a boolean.
 func Not(e Expr) Expr {
 	expr := newExprNot()
-	expr.pushExprOrPanic(e)
-	expr.finaliseOrPanic()
+	expr.consumeOperands(e)
 	return expr
 }
 
@@ -96,14 +95,9 @@ func newExprOr() *exprOr {
 
 // Or creates an expression that takes at least two operands and evaluates to true if one of the operands evaluates to true.
 // All the given operands must evaluate to a boolean.
-func Or(v1, v2 Expr, vN ...Expr) Expr {
+func Or(vN ...Expr) Expr {
 	e := newExprOr()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -166,14 +160,9 @@ func newExprAnd() *exprAnd {
 
 // And creates an expression that takes at least two operands and evaluates to true if all the operands evaluate to true.
 // All the given operands must evaluate to a boolean.
-func And(v1, v2 Expr, vN ...Expr) Expr {
+func And(vN ...Expr) Expr {
 	e := newExprAnd()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -235,14 +224,9 @@ func newExprEq() *exprEq {
 }
 
 // Eq creates an expression that takes at least two operands and evaluates to true if all the operands are equal.
-func Eq(v1, v2 Expr, vN ...Expr) Expr {
+func Eq(vN ...Expr) Expr {
 	e := newExprEq()
-	e.pushExprOrPanic(v1)
-	e.pushExprOrPanic(v2)
-	for _, v := range vN {
-		e.pushExprOrPanic(v)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
@@ -298,14 +282,9 @@ func newExprIn() *exprIn {
 }
 
 // In creates an expression that takes at least two operands and evaluates to true if the first one is equal to one of the others.
-func In(v, e1 Expr, eN ...Expr) Expr {
+func In(vN ...Expr) Expr {
 	e := newExprIn()
-	e.pushExprOrPanic(v)
-	e.pushExprOrPanic(e1)
-	for _, eX := range eN {
-		e.pushExprOrPanic(eX)
-	}
-	e.finaliseOrPanic()
+	e.consumeOperands(vN...)
 	return e
 }
 
