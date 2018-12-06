@@ -18,8 +18,8 @@ const (
 	ANY    // A special type that can be promoted to any other.
 )
 
-//String returns a human readable representation of the Type.  This
-//makes Type implement the Stringer interface.
+// String returns a human readable representation of the Type.  This
+// makes Type implement the Stringer interface.
 func (t Type) String() string {
 	switch t {
 	case BOOLEAN:
