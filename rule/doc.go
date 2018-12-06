@@ -128,7 +128,7 @@ package rule
 //
 // Finally, we need a way for people using language other than Go to
 // construct our Operator.  The Operator interface defines most of
-// what we need, bus we'll need to modify the GetOperator function in
+// what we need, but we'll need to modify the GetOperator function in
 // operator.go to reflect our new operators existence.
 //
 // For our example, here's GetOperator redefined to include the "plus"
