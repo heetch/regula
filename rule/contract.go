@@ -4,6 +4,20 @@ package rule
 // a return type, and some expressions also receive typed parameters.
 type Type int
 
+// These constants represent the complete set of abstract types usable
+// in expressions within Regula.  Not that these abstract types don't
+// necessary equate directly to concrete types that you might think
+// about within Go.  In particular "NUMBER" and "ANY" exist to define
+// parameters that do not have to be of a fixed type.
+const (
+	BOOLEAN Type = iota
+	STRING
+	INTEGER
+	FLOAT
+	NUMBER // A special type that can be promoted to INTEGER or FLOAT
+	ANY    // A special type that can be promoted to any other.
+)
+
 //String returns a human readable representation of the Type.  This
 //makes Type implement the Stringer interface.
 func (t Type) String() string {
@@ -23,20 +37,6 @@ func (t Type) String() string {
 	}
 	return "invalid type"
 }
-
-// These constants represent the complete set of abstract types usable
-// in expressions within Regula.  Not that these abstract types don't
-// necessary equate directly to concrete types that you might think
-// about within Go.  In particular "NUMBER" and "ANY" exist to define
-// parameters that do not have to be of a fixed type.
-const (
-	BOOLEAN Type = iota
-	STRING
-	INTEGER
-	FLOAT
-	NUMBER // A special type that can be promoted to INTEGER or FLOAT
-	ANY    // A special type that can be promoted to any other.
-)
 
 // Cardinality expresses the number of times a term might be repeated
 // in an expression.
