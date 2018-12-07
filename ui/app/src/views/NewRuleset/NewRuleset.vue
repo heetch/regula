@@ -4,9 +4,9 @@
 
     <v-form>
 
-      <Signature/>
+      <Signature />
 
-      <Rules/>
+      <Rules />
 
       <div class="text-xs-right mt-3">
         <v-btn

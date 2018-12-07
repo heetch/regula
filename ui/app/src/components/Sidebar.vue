@@ -10,7 +10,11 @@
     </v-treeview>
     <div class="new-ruleset mt-5">
       <router-link to="/rulesets/new">
-        <v-btn fab dark color="primary">
+        <v-btn
+          fab
+          dark
+          color="primary"
+        >
           <v-icon dark>mdi-plus</v-icon>
         </v-btn>
       </router-link>
@@ -42,8 +46,11 @@ export const rulesetsToTree = (rulesets = []) => {
 
   // walk is a private function that walks through a given object and returns
   // a tree compatible with the TreeView component
-  const walk = (o = {}) => Object.keys(o)
-    .map(k => ({ name: k, ...(!Array.isArray(o[k]) && { children: walk(o[k]) }) }));
+  const walk = (o = {}) =>
+    Object.keys(o).map(k => ({
+      name: k,
+      ...(!Array.isArray(o[k]) && { children: walk(o[k]) }),
+    }));
 
   return walk(tree);
 };
@@ -73,13 +80,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  #sidebar {
-    padding: 1em;
-    overflow: auto;
-    height: 100%;
+#sidebar {
+  padding: 1em;
+  overflow: auto;
+  height: 100%;
 
-    .new-ruleset a {
-      text-decoration: none;
-    }
+  .new-ruleset a {
+    text-decoration: none;
   }
+}
 </style>
