@@ -28,9 +28,24 @@ import Rules from './Rules.vue';
 
 export default {
   name: 'NewRuleset',
+
   components: {
     Signature,
     Rules,
+  },
+
+  data: () => ({
+    valid: false,
+  }),
+
+  methods: {
+    submit() {
+      if (this.$refs.form.validate()) {
+        console.log('Valid form');
+      } else {
+        console.log('Invalid form');
+      }
+    },
   },
 };
 </script>
