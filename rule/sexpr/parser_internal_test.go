@@ -8,13 +8,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// The symbol map allows us to do bidirectional conversion of symbols
+func TestMakeSymbolMap(t *testing.T) {
+	sm := makeSymbolMap()
+	o, err := sm.getOperatorForSymbol("=")
+	require.NoError(t, err)
+	require.Equal(t, "eq", o.Contract().OpCode)
+}
+
+// NewParser initialises the Parser with an io.Reader and no buffered lexicalElement
 func TestNewParser(t *testing.T) {
 	var b bytes.Buffer
 	p := NewParser(&b)
 	require.False(t, p.buffered)
 }
 
-// Test that we can scan a single lexicalElement from the underlying Scanner
+// scan will scan a single lexicalElement from the underlying Scanner
 func TestScanOneLexicalElement(t *testing.T) {
 	b := bytes.NewBufferString(`hello`)
 	p := NewParser(b)
@@ -24,6 +33,7 @@ func TestScanOneLexicalElement(t *testing.T) {
 	require.Equal(t, "hello", le.Literal)
 }
 
+// unscan will allow the same lexicalElement to be rescanned from the buffer
 func TestUnscanLexicalElement(t *testing.T) {
 	b := bytes.NewBufferString(`(hello)`)
 	p := NewParser(b)
@@ -53,6 +63,7 @@ func TestUnscanLexicalElement(t *testing.T) {
 	require.Equal(t, "hello", le.Literal)
 }
 
+// Parse can return a tree of Exprs representing a simple operator and its operand.
 func TestParseSimpleOperator(t *testing.T) {
 	b := bytes.NewBufferString(`(not #true)`)
 	p := NewParser(b)
@@ -65,8 +76,15 @@ func TestParseSimpleOperator(t *testing.T) {
 	require.True(t, ce1.Same(expected))
 }
 
+// Parse can return a tree of Exprs representing operators with other operators amongst their operands
 func TestParseNestedOperator(t *testing.T) {
-	b := bytes.NewBufferString(`(not (= #true #false))`)
+	b := bytes.NewBufferString(`
+(not (= #true
+        (or #false
+            #true
+            (and #true 
+                 #true))))
+`)
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
@@ -76,13 +94,39 @@ func TestParseNestedOperator(t *testing.T) {
 	expected := rule.Not(
 		rule.Eq(
 			rule.BoolValue(true),
-			rule.BoolValue(false),
+			rule.Or(
+				rule.BoolValue(false),
+				rule.BoolValue(true),
+				rule.And(
+					rule.BoolValue(true),
+					rule.BoolValue(true),
+				),
+			),
 		),
 	).(rule.ComparableExpression)
 	require.True(t, ce1.Same(expected))
+}
+
+// Parse returns an error if it encounters EOF
+func TestParserReturnsErrorIfItHitsEOF(t *testing.T) {
+	b := bytes.NewBufferString(``)
+	p := NewParser(b)
+	var err error
+	_, err = p.Parse()
+	require.EqualError(t, err, `1:0: Error. unexpected end of file.`)
 
 }
 
+// Parse returns an error if the top level expression doesn't return a Boolean value
+func TestParserReturnsErrorIfRootOfRuleIsNonBoolean(t *testing.T) {
+	b := bytes.NewBufferString(`"eek"`)
+	p := NewParser(b)
+	var err error
+	_, err = p.Parse()
+	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String.`)
+}
+
+// Parse returns an error if an operator doesn't follow the left parenthesis
 func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(#false)`)
 	p := NewParser(b)
@@ -90,6 +134,7 @@ func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 	require.EqualError(t, err, `Expected an operator, but got the Boolean "false"`)
 }
 
+// Parse returns an error if a symbol that is not an operator follows the left parenthesis
 func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(wobbly)`)
 	p := NewParser(b)
@@ -97,19 +142,21 @@ func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	require.EqualError(t, err, `"wobbly" is not a valid symbol`)
 }
 
-func TestParseOperatorExpectationsMatch(t *testing.T) {
-	b := bytes.NewBufferString(`(= #true #true)`)
+// makeBoolValue
+func TestMakeBoolValue(t *testing.T) {
+	b := bytes.NewBufferString(`#true #false`)
 	p := NewParser(b)
-	expr, err := p.Parse()
+	le, err := p.scan()
 	require.NoError(t, err)
-	ce := expr.(rule.ComparableExpression)
-	ee := rule.Eq(rule.BoolValue(true), rule.BoolValue(true)).(rule.ComparableExpression)
-	require.True(t, ee.Same(ce))
-}
+	bv := p.makeBoolValue(le)
+	require.True(t, bv.(rule.ComparableExpression).Same(
+		rule.BoolValue(true),
+	))
+	le, err = p.scan()
+	require.NoError(t, err)
+	bv = p.makeBoolValue(le)
+	require.True(t, bv.(rule.ComparableExpression).Same(
+		rule.BoolValue(false),
+	))
 
-func TestMakeSymbolMap(t *testing.T) {
-	sm := makeSymbolMap()
-	o, err := sm.getOperatorForSymbol("=")
-	require.NoError(t, err)
-	require.Equal(t, "eq", o.Contract().OpCode)
 }
