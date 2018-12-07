@@ -10,7 +10,7 @@
     </v-treeview>
     <div class="new-ruleset mt-5">
       <router-link to="/rulesets/new">
-        <v-btn fab dark color="indigo">
+        <v-btn fab dark color="primary">
           <v-icon dark>mdi-plus</v-icon>
         </v-btn>
       </router-link>
@@ -77,5 +77,9 @@ export default {
     padding: 1em;
     overflow: auto;
     height: 100%;
+
+    .new-ruleset a {
+      text-decoration: none;
+    }
   }
 </style>
