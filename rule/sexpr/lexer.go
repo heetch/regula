@@ -562,22 +562,3 @@ func (s *Scanner) eof() *ScanError {
 	err.EOF = true
 	return err
 }
-
-// ScanError is a type that implements the Error interface, but adds
-// additional context information to errors that can be inspected.  It
-// is intended to be used for all errors emerging from the Scanner.
-type ScanError struct {
-	Byte       int
-	Char       int
-	Line       int
-	CharInLine int
-	msg        string
-	EOF        bool
-}
-
-// Error makes ScanError comply with the Error interface.  It returns
-// a string representation of the ScanError including it's message and
-// some human readable position information.
-func (se ScanError) Error() string {
-	return fmt.Sprintf("Error:%d,%d: %s", se.Line, se.CharInLine, se.msg)
-}

@@ -31,7 +31,9 @@ func makeSymbolMap() *opCodeMap {
 	return sm
 }
 
-// Parser
+// Parser is a parser for the Regula Symbolic Expression Language.  It
+// should always be constructed by passing an io.Reader to the
+// NewParser method.
 type Parser struct {
 	s         *Scanner
 	buf       *lexicalElement
@@ -39,6 +41,10 @@ type Parser struct {
 	opCodeMap *opCodeMap
 }
 
+// NewParser returns a new Parser instance that can be used to parse a
+// tree of symbolic expressions from the provide io.Reader.  No
+// parsing will occur until the resulting Parser's Parse method is
+// called.
 func NewParser(r io.Reader) *Parser {
 	return &Parser{
 		s:         NewScanner(r),
@@ -74,8 +80,12 @@ func (p *Parser) unscan() {
 	p.buffered = true
 }
 
-//
+// Parse will parse the first expression it finds in a buffer,
+// including all its sub-expressions.  If an error is encountered this
+// will be returned, otherwise an abstract syntax tree built of Exprs
+// will be returned.
 func (p *Parser) Parse() (rule.Expr, error) {
+	// Our root expression *must* have the return type BOOLEAN
 	t := rule.Term{
 		Type:        rule.BOOLEAN,
 		Cardinality: rule.ONE,
@@ -85,18 +95,33 @@ func (p *Parser) Parse() (rule.Expr, error) {
 		return nil, err
 	}
 	if !t.IsFulfilledBy(expr) {
-		return nil, fmt.Errorf("The root expression in a rule must return a BOOLEAN, but it returns %q", expr.Contract().ReturnType)
+		return nil, ParserError{
+			Msg:             fmt.Sprintf("The root expression in a rule must return a Boolean, but it returns %s", expr.Contract().ReturnType),
+			ErrorType:       TYPE,
+			StartChar:       0,
+			EndChar:         p.s.charCount,
+			StartByte:       0,
+			EndByte:         p.s.byteCount,
+			StartLine:       0,
+			EndLine:         p.s.lineCount,
+			StartCharInLine: 0,
+			EndCharInLine:   p.s.lineCharCount,
+		}
 	}
+
+	// TODO: check that there are no further expression in the
+	// buffer (other than whitespace and comments) as this would
+	// be an error condition.
 	return expr, nil
 }
 
-//
-func (p *Parser) NewError(err error) error {
-	// TODO, furnish this with more information
-	return err
-}
-
-//
+// parseExpression parses a single Expr from the Parsers buffer.  If
+// an expression contains other expressions these will be parsed as
+// they are encountered.  In this way parse expression will
+// recursively walk a tree of expressions and the returned Expr will
+// be the top of an abstract syntax tree representing the full tree of
+// expression encompassed by the current text expression.  Any errors
+// encountered will be passed back up the tree.
 func (p *Parser) parseExpression() (rule.Expr, error) {
 	var expr rule.Expr
 	var inOperator bool
@@ -110,21 +135,37 @@ Loop:
 		}
 		switch le.Token {
 		case EOF:
-			break Loop
+			// The parser shouldn't actually hit this
+			// case, because we should only ever parse a
+			// single tree of expressions (terminated by a
+			// right parenthesis), a single value or a
+			// single param.  This will become more cloudy
+			// if we start parsing comments.
+			return nil, newParserError(le, fmt.Errorf("unexpected end of file"))
+		case COMMENT:
+			// We ignore comments, for now
+			continue
 		case WHITESPACE:
-			// We just ignore white space
+			// We just ignore white space, for now.
 			continue
 		case LPAREN:
 			if inOperator {
-				// This is a subexpression
+				// This is a nested operator, so we'll
+				// want to treat it exactly like we
+				// did this one.  ... therefore, pop that left parenthesis back.
 				p.unscan()
+				// .... and recur!
 				expr, err = p.parseExpression()
 				if err != nil {
 					return nil, err
 				}
+				// Now we've got our nested
+				// expression, lets push it onto this
+				// one (and make sure it complies with
+				// the contract)
 				if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
 					// TODO: drastically improve this error message
-					return nil, p.NewError(fmt.Errorf(
+					return nil, newParserError(le, fmt.Errorf(
 						"Type mismatch in subexpression",
 					))
 				}
@@ -138,22 +179,41 @@ Loop:
 			inOperator = true
 
 		case BOOL:
-			expr, err = p.parseBool(le)
+			expr = p.makeBoolValue(le)
 			if !inOperator {
+				// Great, we got a BoolValue, let's return that.
 				break Loop
 			}
+			// OK, let's push the BoolValue into our
+			// operator and see if that complies with the
+			// contract.
 			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
-				return nil, p.NewError(err)
+				return nil, newParserError(le, err)
+			}
+
+		case STRING:
+			expr = rule.StringValue(le.Literal)
+			if !inOperator {
+				// OK, we're done, break the loop
+				break Loop
+			}
+			// Lets see if our opExpr is really expecting a string
+			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+				return nil, newParserError(le, err)
 			}
 
 		case RPAREN:
 			if !inOperator {
-				return nil, p.NewError(fmt.Errorf("Unexpected closing parenthesis"))
+				// We don't have a matching LPAREN, so this is bad news.
+				return nil, newParserError(le, fmt.Errorf("Unexpected closing parenthesis"))
 			}
+			// We've close off the operator
 			inOperator = false
+			// .. lets finalise it, and see if that's compatible with the contract
 			if err := opExpr.(rule.Operator).Finalise(); err != nil {
-				return nil, p.NewError(err)
+				return nil, newParserError(le, err)
 			}
+			// All is good, the output expression is this operater
 			expr = opExpr
 			break Loop
 		}
@@ -162,124 +222,15 @@ Loop:
 	return expr, nil
 }
 
-// 	return p.parseExpression()
-// }
-
-// func (p *Parser) parseSubExpression(term rule.Term, parent string, pos int) (rule.Expr, error) {
-// 	subExpr, err := p.parseExpression()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if !term.IsFulfilledBy(subExpr) {
-// 		return nil, fmt.Errorf(
-// 			"Expression %q expected a %q in position %d, but got a %q",
-// 			parent, term, pos, subExpr.Contract().ReturnType)
-// 	}
-// 	return subExpr, nil
-// }
-
-// //
-// func (p *Parser) parseSubExpressions(expr rule.Expr) error {
-// 	ce := expr.(rule.ComparableExpression)
-// 	contract := expr.Contract()
-// 	symbol, err := p.opCodeMap.getSymbolForOpCode(ce.GetKind())
-// 	if err != nil {
-
-// 	}
-
-// 	for pos, term := range contract.Terms {
-// 		switch term.Cardinality {
-// 		case rule.ONE:
-// 			nextLE, err := p.scan()
-// 			if err != nil {
-// 				return err
-// 			}
-// 			p.unscan()
-
-// 			if nextLE.Token == RPAREN || nextLE.Token == EOF {
-// 				return fmt.Errorf(
-// 					"Operation %q expected a %q in position %d, but instead the expression was terminated", symbol, term.Type, pos+1)
-// 			}
-
-// 			subExpr, err := p.parseSubExpression(term, contract.OpCode, pos)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			expr.(rule.Operator).PushExpr(subExpr)
-
-// 		case rule.MANY:
-// 			offset := 0
-// 		ManyLoop:
-// 			for {
-// 				nextLE, err := p.scan()
-// 				if err != nil {
-// 					return err
-// 				}
-// 				p.unscan()
-
-// 				if nextLE.Token == RPAREN || nextLE.Token == EOF {
-// 					break ManyLoop
-// 				}
-
-// 				subExpr, err := p.parseSubExpression(term, contract.OpCode, pos+offset)
-// 				if err != nil {
-// 					return err
-// 				}
-// 				expr.(rule.Operator).PushExpr(subExpr)
-// 				offset++
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (p *Parser) parseExpression() (rule.Expr, error) {
-// 	var expr rule.Expr
-
-// Loop:
-// 	for {
-// 		le, err := p.scan()
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		switch le.Token {
-// 		case EOF:
-// 			break Loop
-// 		case WHITESPACE:
-// 			// We just ignore white space
-// 			continue
-// 		case LPAREN:
-// 			// Left parenthesis must be followed by an operator
-// 			expr, err = p.parseOperator()
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			err = p.parseSubExpressions(expr)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 		case BOOL:
-// 			expr, err = p.parseBool(le)
-// 			break Loop
-// 		case RPAREN:
-// 			break Loop
-// 		}
-
-// 	}
-// 	return expr, nil
-
-// }
-
-//
-func (p *Parser) parseBool(le *lexicalElement) (rule.Expr, error) {
+// makeBoolValue extracts a BoolValue from a lexicalElement, or returns an error
+func (p *Parser) makeBoolValue(le *lexicalElement) rule.Expr {
 	if le.Literal == "true" {
-		return rule.BoolValue(true), nil
+		return rule.BoolValue(true)
 	}
-	return rule.BoolValue(false), nil
+	return rule.BoolValue(false)
 }
 
-//
+// parseOperator attempts to convert the next symbol into an operator, if it fails and error is returned.
 func (p *Parser) parseOperator() (rule.Expr, error) {
 	le, err := p.scan()
 	if err != nil {
