@@ -1,6 +1,6 @@
 <template>
   <v-container class="new-ruleset ">
-    <h1 class="display-2">New ruleset</h1>
+    <h1 class="display-1">New ruleset</h1>
 
     <v-form>
 
@@ -97,6 +97,15 @@
 
       </v-card>
 
+      <div class="text-xs-right mt-3">
+        <v-btn
+          :disabled="!valid"
+          @click="submit"
+          color="primary"
+        >
+          create new ruleset
+        </v-btn>
+      </div>
     </v-form>
 
   </v-container>
