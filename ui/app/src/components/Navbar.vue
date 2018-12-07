@@ -10,10 +10,10 @@
     </v-navigation-drawer>
 
     <v-toolbar
-        dense
-        fixed
-        clipped-left
-        app
+      dense
+      fixed
+      clipped-left
+      app
     >
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
       <v-toolbar-title class="headline">
@@ -57,14 +57,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .headline {
-    a {
-      text-decoration: none;
-      color: rgba(0,0,0,0.87);
+.headline {
+  a {
+    text-decoration: none;
+    color: rgba(0, 0, 0, 0.87);
 
-      &:visited {
-        color: rgba(0,0,0,0.87);
-      }
+    &:visited {
+      color: rgba(0, 0, 0, 0.87);
     }
   }
+}
 </style>
