@@ -105,6 +105,18 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	}
 }
 
+func TestTermEqual(t *testing.T) {
+	t1 := rule.Term{Type: rule.STRING, Cardinality: rule.ONE}
+	t2 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.ONE}
+	t3 := rule.Term{Type: rule.STRING, Cardinality: rule.MANY}
+	t4 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.MANY}
+
+	require.True(t, t1.Equal(t1))
+	require.False(t, t1.Equal(t2))
+	require.False(t, t1.Equal(t3))
+	require.False(t, t1.Equal(t4))
+}
+
 // PushExpr and Finalise will return ArityError if the number of Exprs
 // pushed via PushExpr is at odds to the Arity of the Contract.
 func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
