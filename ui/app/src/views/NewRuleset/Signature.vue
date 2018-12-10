@@ -10,7 +10,7 @@
       <!-- path -->
       <v-text-field
         box
-        v-model="path"
+        v-model="value.path"
         :rules="pathRules"
         label="Path"
         required
@@ -24,7 +24,7 @@
       <v-layout
         row
         wrap
-        v-for="(param, index) in params"
+        v-for="(param, index) in value.params"
         :key="index"
       >
         <v-flex
@@ -99,6 +99,7 @@
         box
         :items="returnTypes"
         label="Type"
+        v-model="value.returnType"
       ></v-select>
     </v-card-text>
   </v-card>
@@ -108,14 +109,13 @@
 <script>
 export default {
   name: 'Signature',
+  props: ['value'],
 
   data: () => ({
-    path: '',
     pathRules: [
       v => !!v || 'Path is required',
       v => /^[a-z]+(?:[a-z0-9-/]?[a-z0-9])*$/.test(v) || 'Path must be valid',
     ],
-    params: [{ name: '', type: '' }],
     paramNameRules: [
       v => !!v || 'Param name is required',
       v =>
@@ -127,11 +127,11 @@ export default {
 
   methods: {
     addParam() {
-      this.params.push({ name: '', type: '' });
+      this.value.params.push({ name: '', type: '' });
     },
 
     removeParam(index) {
-      this.params.splice(index, 1);
+      this.value.params.splice(index, 1);
     },
   },
 };
