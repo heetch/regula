@@ -3,6 +3,8 @@ package sexpr
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/heetch/regula/rule"
 )
@@ -246,4 +248,20 @@ func (p *Parser) parseOperator() (rule.Operator, error) {
 	}
 
 	return op, nil
+}
+
+//
+func (p *Parser) makeNumber(le *lexicalElement) (rule.Expr, error) {
+	if strings.ContainsRune(le.Literal, '.') {
+		f64, err := strconv.ParseFloat(le.Literal, 64)
+		if err != nil {
+			return nil, newParserError(le, err)
+		}
+		return rule.Float64Value(f64), nil
+	}
+	i64, err := strconv.ParseInt(le.Literal, 10, 64)
+	if err != nil {
+		return nil, newParserError(le, err)
+	}
+	return rule.Int64Value(i64), nil
 }
