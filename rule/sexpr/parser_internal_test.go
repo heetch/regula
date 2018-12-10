@@ -160,14 +160,47 @@ func TestMakeBoolValue(t *testing.T) {
 	))
 }
 
-//makeNumber constructs an Int64Value
-func TestMakeNumberMakesInt64Value(t *testing.T) {
-	b := bytes.NewBufferString(`123`)
-	p := NewParser(b)
-	le, err := p.scan()
-	require.NoError(t, err)
-	expr, err := p.makeNumber(le)
-	require.NoError(t, err)
-	ce := expr.(rule.ComparableExpression)
-	require.True(t, ce.Same(rule.Int64Value(123)))
+//makeNumber constructs appropriate numeric value types with valid input
+func TestMakeNumberHappyCases(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Input    string
+		Expected rule.Expr
+	}{
+		{
+			Name:     "positive integer",
+			Input:    "123",
+			Expected: rule.Int64Value(123),
+		},
+		{
+			Name:     "negative integer",
+			Input:    "-20",
+			Expected: rule.Int64Value(-20),
+		},
+		{
+			Name:     "positive float",
+			Input:    "12.345",
+			Expected: rule.Float64Value(12.345),
+		},
+		{
+			Name:     "negative float",
+			Input:    "-123.45",
+			Expected: rule.Float64Value(-123.45),
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			b := bytes.NewBufferString(c.Input)
+			p := NewParser(b)
+			le, err := p.scan()
+			require.NoError(t, err)
+			expr, err := p.makeNumber(le)
+			require.NoError(t, err)
+			ce := expr.(rule.ComparableExpression)
+			exp := c.Expected.(rule.ComparableExpression)
+			require.True(t, ce.Same(exp))
+		})
+
+	}
 }
