@@ -204,3 +204,33 @@ func TestMakeNumberHappyCases(t *testing.T) {
 
 	}
 }
+
+//makeNumber returns an error on invalid input (where that input makes it past the lexer
+func TestMakeNumberSadCases(t *testing.T) {
+	cases := []struct {
+		Name  string
+		Input string
+		Error string
+	}{
+		{
+			Name:  "Missing whole part in negative",
+			Input: "-.1",
+			Error: "1:0: Error. strconv.ParseInt: parsing \"-\": invalid syntax.",
+		},
+		// This space reserved for any other case we can think of!
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			b := bytes.NewBufferString(c.Input)
+			p := NewParser(b)
+			le, err := p.scan()
+			require.NoError(t, err)
+			t.Log(le.Literal)
+			expr, err := p.makeNumber(le)
+			t.Log(expr)
+			require.EqualError(t, err, c.Error)
+			require.Nil(t, expr)
+
+		})
+	}
+}
