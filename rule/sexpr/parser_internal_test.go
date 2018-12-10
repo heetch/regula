@@ -225,9 +225,7 @@ func TestMakeNumberSadCases(t *testing.T) {
 			p := NewParser(b)
 			le, err := p.scan()
 			require.NoError(t, err)
-			t.Log(le.Literal)
 			expr, err := p.makeNumber(le)
-			t.Log(expr)
 			require.EqualError(t, err, c.Error)
 			require.Nil(t, expr)
 
