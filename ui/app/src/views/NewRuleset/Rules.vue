@@ -19,7 +19,7 @@
         >
           <v-flex
             xs12
-            sm8
+            sm7
             class="pr-2"
           >
             <v-textarea
@@ -42,6 +42,31 @@
               required
               v-model="rule.result"
             ></v-text-field>
+          </v-flex>
+          <v-flex
+            xs12
+            sm1
+            class="text-sm-center"
+          >
+            <v-btn
+              v-if="index == 0"
+              small
+              fab
+              color="error"
+              disabled
+              @click="removeRule(index)"
+            >
+              <v-icon dark>mdi-minus</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="index > 0"
+              small
+              fab
+              color="error"
+              @click="removeRule(index)"
+            >
+              <v-icon dark>mdi-minus</v-icon>
+            </v-btn>
           </v-flex>
         </v-layout>
       </div>
