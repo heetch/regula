@@ -4,7 +4,7 @@
 
     <v-form>
 
-      <Signature />
+      <Signature v-model="signature" />
 
       <Rules />
 
@@ -36,6 +36,11 @@ export default {
 
   data: () => ({
     valid: false,
+    signature: {
+      path: '',
+      returnType: '',
+      params: [{ name: '', type: '' }],
+    },
   }),
 
   methods: {
