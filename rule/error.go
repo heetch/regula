@@ -43,9 +43,26 @@ type TypeError struct {
 	ReceivedType Type
 }
 
-// Error returns a string representation of the TypeError.  This make
+// Error returns a string representation of the TypeError.  This makes
 // TypeError implement the Error interface.
 func (te TypeError) Error() string {
 	return fmt.Sprintf(`attempt to call %q with a %s in position %d, but it requires a %s`,
 		te.OpCode, te.ReceivedType, te.ErrorPos, te.ExpectedType)
+}
+
+// HomogeneousTypeError encapsulates information relevant to an
+// attempt to provide multiple Exprs with incompatible types as
+// operands to an operator, which all match the same Term of the
+// Contract, where that Term has the Cardinality "MANY".
+type HomogeneousTypeError struct {
+	OpCode       string
+	ErrorPos     int
+	HomoStartPos int
+	ExpectedType Type
+	ReceivedType Type
+}
+
+// Error returns a string representation of the HomogeneousTypeError.   This makes HomogeneousTypeError implement the Error interface.
+func (hte HomogeneousTypeError) Error() string {
+	return fmt.Sprintf(`attempt to call %q with a %s in position %d, but all arguments after position %d must be a the same type, and you previously passed %s.`, hte.OpCode, hte.ReceivedType, hte.ErrorPos, hte.HomoStartPos, hte.ExpectedType)
 }
