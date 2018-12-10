@@ -80,3 +80,58 @@ func TestConsumeOperands(t *testing.T) {
 			)
 		})
 }
+
+// When we pass both Int64 and Float64 as "NUMBER" types to fulfil one
+// repeated Term of an operators Contract, then the Int64 will be
+// converted to a Float64
+func TestHomogeniseOperator(t *testing.T) {
+	op := operator{
+		contract: Contract{
+			OpCode:     "goo",
+			ReturnType: BOOLEAN,
+			Terms: []Term{
+				{
+					Type:        NUMBER,
+					Cardinality: MANY,
+					Min:         2,
+				},
+			},
+		},
+	}
+	err := op.PushExpr(Int64Value(1))
+	require.NoError(t, err)
+	err = op.PushExpr(Float64Value(1.1))
+	require.NoError(t, err)
+	op.homogenise()
+	expected := IntToFloat(Int64Value(1.0)).(ComparableExpression)
+	require.True(t, op.operands[0].(ComparableExpression).Same(expected))
+	exp := Float64Value(1.1)
+	require.True(t, op.operands[1].(ComparableExpression).Same(exp))
+}
+
+// operator.homogenise will promote the ReturnType of the operator
+// from NUMBER to the type of its parameters if they defined in the
+// Contract as a Term with Cardinality == MANY and Type == NUMBER.
+// This is intended to allow us to define mathematical operators that
+// can accept mixed type arguments.
+func TestHomogenisedOperatorPromotesReturnTypeWhenNumber(t *testing.T) {
+	op := operator{
+		contract: Contract{
+			OpCode:     "plus",
+			ReturnType: NUMBER,
+			Terms: []Term{
+				{
+					Type:        NUMBER,
+					Cardinality: MANY,
+					Min:         2,
+				},
+			},
+		},
+	}
+	err := op.PushExpr(Int64Value(1))
+	require.NoError(t, err)
+	err = op.PushExpr(Float64Value(1.1))
+	require.NoError(t, err)
+	op.homogenise()
+	require.Equal(t, FLOAT, op.Contract().ReturnType)
+}
