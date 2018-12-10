@@ -142,7 +142,7 @@ func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	require.EqualError(t, err, `"wobbly" is not a valid symbol`)
 }
 
-// makeBoolValue
+// makeBoolValue correctly constructs a BoolValue
 func TestMakeBoolValue(t *testing.T) {
 	b := bytes.NewBufferString(`#true #false`)
 	p := NewParser(b)
@@ -158,5 +158,16 @@ func TestMakeBoolValue(t *testing.T) {
 	require.True(t, bv.(rule.ComparableExpression).Same(
 		rule.BoolValue(false),
 	))
+}
 
+//makeNumber constructs an Int64Value
+func TestMakeNumberMakesInt64Value(t *testing.T) {
+	b := bytes.NewBufferString(`123`)
+	p := NewParser(b)
+	le, err := p.scan()
+	require.NoError(t, err)
+	expr, err := p.makeNumber(le)
+	require.NoError(t, err)
+	ce := expr.(rule.ComparableExpression)
+	require.True(t, ce.Same(rule.Int64Value(123)))
 }
