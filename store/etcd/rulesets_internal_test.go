@@ -106,3 +106,25 @@ func TestComputeLimit(t *testing.T) {
 	l = computeLimit(70)
 	require.Equal(t, 70, l)
 }
+
+// TestPathMethods ensures that the correct path are returned by each method.
+func TestPathMethods(t *testing.T) {
+	s := &RulesetService{
+		Namespace: "test",
+	}
+
+	exp := "test/rulesets/entries/path/version"
+	require.Equal(t, exp, s.rulesetsPath("path", "version"))
+
+	exp = "test/rulesets/checksums/path"
+	require.Equal(t, exp, s.checksumsPath("path"))
+
+	exp = "test/rulesets/signatures/path"
+	require.Equal(t, exp, s.signaturesPath("path"))
+
+	exp = "test/rulesets/latest/path"
+	require.Equal(t, exp, s.latestRulesetPath("path"))
+
+	exp = "test/rulesets/versions/path"
+	require.Equal(t, exp, s.versionsPath("path"))
+}
