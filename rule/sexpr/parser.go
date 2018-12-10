@@ -30,6 +30,7 @@ func makeSymbolMap() *opCodeMap {
 	sm.mapSymbol("<=", "lte")
 	sm.mapSymbol("hash", "hash")
 	sm.mapSymbol("percentile", "percentile")
+	sm.mapSymbol("int->float", "intToFloat")
 	return sm
 }
 
@@ -201,6 +202,19 @@ Loop:
 			}
 			// Lets see if our opExpr is really expecting a string
 			if err := opExpr.PushExpr(expr); err != nil {
+				return nil, newParserError(le, err)
+			}
+
+		case NUMBER:
+			expr, err := p.makeNumber(le)
+			if err != nil {
+				return nil, err
+			}
+			if !inOperator {
+				// Just return the Number
+				break Loop
+			}
+			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
 				return nil, newParserError(le, err)
 			}
 
