@@ -195,6 +195,30 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	return &entry, nil
 }
 
+// All versions (UIDs part) of a rulesets are stored under the key returned by the versionsPath method.
+// putVersions stores the new version or appends it to the old ones.
+func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
+	var versions []string
+
+	v := stm.Get(s.versionsPath(path))
+	if v != "" {
+		err := json.Unmarshal([]byte(v), &versions)
+		if err != nil {
+			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
+			return errors.Wrap(err, "failed to unmarshal versions")
+		}
+	}
+
+	versions = append(versions, version)
+	bvs, err := json.Marshal(versions)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode versions")
+	}
+	stm.Put(s.versionsPath(path), string(bvs))
+
+	return nil
+}
+
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	sig, err := validateRuleset(path, ruleset)
@@ -263,6 +287,8 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			return errors.Wrap(err, "failed to generate ruleset version")
 		}
 		version := k.String()
+
+		s.putVersions(stm, path, version)
 
 		re := store.RulesetEntry{
 			Path:    path,
@@ -530,7 +556,7 @@ func (s *RulesetService) latestRulesetPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
 }
 
-// Under the key <namespace>/rulesets/versions/<p> there are all versions (the UIDs only) of the rulesets p.
+// Under the key <namespace>/rulesets/versions/<p> there are all versions (UIDs part) of the rulesets p.
 func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
 }

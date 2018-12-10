@@ -2,6 +2,7 @@ package etcd_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	ppath "path"
@@ -436,6 +437,17 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
+		// verify versions list creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "versions", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		var versions []string
+		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		require.NoError(t, err)
+		require.Len(t, versions, 1)
+		require.EqualValues(t, entry.Version, versions[0])
+
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
 		require.Equal(t, err, store.ErrNotModified)
@@ -451,6 +463,17 @@ func TestPut(t *testing.T) {
 		entry2, err = s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
 		require.NotEqual(t, entry.Version, entry2.Version)
+
+		// verify versions list append
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "versions", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		require.NoError(t, err)
+		require.Len(t, versions, 2)
+		require.EqualValues(t, entry.Version, versions[0])
+		require.EqualValues(t, entry2.Version, versions[1])
 	})
 
 	t.Run("Signatures", func(t *testing.T) {
