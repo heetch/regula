@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"path"
 	"regexp"
 	"strconv"
@@ -255,14 +254,14 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		// make sure signature didn't change
 		rawSig := stm.Get(s.signaturesPath(path))
 		if rawSig != "" {
-			var curSig signature
+			var curSig store.Signature
 			err := json.Unmarshal([]byte(rawSig), &curSig)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = curSig.matchWith(sig)
+			err = curSig.MatchWith(sig)
 			if err != nil {
 				return err
 			}
@@ -318,61 +317,13 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	return &entry, err
 }
 
-type signature struct {
-	ReturnType string
-	ParamTypes map[string]string
-}
-
-func newSignature(rs *regula.Ruleset) *signature {
-	pt := make(map[string]string)
-	for _, p := range rs.Params() {
-		pt[p.Name] = p.Type
-	}
-
-	return &signature{
-		ParamTypes: pt,
-		ReturnType: rs.Type,
-	}
-}
-
-func (s *signature) matchWith(other *signature) error {
-	if s.ReturnType != other.ReturnType {
-		return &store.ValidationError{
-			Field:  "return type",
-			Value:  other.ReturnType,
-			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", s.ReturnType),
-		}
-	}
-
-	for name, tp := range other.ParamTypes {
-		stp, ok := s.ParamTypes[name]
-		if !ok {
-			return &store.ValidationError{
-				Field:  "param",
-				Value:  name,
-				Reason: "signature mismatch: unknown parameter",
-			}
-		}
-
-		if tp != stp {
-			return &store.ValidationError{
-				Field:  "param type",
-				Value:  tp,
-				Reason: fmt.Sprintf("signature mismatch: param must be of type %s", stp),
-			}
-		}
-	}
-
-	return nil
-}
-
-func validateRuleset(path string, rs *regula.Ruleset) (*signature, error) {
+func validateRuleset(path string, rs *regula.Ruleset) (*store.Signature, error) {
 	err := validateRulesetName(path)
 	if err != nil {
 		return nil, err
 	}
 
-	sig := newSignature(rs)
+	sig := store.NewSignature(rs)
 
 	for _, r := range rs.Rules {
 		params := r.Params()
