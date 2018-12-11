@@ -9,7 +9,7 @@
     <v-card-text>
       <!-- parameters  -->
       <div
-        v-for="(rule, index) in rules"
+        v-for="(rule, index) in value"
         :key="index"
       >
         <h3 class="subheading mb-3">Rule {{index + 1}}</h3>
@@ -88,19 +88,20 @@
 export default {
   name: 'Rules',
 
+  props: { value: Array },
+
   data: () => ({
-    rules: [{ code: '(#true)', result: '' }],
     codeRules: [v => !!v || 'Code is required'],
     resultsRules: [v => !!v || 'Result is required'],
   }),
 
   methods: {
     addRule() {
-      this.rules.push({ code: '(#true)', result: '' });
+      this.value.push({ code: '(#true)', result: '' });
     },
 
     removeRule(index) {
-      this.rules.splice(index, 1);
+      this.value.splice(index, 1);
     },
   },
 };

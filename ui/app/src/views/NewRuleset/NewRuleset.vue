@@ -6,7 +6,7 @@
 
       <Signature v-model="signature" />
 
-      <Rules />
+      <Rules v-model="rules" />
 
       <div class="text-xs-right mt-3">
         <v-btn
@@ -41,6 +41,7 @@ export default {
       returnType: '',
       params: [{ name: '', type: '' }],
     },
+    rules: [{ code: '(#true)', result: '' }],
   }),
 
   methods: {

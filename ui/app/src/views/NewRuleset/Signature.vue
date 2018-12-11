@@ -109,7 +109,7 @@
 <script>
 export default {
   name: 'Signature',
-  props: ['value'],
+  props: { value: Object },
 
   data: () => ({
     pathRules: [
