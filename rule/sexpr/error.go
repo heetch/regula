@@ -20,7 +20,7 @@ const (
 )
 
 // String returns a human readable representation of the ErrorType.  This
-// makes ErrorType implement the Stringer interface
+// makes ErrorType implement the Stringer interface.
 func (e ErrorType) String() string {
 	switch e {
 	case ARITY:
