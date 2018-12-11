@@ -6,7 +6,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "test:unit": "vue-cli-service test:unit --require isomorphic-fetch --require babel-register './src/**/*.spec.js'"
+    "test:unit": "vue-cli-service test:unit --require babel-register './src/**/*.spec.js'"
   },
   "dependencies": {
     "@mdi/font": "^3.2.89",
