@@ -2,7 +2,10 @@
   <v-container class="new-ruleset ">
     <h1 class="display-1">New ruleset</h1>
 
-    <v-form>
+    <v-form
+      ref="form"
+      v-model="valid"
+    >
 
       <Signature v-model="signature" />
 
@@ -50,7 +53,8 @@ export default {
   methods: {
     submit() {
       if (this.$refs.form.validate()) {
-        console.log('Valid form');
+        console.log(this.signature);
+        console.log(this.rules);
       } else {
         console.log('Invalid form');
       }
