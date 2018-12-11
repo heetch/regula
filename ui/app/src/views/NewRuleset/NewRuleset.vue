@@ -6,7 +6,10 @@
 
       <Signature v-model="signature" />
 
-      <Rules v-model="rules" />
+      <Rules
+        v-model="rules"
+        :return-type="signature.returnType"
+      />
 
       <div class="text-xs-right mt-3">
         <v-btn
