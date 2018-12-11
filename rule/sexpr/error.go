@@ -37,7 +37,7 @@ func (e ErrorType) String() string {
 	return "Undefined Error"
 }
 
-// ParserError is a wrapper for any and all errors occurring the
+// ParserError is a wrapper for any and all errors occurring in the
 // symbolic expression parser that are to be made visible to the human
 // submitting rules to the parser.  Its intent is to pass back enough
 // information to the user interface that they can in term indicate to
