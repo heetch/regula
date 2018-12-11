@@ -27,7 +27,7 @@
               label="Code"
               :name="'rule-' + (index+1)"
               :rules="codeRules"
-              v-model="rule.code"
+              v-model="rule.sExpr"
             ></v-textarea>
           </v-flex>
           <v-flex
@@ -42,7 +42,7 @@
               :type="returnTypeInputType"
               label="Result"
               required
-              v-model="rule.result"
+              v-model="rule.returnValue"
             ></v-text-field>
             <v-textarea
               box

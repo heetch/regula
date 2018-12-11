@@ -29,6 +29,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import Signature from './Signature.vue';
 import Rules from './Rules.vue';
 
@@ -47,14 +48,23 @@ export default {
       returnType: '',
       params: [{ name: '', type: '' }],
     },
-    rules: [{ code: '(#true)', result: '' }],
+    rules: [{ sExpr: '(#true)', returnValue: '' }],
   }),
 
   methods: {
     submit() {
       if (this.$refs.form.validate()) {
-        console.log(this.signature);
-        console.log(this.rules);
+        axios
+          .put('/i/rulesets', {
+            path: this.signature.path,
+            signature: {
+              params: this.signature.params,
+              returnType: this.signature.returnType,
+            },
+            rules: this.rules,
+          })
+          .then(console.log)
+          .catch(console.error);
       } else {
         console.log('Invalid form');
       }
