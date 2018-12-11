@@ -17,9 +17,10 @@ export default new Router({
       path: '/rulesets/new',
       name: 'new-ruleset',
       // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
+      // this generates a separate chunk (newRuleset.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "about" */ './views/NewRuleset/NewRuleset.vue'),
+      component: () =>
+        import(/* webpackChunkName: "newRuleset" */ './views/NewRuleset/NewRuleset.vue'),
     },
   ],
 });
