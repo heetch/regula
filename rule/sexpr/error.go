@@ -99,7 +99,7 @@ func newParserError(le *lexicalElement, err error) ParserError {
 }
 
 // Error returns a human readable summary of the ParseError.  This
-// make ParseError implement the Error interface.
+// makes ParseError implement the Error interface.
 func (p ParserError) Error() string {
 	return fmt.Sprintf(
 		"%d:%d: %s. %s.",
