@@ -37,11 +37,21 @@
           >
             <v-text-field
               box
+              v-if="returnType != 'Json'"
               :rules="resultsRules"
+              :type="returnTypeInputType"
               label="Result"
               required
               v-model="rule.result"
             ></v-text-field>
+            <v-textarea
+              box
+              v-if="returnType == 'Json'"
+              :rules="resultsRules"
+              label="Result"
+              required
+              v-model="rule.result"
+            ></v-textarea>
           </v-flex>
           <v-flex
             xs12
@@ -54,7 +64,6 @@
               fab
               color="error"
               disabled
-              @click="removeRule(index)"
             >
               <v-icon dark>mdi-minus</v-icon>
             </v-btn>
@@ -88,12 +97,30 @@
 export default {
   name: 'Rules',
 
-  props: { value: Array },
+  props: {
+    value: Array,
+    returnType: String,
+  },
 
   data: () => ({
     codeRules: [v => !!v || 'Code is required'],
     resultsRules: [v => !!v || 'Result is required'],
   }),
+
+  computed: {
+    returnTypeInputType() {
+      switch (this.returnType) {
+        case 'String':
+          return 'text';
+        case 'Int64':
+          return 'number';
+        case 'Float64':
+          return 'number';
+        default:
+          return 'text';
+      }
+    },
+  },
 
   methods: {
     addRule() {
