@@ -35,6 +35,9 @@ func IsValidationError(err error) bool {
 
 // RulesetService manages rulesets.
 type RulesetService interface {
+	// Get returns the ruleset related to the given path. By default, it returns the latest one.
+	// It returns the related ruleset version if it's specified.
+	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
 	// List returns the rulesets entries under the given prefix. if pathsOnly is set to true, only the rulesets paths are returned.
 	// If the prefix is empty it returns entries from the beginning following the ascii ordering.
 	// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
@@ -55,6 +58,7 @@ type RulesetEntry struct {
 	Version   string
 	Ruleset   *regula.Ruleset
 	Signature *Signature
+	Versions  []string
 }
 
 // RulesetEntries holds a list of ruleset entries.

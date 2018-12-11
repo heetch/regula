@@ -61,6 +61,54 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.
 	return e
 }
 
+func TestGet(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdRulesetService(t)
+	defer cleanup()
+
+	t.Run("Root", func(t *testing.T) {
+		path := "a/b/c"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		sig := store.NewSignature(rs1)
+		createRuleset(t, s, path, rs1)
+
+		entry1, err := s.Get(context.Background(), path, "")
+		require.NoError(t, err)
+		require.Equal(t, path, entry1.Path)
+		require.Equal(t, rs1, entry1.Ruleset)
+		require.Equal(t, sig, entry1.Signature)
+		require.NotEmpty(t, entry1.Version)
+		require.Len(t, entry1.Versions, 1)
+
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)))
+		createRuleset(t, s, path, rs2)
+
+		// by default, it should return the latest version
+		entry2, err := s.Get(context.Background(), path, "")
+		require.NoError(t, err)
+		require.Equal(t, path, entry2.Path)
+		require.Equal(t, rs2, entry2.Ruleset)
+		require.Equal(t, sig, entry2.Signature)
+		require.NotEmpty(t, entry2.Version)
+		require.Len(t, entry2.Versions, 2)
+
+		// get a specific version
+		entry3, err := s.Get(context.Background(), path, entry1.Version)
+		require.NoError(t, err)
+		require.Equal(t, entry1.Path, entry3.Path)
+		require.Equal(t, entry1.Ruleset, entry3.Ruleset)
+		require.Equal(t, entry1.Signature, entry3.Signature)
+		require.Equal(t, entry1.Version, entry3.Version)
+		require.Len(t, entry3.Versions, 2)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		_, err := s.Get(context.Background(), "doesntexist", "")
+		require.Equal(t, err, store.ErrNotFound)
+	})
+}
+
 // List returns all rulesets entries or not depending on the query string.
 func TestList(t *testing.T) {
 	t.Parallel()

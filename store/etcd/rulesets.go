@@ -35,6 +35,52 @@ func computeLimit(l int) int {
 	return l
 }
 
+// Get returns the ruleset related to the given path. By default, it returns the latest one.
+// It returns the related ruleset version if it's specified.
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	var (
+		entry *store.RulesetEntry
+		err   error
+	)
+
+	if version == "" {
+		entry, err = s.Latest(ctx, path)
+	} else {
+		entry, err = s.OneByVersion(ctx, path, version)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.KV.Get(ctx, s.versionsPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch versions of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset versions list")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Versions)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal versions")
+	}
+
+	resp, err = s.Client.KV.Get(ctx, s.signaturesPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch signature of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset signature")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Signature)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal signature")
+	}
+
+	return entry, nil
+}
+
 // List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
