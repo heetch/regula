@@ -30,7 +30,7 @@ func (t Token) String() string {
 	case NUMBER:
 		return "number"
 	case BOOL:
-		return "Boolean"
+		return "boolean"
 	case COMMENT:
 		return "comment"
 	case SYMBOL:
