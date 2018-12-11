@@ -55,7 +55,7 @@ type ParserError struct {
 	EndCharInLine   int
 }
 
-// newParseError take a lexicalElement and an error and creates a new
+// newParseError takes a lexicalElement and an error and creates a new
 // ParseError that presents the error condition in the context of the
 // lexical element.
 func newParserError(le *lexicalElement, err error) ParserError {
