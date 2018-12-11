@@ -22,13 +22,16 @@
             sm7
             class="pr-2"
           >
-            <v-textarea
-              box
-              label="Code"
-              :name="'rule-' + (index+1)"
-              :rules="codeRules"
+            <editor
               v-model="rule.sExpr"
-            ></v-textarea>
+              @init="editorInit"
+              lang="lisp"
+              theme="tomorrow"
+              width="100%"
+              height="100"
+              :options="editorOptions"
+            >
+            </editor>
           </v-flex>
           <v-flex
             xs12
@@ -50,7 +53,7 @@
               :rules="resultsRules"
               label="Result"
               required
-              v-model="rule.result"
+              v-model="rule.returnValue"
             ></v-textarea>
           </v-flex>
           <v-flex
@@ -94,6 +97,8 @@
 
 
 <script>
+import editor from 'vue2-ace-editor';
+
 export default {
   name: 'Rules',
 
@@ -105,6 +110,12 @@ export default {
   data: () => ({
     codeRules: [v => !!v || 'Code is required'],
     resultsRules: [v => !!v || 'Result is required'],
+    editorOptions: {
+      showGutter: false,
+      showLineNumbers: false,
+      highlightActiveLine: false,
+      fontSize: '1.5em',
+    },
   }),
 
   computed: {
@@ -121,9 +132,19 @@ export default {
     },
   },
 
+  components: {
+    editor,
+  },
+
   methods: {
+    editorInit() {
+      require('brace/ext/language_tools');
+      require('brace/mode/lisp');
+      require('brace/theme/tomorrow');
+    },
+
     addRule() {
-      this.value.push({ code: '(#true)', result: '' });
+      this.value.push({ sExpr: '(#true)', returnValue: '' });
     },
 
     removeRule(index) {
