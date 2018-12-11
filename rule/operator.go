@@ -31,7 +31,7 @@ func GetOperator(name string) (Operator, error) {
 }
 
 // The operator is the representation of an operation to be performed
-// on some given set of operands.  Some Exprs are operators, but Vaule
+// on some given set of operands.  Some Exprs are operators, but Value
 // and Param types are not.
 //
 // Operators have a Contract , and a slice of operands (which are
