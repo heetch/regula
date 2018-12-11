@@ -37,7 +37,7 @@
           >
             <v-text-field
               box
-              v-if="returnType != 'Json'"
+              v-if="returnType !== 'Json'"
               :rules="resultsRules"
               :type="returnTypeInputType"
               label="Result"
@@ -46,7 +46,7 @@
             ></v-text-field>
             <v-textarea
               box
-              v-if="returnType == 'Json'"
+              v-if="returnType === 'Json'"
               :rules="resultsRules"
               label="Result"
               required
@@ -108,10 +108,9 @@ export default {
   }),
 
   computed: {
+    // select the right input type based on the selected ruleset return type
     returnTypeInputType() {
       switch (this.returnType) {
-        case 'String':
-          return 'text';
         case 'Int64':
           return 'number';
         case 'Float64':

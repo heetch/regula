@@ -23,6 +23,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 // turns a list of rulesets to a tree compatible with the TreeView component
 export const rulesetsToTree = (rulesets = []) => {
   const tree = {};
@@ -68,9 +70,11 @@ export default {
 
   methods: {
     fetchRulesets() {
-      fetch('/ui/i/rulesets/')
-        .then(stream => stream.json())
-        .then(({ rulesets = [] }) => {
+      axios
+        .get('/ui/i/rulesets/')
+        .then(({ data = {} }) => {
+          const { rulesets = [] } = data;
+
           this.items = rulesetsToTree(rulesets);
         })
         .catch(console.error);
