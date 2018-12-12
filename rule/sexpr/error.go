@@ -102,7 +102,7 @@ func newParserError(le *lexicalElement, err error) ParserError {
 // make ParseError implement the Error interface.
 func (p ParserError) Error() string {
 	return fmt.Sprintf(
-		"%d:%d: %s. %s.",
+		"%d:%d: %s. %s",
 		p.StartLine, p.StartCharInLine, p.ErrorType, p.Msg)
 }
 

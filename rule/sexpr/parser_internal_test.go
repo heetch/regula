@@ -113,7 +113,7 @@ func TestParserReturnsErrorIfItHitsEOF(t *testing.T) {
 	p := NewParser(b)
 	var err error
 	_, err = p.Parse(nil)
-	require.EqualError(t, err, `1:0: Error. unexpected end of file.`)
+	require.EqualError(t, err, `1:0: Error. unexpected end of file`)
 
 }
 
@@ -123,7 +123,7 @@ func TestParserReturnsErrorIfRootOfRuleIsNonBoolean(t *testing.T) {
 	p := NewParser(b)
 	var err error
 	_, err = p.Parse(nil)
-	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String.`)
+	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String`)
 }
 
 // Parse returns an error if an operator doesn't follow the left parenthesis
@@ -215,7 +215,7 @@ func TestMakeNumberSadCases(t *testing.T) {
 		{
 			Name:  "Missing whole part in negative",
 			Input: "-.1",
-			Error: "1:0: Error. strconv.ParseInt: parsing \"-\": invalid syntax.",
+			Error: "1:0: Error. strconv.ParseInt: parsing \"-\": invalid syntax",
 		},
 		// This space reserved for any other case we can think of!
 	}
@@ -272,5 +272,13 @@ func TestMakeParameter(t *testing.T) {
 				c.Expected.(rule.ComparableExpression)))
 		})
 	}
+}
+
+func TestMakeParameterInvalidLiteral(t *testing.T) {
+	params := Parameters{} // No params defined
+	p := NewParser(nil)
+	le := &lexicalElement{Literal: "foo"}
+	_, err := p.makeParameter(le, params)
+	require.EqualError(t, err, `0:0: Error. unknown parameter name "foo"`)
 
 }
