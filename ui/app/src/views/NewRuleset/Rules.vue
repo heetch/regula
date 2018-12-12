@@ -40,7 +40,7 @@
           >
             <v-text-field
               box
-              v-if="returnType !== 'Json'"
+              v-if="returnType !== 'JSON'"
               :rules="resultsRules"
               :type="returnTypeInputType"
               label="Result"
@@ -49,7 +49,7 @@
             ></v-text-field>
             <v-textarea
               box
-              v-if="returnType === 'Json'"
+              v-if="returnType === 'JSON'"
               :rules="resultsRules"
               label="Result"
               required
