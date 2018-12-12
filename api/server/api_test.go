@@ -34,6 +34,71 @@ func TestAPI(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, w.Code)
 	})
 
+	t.Run("Get", func(t *testing.T) {
+		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		e1 := store.RulesetEntry{
+			Path:      "a",
+			Version:   "version",
+			Ruleset:   r1,
+			Versions:  []string{"version"},
+			Signature: store.NewSignature(r1),
+		}
+
+		e2 := store.RulesetEntry{
+			Path:      "a",
+			Version:   "version2",
+			Ruleset:   r1,
+			Versions:  []string{"version1", "version2"},
+			Signature: store.NewSignature(r1),
+		}
+
+		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {
+			t.Helper()
+
+			uu, uerr := url.Parse(u)
+			require.NoError(t, uerr)
+			version := uu.Query().Get("version")
+			s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+				require.Equal(t, v, version)
+				return e, err
+			}
+			defer func() { s.GetFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", u, nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var res api.Ruleset
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				require.Len(t, res.Versions, len(e.Versions))
+				require.Equal(t, e.Path, res.Path)
+				require.Equal(t, e.Signature, res.Signature)
+				require.Equal(t, e.Version, res.Version)
+				require.Equal(t, e.Ruleset, res.Ruleset)
+			}
+		}
+
+		t.Run("Root", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
+		})
+
+		t.Run("NotFound", func(t *testing.T) {
+			call(t, "/rulesets/b", http.StatusNotFound, &e1, store.ErrNotFound)
+		})
+
+		t.Run("UnexpectedError", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusInternalServerError, &e1, errors.New("unexpected error"))
+		})
+
+		t.Run("Specific version", func(t *testing.T) {
+			call(t, "/rulesets/a?version=version2", http.StatusOK, &e2, nil)
+		})
+	})
+
 	t.Run("List", func(t *testing.T) {
 		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
