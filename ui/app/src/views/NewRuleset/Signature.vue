@@ -77,17 +77,6 @@
           class="text-sm-center"
         >
           <v-btn
-            v-if="index == 0"
-            small
-            fab
-            color="error"
-            disabled
-            @click="removeParam(index)"
-          >
-            <v-icon dark>mdi-minus</v-icon>
-          </v-btn>
-          <v-btn
-            v-if="index > 0"
             small
             fab
             color="error"

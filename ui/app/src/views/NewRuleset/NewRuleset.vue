@@ -46,7 +46,7 @@ export default {
     signature: {
       path: '',
       returnType: '',
-      params: [{ name: '', type: '' }],
+      params: [],
     },
     rules: [{ sExpr: '(#true)', returnValue: '' }],
   }),
