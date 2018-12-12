@@ -218,6 +218,19 @@ Loop:
 				return nil, newParserError(le, err)
 			}
 
+		case NUMBER:
+			expr, err := p.makeNumber(le)
+			if err != nil {
+				return nil, err
+			}
+			if !inOperator {
+				// Just return the Number
+				break Loop
+			}
+			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+				return nil, newParserError(le, err)
+			}
+
 		case RPAREN:
 			if !inOperator {
 				// We don't have a matching LPAREN, so this is bad news.
