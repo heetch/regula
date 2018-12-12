@@ -216,27 +216,13 @@ func TestPushExprEnforcesTermType(t *testing.T) {
 	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
 }
 
-func TestTermEqual(t *testing.T) {
-	t1 := rule.Term{Type: rule.STRING, Cardinality: rule.ONE}
-	t2 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.ONE}
-	t3 := rule.Term{Type: rule.STRING, Cardinality: rule.MANY}
-	t4 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.MANY}
-
-	require.True(t, t1.Equal(t1))
-	require.False(t, t1.Equal(t2))
-	require.False(t, t1.Equal(t3))
-	require.False(t, t1.Equal(t4))
-}
-
 // GetOperatorExpr returns a TypedExpression by name
 func TestGetOperatorExpr(t *testing.T) {
-	expected, ok := rule.Eq(rule.BoolValue(true), rule.BoolValue(true)).(rule.TypedExpression)
-	require.True(t, ok)
+	expected := rule.Eq(rule.BoolValue(true), rule.BoolValue(true))
 	op, err := rule.GetOperatorExpr("eq")
 	require.NoError(t, err)
-	te := op.(rule.TypedExpression)
 	ec := expected.Contract()
-	ac := te.Contract()
+	ac := op.Contract()
 	require.True(t, ec.Equal(ac))
 }
 
