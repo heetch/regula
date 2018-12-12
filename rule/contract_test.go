@@ -105,6 +105,18 @@ func TestTermIsFulfilledBy(t *testing.T) {
 	}
 }
 
+func TestTermEqual(t *testing.T) {
+	t1 := rule.Term{Type: rule.STRING, Cardinality: rule.ONE}
+	t2 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.ONE}
+	t3 := rule.Term{Type: rule.STRING, Cardinality: rule.MANY}
+	t4 := rule.Term{Type: rule.BOOLEAN, Cardinality: rule.MANY}
+
+	require.True(t, t1.Equal(t1))
+	require.False(t, t1.Equal(t2))
+	require.False(t, t1.Equal(t3))
+	require.False(t, t1.Equal(t4))
+}
+
 // PushExpr and Finalise will return ArityError if the number of Exprs
 // pushed via PushExpr is at odds to the Arity of the Contract.
 func TestPushExprAndFinaliseEnforceArity(t *testing.T) {
@@ -202,5 +214,20 @@ func TestPushExprEnforcesTermType(t *testing.T) {
 	require.Equal(t, "or", te.OpCode)
 	require.Equal(t, rule.INTEGER, te.ReceivedType)
 	require.Equal(t, rule.BOOLEAN, te.ExpectedType)
+}
 
+// GetOperatorExpr returns a TypedExpression by name
+func TestGetOperatorExpr(t *testing.T) {
+	expected := rule.Eq(rule.BoolValue(true), rule.BoolValue(true))
+	op, err := rule.GetOperatorExpr("eq")
+	require.NoError(t, err)
+	ec := expected.Contract()
+	ac := op.Contract()
+	require.True(t, ec.Equal(ac))
+}
+
+// Providing a non-existent expression name to GetOperatorExpr results in an error.
+func TestGetOperatorExprBadName(t *testing.T) {
+	_, err := rule.GetOperatorExpr("dave")
+	require.EqualError(t, err, `No operator called "dave" exists`)
 }

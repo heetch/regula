@@ -1,5 +1,7 @@
 package rule
 
+import "fmt"
+
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
 type Type int
@@ -75,6 +77,11 @@ func (t Term) IsFulfilledBy(e Expr) bool {
 	return rt == t.Type
 }
 
+//Equal returns true when two Terms are identical
+func (t Term) Equal(other Term) bool {
+	return t.Type == other.Type && t.Cardinality == other.Cardinality
+}
+
 // A Contract declares the Type compatibility of an expression.  Every
 // expression has a ReturnType (it's value type, in place when
 // evaluated) and zero, one or many Terms.  Each Term is in turn
@@ -85,16 +92,54 @@ type Contract struct {
 	Terms      []Term
 }
 
+//Equal returns true when two contracts are identical.
+func (c Contract) Equal(other Contract) bool {
+	if c.ReturnType != other.ReturnType {
+		return false
+	}
+	if len(c.Terms) != len(other.Terms) {
+		return false
+	}
+	for i, ct := range c.Terms {
+		if !ct.Equal(other.Terms[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // GetTerm returns the Term of a contract that matches a particular position.  If no Term is available for a position then an ArityError will be returned
 func (c *Contract) GetTerm(pos int) (Term, error) {
 	extent := len(c.Terms)
 	if pos < extent {
-		return c.Terms[pos], nil
+		term := c.Terms[pos]
+		if term.Cardinality == MANY && pos < extent-1 {
+			panic(fmt.Sprintf("bad contract for %q, only the last Term in a Contract may have Cardinality == MANY", c.OpCode))
+		}
+		return term, nil
 	}
 	lastTerm := c.Terms[extent-1]
 	if lastTerm.Cardinality == MANY {
 		return lastTerm, nil
 	}
 	return lastTerm, ArityError{OpCode: c.OpCode, ErrorPos: pos + 1, MaxPos: extent}
+}
 
+// GetOperatorExpr returns an Expr that matches the provided operator
+// name. If no matching expression exists, and error will be returned.
+func GetOperatorExpr(name string) (Expr, error) {
+	switch name {
+	case "eq":
+		return newExprEq(), nil
+	case "not":
+		return newExprNot(), nil
+	case "and":
+		return newExprAnd(), nil
+	case "or":
+		return newExprOr(), nil
+	case "in":
+		return newExprIn(), nil
+
+	}
+	return nil, fmt.Errorf("No operator called %q exists", name)
 }

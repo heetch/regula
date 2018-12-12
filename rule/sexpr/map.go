@@ -54,7 +54,7 @@ func (om *opCodeMap) getOpCodeForSymbol(symbol string) (string, error) {
 
 //getOperatorForSymbol returns the rule.Operator that is mapped to a symbol in
 //our symbolic expression language.
-func (om *opCodeMap) getOperatorForSymbol(symbol string) (rule.Expr, error) {
+func (om *opCodeMap) getOperatorForSymbol(symbol string) (rule.Operator, error) {
 	op, err := om.getOpCodeForSymbol(symbol)
 	if err != nil {
 		return nil, err
