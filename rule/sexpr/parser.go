@@ -34,6 +34,8 @@ func makeSymbolMap() *opCodeMap {
 	return sm
 }
 
+type Parameters map[string]rule.Type
+
 // Parser is a parser for the Regula Symbolic Expression Language.  It
 // should always be constructed by passing an io.Reader to the
 // NewParser method.
@@ -87,13 +89,13 @@ func (p *Parser) unscan() {
 // including all its sub-expressions.  If an error is encountered this
 // will be returned, otherwise an abstract syntax tree built of Exprs
 // will be returned.
-func (p *Parser) Parse() (rule.Expr, error) {
+func (p *Parser) Parse(params Parameters) (rule.Expr, error) {
 	// Our root expression *must* have the return type BOOLEAN
 	t := rule.Term{
 		Type:        rule.BOOLEAN,
 		Cardinality: rule.ONE,
 	}
-	expr, err := p.parseExpression()
+	expr, err := p.parseExpression(params)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +127,7 @@ func (p *Parser) Parse() (rule.Expr, error) {
 // be the top of an abstract syntax tree representing the full tree of
 // expression encompassed by the current text expression.  Any errors
 // encountered will be passed back up the tree.
-func (p *Parser) parseExpression() (rule.Expr, error) {
+func (p *Parser) parseExpression(params Parameters) (rule.Expr, error) {
 	var expr rule.Expr
 	var inOperator bool
 	var opExpr rule.Expr
@@ -158,7 +160,7 @@ Loop:
 				// did this one.  ... therefore, pop that left parenthesis back.
 				p.unscan()
 				// .... and recur!
-				expr, err = p.parseExpression()
+				expr, err = p.parseExpression(params)
 				if err != nil {
 					return nil, err
 				}
@@ -218,6 +220,17 @@ Loop:
 				return nil, newParserError(le, err)
 			}
 
+		case SYMBOL:
+			expr, err = p.makeParameter(le, params)
+			if err != nil {
+				return nil, err
+			}
+			if !inOperator {
+				break Loop
+			}
+			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+				return nil, newParserError(le, err)
+			}
 		case RPAREN:
 			if !inOperator {
 				// We don't have a matching LPAREN, so this is bad news.
@@ -278,4 +291,26 @@ func (p *Parser) makeNumber(le *lexicalElement) (rule.Expr, error) {
 		return nil, newParserError(le, err)
 	}
 	return rule.Int64Value(i64), nil
+}
+
+// makeParameter looks up a Symbol in the Parameters table and returns a Param of the correct type, or otherwise throws an error.
+func (p *Parser) makeParameter(le *lexicalElement, params Parameters) (rule.Expr, error) {
+	t, ok := params[le.Literal]
+	if !ok {
+		return nil, newParserError(le, fmt.Errorf(
+			"unknown parameter name %q", le.Literal,
+		))
+	}
+	switch t {
+	case rule.BOOLEAN:
+		return rule.BoolParam(le.Literal), nil
+	case rule.STRING:
+		return rule.StringParam(le.Literal), nil
+	case rule.INTEGER:
+		return rule.Int64Param(le.Literal), nil
+	case rule.FLOAT:
+		return rule.Float64Param(le.Literal), nil
+	}
+	// 🛈: NUMBER and ANY are not valid types for parameters
+	return nil, newParserError(le, fmt.Errorf("parameter %q has an invalid Type: %s", le.Literal, t))
 }
