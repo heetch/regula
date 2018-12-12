@@ -19,8 +19,8 @@ const (
 	OTHER
 )
 
-// String returns a human readble representation of the ErrorType.  This
-// makes ErrorType implement the Stringer interface
+// String returns a human readable representation of the ErrorType.  This
+// makes ErrorType implement the Stringer interface.
 func (e ErrorType) String() string {
 	switch e {
 	case ARITY:
@@ -37,7 +37,7 @@ func (e ErrorType) String() string {
 	return "Undefined Error"
 }
 
-// ParserError is a wrapper for any and all errors occurring the
+// ParserError is a wrapper for any and all errors occurring in the
 // symbolic expression parser that are to be made visible to the human
 // submitting rules to the parser.  Its intent is to pass back enough
 // information to the user interface that they can in term indicate to
@@ -55,7 +55,7 @@ type ParserError struct {
 	EndCharInLine   int
 }
 
-// newParseError take a lexicalElement and an error and creates a new
+// newParseError takes a lexicalElement and an error and creates a new
 // ParseError that presents the error condition in the context of the
 // lexical element.
 func newParserError(le *lexicalElement, err error) ParserError {
@@ -99,7 +99,7 @@ func newParserError(le *lexicalElement, err error) ParserError {
 }
 
 // Error returns a human readable summary of the ParseError.  This
-// make ParseError implement the Error interface.
+// makes ParseError implement the Error interface.
 func (p ParserError) Error() string {
 	return fmt.Sprintf(
 		"%d:%d: %s. %s.",

@@ -92,6 +92,22 @@ type Contract struct {
 	Terms      []Term
 }
 
+//Equal returns true when two contracts are identical.
+func (c Contract) Equal(other Contract) bool {
+	if c.ReturnType != other.ReturnType {
+		return false
+	}
+	if len(c.Terms) != len(other.Terms) {
+		return false
+	}
+	for i, ct := range c.Terms {
+		if !ct.Equal(other.Terms[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // GetTerm returns the Term of a contract that matches a particular position.  If no Term is available for a position then an ArityError will be returned
 func (c *Contract) GetTerm(pos int) (Term, error) {
 	extent := len(c.Terms)
