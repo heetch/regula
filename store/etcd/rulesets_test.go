@@ -68,7 +68,7 @@ func TestGet(t *testing.T) {
 	defer cleanup()
 
 	t.Run("Root", func(t *testing.T) {
-		path := "a/b/c"
+		path := "p/a/t/h"
 		rs1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		sig := store.NewSignature(rs1)
 		createRuleset(t, s, path, rs1)
