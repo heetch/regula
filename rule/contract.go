@@ -112,7 +112,11 @@ func (c Contract) Equal(other Contract) bool {
 func (c *Contract) GetTerm(pos int) (Term, error) {
 	extent := len(c.Terms)
 	if pos < extent {
-		return c.Terms[pos], nil
+		term := c.Terms[pos]
+		if term.Cardinality == MANY && pos < extent-1 {
+			panic(fmt.Sprintf("bad contract for %q, only the last Term in a Contract may have Cardinality == MANY", c.OpCode))
+		}
+		return term, nil
 	}
 	lastTerm := c.Terms[extent-1]
 	if lastTerm.Cardinality == MANY {

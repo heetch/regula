@@ -69,7 +69,7 @@ func TestParseSimpleOperator(t *testing.T) {
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
-	expr, err = p.Parse()
+	expr, err = p.Parse(nil)
 	require.NoError(t, err)
 	ce1 := expr.(rule.ComparableExpression)
 	expected := rule.Not(rule.BoolValue(true)).(rule.ComparableExpression)
@@ -88,7 +88,7 @@ func TestParseNestedOperator(t *testing.T) {
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
-	expr, err = p.Parse()
+	expr, err = p.Parse(nil)
 	require.NoError(t, err)
 	ce1 := expr.(rule.ComparableExpression)
 	expected := rule.Not(
@@ -112,8 +112,8 @@ func TestParserReturnsErrorIfItHitsEOF(t *testing.T) {
 	b := bytes.NewBufferString(``)
 	p := NewParser(b)
 	var err error
-	_, err = p.Parse()
-	require.EqualError(t, err, `1:0: Error. unexpected end of file.`)
+	_, err = p.Parse(nil)
+	require.EqualError(t, err, `1:0: Error. unexpected end of file`)
 
 }
 
@@ -122,15 +122,15 @@ func TestParserReturnsErrorIfRootOfRuleIsNonBoolean(t *testing.T) {
 	b := bytes.NewBufferString(`"eek"`)
 	p := NewParser(b)
 	var err error
-	_, err = p.Parse()
-	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String.`)
+	_, err = p.Parse(nil)
+	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String`)
 }
 
 // Parse returns an error if an operator doesn't follow the left parenthesis
 func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(#false)`)
 	p := NewParser(b)
-	_, err := p.Parse()
+	_, err := p.Parse(nil)
 	require.EqualError(t, err, `Expected an operator, but got the boolean "false"`)
 }
 
@@ -138,11 +138,11 @@ func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(wobbly)`)
 	p := NewParser(b)
-	_, err := p.Parse()
+	_, err := p.Parse(nil)
 	require.EqualError(t, err, `"wobbly" is not a valid symbol`)
 }
 
-// makeBoolValue
+// makeBoolValue correctly constructs a BoolValue
 func TestMakeBoolValue(t *testing.T) {
 	b := bytes.NewBufferString(`#true #false`)
 	p := NewParser(b)
@@ -158,5 +158,127 @@ func TestMakeBoolValue(t *testing.T) {
 	require.True(t, bv.(rule.ComparableExpression).Same(
 		rule.BoolValue(false),
 	))
+}
+
+//makeNumber constructs appropriate numeric value types with valid input
+func TestMakeNumberHappyCases(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Input    string
+		Expected rule.Expr
+	}{
+		{
+			Name:     "positive integer",
+			Input:    "123",
+			Expected: rule.Int64Value(123),
+		},
+		{
+			Name:     "negative integer",
+			Input:    "-20",
+			Expected: rule.Int64Value(-20),
+		},
+		{
+			Name:     "positive float",
+			Input:    "12.345",
+			Expected: rule.Float64Value(12.345),
+		},
+		{
+			Name:     "negative float",
+			Input:    "-123.45",
+			Expected: rule.Float64Value(-123.45),
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			b := bytes.NewBufferString(c.Input)
+			p := NewParser(b)
+			le, err := p.scan()
+			require.NoError(t, err)
+			expr, err := p.makeNumber(le)
+			require.NoError(t, err)
+			ce := expr.(rule.ComparableExpression)
+			exp := c.Expected.(rule.ComparableExpression)
+			require.True(t, ce.Same(exp))
+		})
+
+	}
+}
+
+//makeNumber returns an error on invalid input (where that input makes it past the lexer
+func TestMakeNumberSadCases(t *testing.T) {
+	cases := []struct {
+		Name  string
+		Input string
+		Error string
+	}{
+		{
+			Name:  "Missing whole part in negative",
+			Input: "-.1",
+			Error: "1:0: Error. strconv.ParseInt: parsing \"-\": invalid syntax",
+		},
+		// This space reserved for any other case we can think of!
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			b := bytes.NewBufferString(c.Input)
+			p := NewParser(b)
+			le, err := p.scan()
+			require.NoError(t, err)
+			expr, err := p.makeNumber(le)
+			require.EqualError(t, err, c.Error)
+			require.Nil(t, expr)
+
+		})
+	}
+}
+
+func TestMakeParameter(t *testing.T) {
+	params := Parameters{
+		"string": rule.STRING,
+		"int":    rule.INTEGER,
+		"float":  rule.FLOAT,
+		"bool":   rule.BOOLEAN,
+	}
+	cases := []struct {
+		Name     string
+		Expected rule.Expr
+	}{
+		{
+			Name:     "string",
+			Expected: rule.StringParam("string"),
+		},
+		{
+			Name:     "int",
+			Expected: rule.Int64Param("int"),
+		},
+		{
+			Name:     "float",
+			Expected: rule.Float64Param("float"),
+		},
+		{
+			Name:     "bool",
+			Expected: rule.BoolParam("bool"),
+		},
+	}
+
+	p := NewParser(nil)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			le := &lexicalElement{Literal: c.Name}
+			expr, err := p.makeParameter(le, params)
+			require.NoError(t, err)
+			require.True(t, expr.(rule.ComparableExpression).Same(
+				c.Expected.(rule.ComparableExpression)))
+		})
+	}
+}
+
+func TestMakeParameterInvalidLiteral(t *testing.T) {
+	params := Parameters{} // No params defined
+	p := NewParser(nil)
+	le := &lexicalElement{Literal: "foo"}
+	_, err := p.makeParameter(le, params)
+	require.EqualError(t, err, `0:0: Error. unknown parameter name "foo"`)
 
 }

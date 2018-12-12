@@ -25,7 +25,8 @@ func GetOperator(name string) (Operator, error) {
 		return newExprOr(), nil
 	case "in":
 		return newExprIn(), nil
-
+	case "intToFloat":
+		return newExprIntToFloat(), nil
 	}
 	return nil, fmt.Errorf("no operator Expression called %q exists", name)
 }
@@ -92,10 +93,12 @@ func (o *operator) Finalise() error {
 		// First we subtract one, because MANY can mean zero,
 		// then we add on the minimum required.
 		minPos = (minPos - 1) + lastTerm.Min
+		o.homogenise()
 	}
 	if pos < minPos {
 		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.GetKind()}
 	}
+
 	return nil
 }
 
@@ -205,4 +208,125 @@ func (o *operator) finaliseOrPanic() {
 	if err := o.Finalise(); err != nil {
 		panic(err.Error())
 	}
+}
+
+// homogenise will check all the Exprs passed for a Term with the
+// Cardinality "MANY" and ensure that they are the same type,
+// promoting the type where possible, and raising a
+// HomogeneousTypeError where promotion is not possible.
+func (o *operator) homogenise() error {
+	// Only the last Term can be defined with Cardinality == MANY,
+	// and therefore only that case can care about whether it has
+	// homogeneous arguments or not.
+	lastIndex := len(o.contract.Terms) - 1
+	if lastIndex >= 0 {
+		lastTerm := o.contract.Terms[lastIndex]
+		// If Cardinality != MANY then we can't have mixed types to worry about.
+		if lastTerm.Cardinality == MANY {
+			// This starts at ANY, the most generic type,
+			// so we can move towards something more
+			// specific.
+			var t Type = ANY
+			var isFloat bool
+			var isInt bool
+
+			// Iterate over all operands that match the
+			// Term with Cardinality == MANY
+			for i := lastIndex; i < len(o.operands); i++ {
+				opr := o.operands[i]
+				rt := opr.Contract().ReturnType
+				if rt != t {
+					// If we don't yet have a concrete type
+					if t == ANY {
+						switch rt {
+						case ANY:
+							panic("Operand with ANY ReturnType - this should never happen")
+						case NUMBER:
+							panic("Operand with NUMBER ReturnType - this should never happen")
+						case INTEGER:
+							isInt = true
+						case FLOAT:
+							isFloat = true
+						}
+						// The concrete type should now be this type
+						t = rt
+						continue
+					}
+
+					// If we've already seen a concrete type
+					switch rt {
+					case ANY:
+						// This should never happen!
+						panic("Operand with ANY ReturnType - this should never happen")
+					case NUMBER:
+						// This should never happen!
+						panic("Operand with NUMBER ReturnType - this should never happen")
+					case INTEGER:
+						isInt = true
+						if t != FLOAT {
+							return o.newHomogeneousTypeError(i+1, lastIndex+1, t, rt)
+						}
+
+					case FLOAT:
+						isFloat = true
+						if t != INTEGER {
+							return o.newHomogeneousTypeError(i+1, lastIndex+1, t, rt)
+						}
+						t = FLOAT
+					default:
+						return o.newHomogeneousTypeError(i+1, lastIndex+1, t, rt)
+					}
+					// The concrete type should now be this type
+				}
+
+			}
+
+			// Is this a numeric type?
+			if isInt || isFloat {
+				t = INTEGER
+				// Float overrides Int when we have both.
+				if isFloat {
+					if isInt {
+						// We saw some INTEGERs amongst the FLOATs so, we'll promote those all to FLOAT
+						o.promoteToFloat(lastIndex)
+					}
+					t = FLOAT
+				}
+				// If this op has NUMBER as its
+				// ReturnType in the Contract, we need
+				// to convert that to something
+				// concrete before it can be used as
+				// an argument in another operator.
+				if o.contract.ReturnType == NUMBER {
+					o.contract.ReturnType = t
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// promoteToFloat wraps any operand, with an INTEGER ReturnType, that
+// appears in a position managed by a Term with Cardinality=MANY, in a
+// IntToFloat Expr.
+func (o *operator) promoteToFloat(startIndex int) {
+	for i := startIndex; i < len(o.operands); i++ {
+		opr := o.operands[i]
+		if opr.Contract().ReturnType == INTEGER {
+			o.operands[i] = IntToFloat(opr)
+		}
+	}
+}
+
+//newHomogeneousTypeError returns a HomogeneousTypeError for the operator
+func (o *operator) newHomogeneousTypeError(pos, startPos int, expected, received Type) HomogeneousTypeError {
+
+	return HomogeneousTypeError{
+		OpCode:       o.contract.OpCode,
+		ErrorPos:     pos,
+		HomoStartPos: startPos,
+		ExpectedType: expected,
+		ReceivedType: received,
+	}
+
 }

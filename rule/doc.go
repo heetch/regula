@@ -88,7 +88,7 @@ package rule
 //                    if err != nil {
 //                            return nil, err
 //                    }
-//                    ival, err != strconv.Atoi(val)
+//                    ival, err != strconv.Atoi(val.Data)
 //                    if err != nil {
 //                            return nil, err
 //                    }
@@ -105,7 +105,7 @@ package rule
 //                    if err != nil {
 //                            return nil, err
 //                    }
-//                    fval, err != strconv.ParseFloat(val, 64)
+//                    fval, err != strconv.ParseFloat(val.Data, 64)
 //                    if err != nil {
 //                            return nil, err
 //                    }
