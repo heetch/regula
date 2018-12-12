@@ -53,7 +53,22 @@
             :items="paramTypes"
             label="Type"
             v-model="param.type"
-          ></v-select>
+            item-text="text"
+            item-value="value"
+          >
+            <template
+              slot="selection"
+              slot-scope="{ item, index }"
+            >
+              <span>{{ item.value }}</span>
+            </template>
+            <template
+              slot="item"
+              slot-scope="{ item, index }"
+            >
+              <span>{{ item.value }} </span><span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
+            </template>
+          </v-select>
         </v-flex>
 
         <v-flex
@@ -100,7 +115,22 @@
         :items="returnTypes"
         label="Type"
         v-model="value.returnType"
-      ></v-select>
+        item-text="text"
+        item-value="value"
+      >
+        <template
+          slot="selection"
+          slot-scope="{ item, index }"
+        >
+          <span>{{ item.value }}</span>
+        </template>
+        <template
+          slot="item"
+          slot-scope="{ item, index }"
+        >
+          <span>{{ item.value }} </span><span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
+        </template>
+      </v-select>
     </v-card-text>
   </v-card>
 </template>
@@ -121,8 +151,19 @@ export default {
       v =>
         /^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$/.test(v) || 'Param name must be valid',
     ],
-    paramTypes: ['Int64', 'Float64', 'Bool', 'String'],
-    returnTypes: ['Int64', 'Float64', 'Bool', 'String', 'Json'],
+    paramTypes: [
+      { value: 'Int64', hint: '123' },
+      { value: 'Float64', hint: '123.45' },
+      { value: 'Bool', hint: 'true' },
+      { value: 'String', hint: 'foobar' },
+    ],
+    returnTypes: [
+      { value: 'Int64', hint: '123' },
+      { value: 'Float64', hint: '123.45' },
+      { value: 'Bool', hint: 'true' },
+      { value: 'String', hint: 'foobar' },
+      { value: 'JSON', hint: '{"foo": "bar"}' },
+    ],
   }),
 
   methods: {
