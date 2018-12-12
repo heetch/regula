@@ -38,13 +38,21 @@ func TestParser(t *testing.T) {
 			Input:  `(= 1 1.2)`,
 			Output: rule.Eq(rule.IntToFloat(rule.Int64Value(1)), rule.Float64Value(1.2)),
 		},
+		{
+			Name:   `simple parameter`,
+			Input:  `foo`,
+			Output: rule.BoolParam("foo"),
+		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
+			params := sexpr.Parameters{
+				"foo": rule.BOOLEAN,
+			}
 			b := bytes.NewBufferString(c.Input)
 			p := sexpr.NewParser(b)
-			expr, err := p.Parse()
+			expr, err := p.Parse(params)
 			switch c.Error {
 			case nil:
 				require.NoError(t, err)

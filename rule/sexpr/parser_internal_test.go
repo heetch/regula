@@ -69,7 +69,7 @@ func TestParseSimpleOperator(t *testing.T) {
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
-	expr, err = p.Parse()
+	expr, err = p.Parse(nil)
 	require.NoError(t, err)
 	ce1 := expr.(rule.ComparableExpression)
 	expected := rule.Not(rule.BoolValue(true)).(rule.ComparableExpression)
@@ -88,7 +88,7 @@ func TestParseNestedOperator(t *testing.T) {
 	p := NewParser(b)
 	var expr rule.Expr
 	var err error
-	expr, err = p.Parse()
+	expr, err = p.Parse(nil)
 	require.NoError(t, err)
 	ce1 := expr.(rule.ComparableExpression)
 	expected := rule.Not(
@@ -112,7 +112,7 @@ func TestParserReturnsErrorIfItHitsEOF(t *testing.T) {
 	b := bytes.NewBufferString(``)
 	p := NewParser(b)
 	var err error
-	_, err = p.Parse()
+	_, err = p.Parse(nil)
 	require.EqualError(t, err, `1:0: Error. unexpected end of file.`)
 
 }
@@ -122,7 +122,7 @@ func TestParserReturnsErrorIfRootOfRuleIsNonBoolean(t *testing.T) {
 	b := bytes.NewBufferString(`"eek"`)
 	p := NewParser(b)
 	var err error
-	_, err = p.Parse()
+	_, err = p.Parse(nil)
 	require.EqualError(t, err, `0:0: Type error. The root expression in a rule must return a Boolean, but it returns String.`)
 }
 
@@ -130,15 +130,15 @@ func TestParserReturnsErrorIfRootOfRuleIsNonBoolean(t *testing.T) {
 func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(#false)`)
 	p := NewParser(b)
-	_, err := p.Parse()
-	require.EqualError(t, err, `Expected an operator, but got the boolean "false"`)
+	_, err := p.Parse(nil)
+	require.EqualError(t, err, `Expected an operator, but got the Boolean "false"`)
 }
 
 // Parse returns an error if a symbol that is not an operator follows the left parenthesis
 func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(wobbly)`)
 	p := NewParser(b)
-	_, err := p.Parse()
+	_, err := p.Parse(nil)
 	require.EqualError(t, err, `"wobbly" is not a valid symbol`)
 }
 
@@ -231,4 +231,46 @@ func TestMakeNumberSadCases(t *testing.T) {
 
 		})
 	}
+}
+
+func TestMakeParameter(t *testing.T) {
+	params := Parameters{
+		"string": rule.STRING,
+		"int":    rule.INTEGER,
+		"float":  rule.FLOAT,
+		"bool":   rule.BOOLEAN,
+	}
+	cases := []struct {
+		Name     string
+		Expected rule.Expr
+	}{
+		{
+			Name:     "string",
+			Expected: rule.StringParam("string"),
+		},
+		{
+			Name:     "int",
+			Expected: rule.Int64Param("int"),
+		},
+		{
+			Name:     "float",
+			Expected: rule.Float64Param("float"),
+		},
+		{
+			Name:     "bool",
+			Expected: rule.BoolParam("bool"),
+		},
+	}
+
+	p := NewParser(nil)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			le := &lexicalElement{Literal: c.Name}
+			expr, err := p.makeParameter(le, params)
+			require.NoError(t, err)
+			require.True(t, expr.(rule.ComparableExpression).Same(
+				c.Expected.(rule.ComparableExpression)))
+		})
+	}
+
 }
