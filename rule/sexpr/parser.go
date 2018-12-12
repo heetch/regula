@@ -125,7 +125,7 @@ func (p *Parser) Parse() (rule.Expr, error) {
 func (p *Parser) parseExpression() (rule.Expr, error) {
 	var expr rule.Expr
 	var inOperator bool
-	var opExpr rule.Expr
+	var opExpr rule.Operator
 
 Loop:
 	for {
@@ -163,7 +163,7 @@ Loop:
 				// expression, lets push it onto this
 				// one (and make sure it complies with
 				// the contract)
-				if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+				if err := opExpr.PushExpr(expr); err != nil {
 					// TODO: drastically improve this error message
 					return nil, newParserError(le, fmt.Errorf(
 						"Type mismatch in subexpression",
@@ -187,7 +187,7 @@ Loop:
 			// OK, let's push the BoolValue into our
 			// operator and see if that complies with the
 			// contract.
-			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+			if err := opExpr.PushExpr(expr); err != nil {
 				return nil, newParserError(le, err)
 			}
 
@@ -198,7 +198,7 @@ Loop:
 				break Loop
 			}
 			// Lets see if our opExpr is really expecting a string
-			if err := opExpr.(rule.Operator).PushExpr(expr); err != nil {
+			if err := opExpr.PushExpr(expr); err != nil {
 				return nil, newParserError(le, err)
 			}
 
@@ -210,7 +210,7 @@ Loop:
 			// We've close off the operator
 			inOperator = false
 			// .. lets finalise it, and see if that's compatible with the contract
-			if err := opExpr.(rule.Operator).Finalise(); err != nil {
+			if err := opExpr.Finalise(); err != nil {
 				return nil, newParserError(le, err)
 			}
 			// All is good, the output expression is this operater
@@ -231,7 +231,7 @@ func (p *Parser) makeBoolValue(le *lexicalElement) rule.Expr {
 }
 
 // parseOperator attempts to convert the next symbol into an operator, if it fails and error is returned.
-func (p *Parser) parseOperator() (rule.Expr, error) {
+func (p *Parser) parseOperator() (rule.Operator, error) {
 	le, err := p.scan()
 	if err != nil {
 		return nil, err
