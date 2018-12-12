@@ -131,7 +131,7 @@ func TestParseOperatorNonSymbolInOperatorPosition(t *testing.T) {
 	b := bytes.NewBufferString(`(#false)`)
 	p := NewParser(b)
 	_, err := p.Parse()
-	require.EqualError(t, err, `Expected an operator, but got the Boolean "false"`)
+	require.EqualError(t, err, `Expected an operator, but got the boolean "false"`)
 }
 
 // Parse returns an error if a symbol that is not an operator follows the left parenthesis
