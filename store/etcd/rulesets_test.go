@@ -81,6 +81,9 @@ func TestGet(t *testing.T) {
 		require.NotEmpty(t, entry1.Version)
 		require.Len(t, entry1.Versions, 1)
 
+		// we are waiting 1 second here to avoid creating the new version in the same second as the previous one
+		// ksuid gives a sorting with a one second precision
+		time.Sleep(time.Second)
 		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)))
 		createRuleset(t, s, path, rs2)
 
