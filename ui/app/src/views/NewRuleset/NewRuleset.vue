@@ -55,7 +55,7 @@ export default {
     submit() {
       if (this.$refs.form.validate()) {
         axios
-          .put('/i/rulesets', {
+          .put('/ui/i/rulesets', {
             path: this.signature.path,
             signature: {
               params: this.signature.params,
@@ -63,6 +63,7 @@ export default {
             },
             rules: this.rules,
           })
+          // temporary error handling until we implement the backend endpoint
           .then(console.log)
           .catch(console.error);
       } else {
