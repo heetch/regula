@@ -292,7 +292,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 				return errors.Wrap(err, "failed to unmarshal entry")
 			}
 
-			s.Logger.Debug().Str("path", path).Msg("cannot save the rulesets: it already exists")
+			s.Logger.Debug().Str("path", path).Msg("ruleset didn't change, returning without creating a new version")
 
 			return store.ErrNotModified
 		}
