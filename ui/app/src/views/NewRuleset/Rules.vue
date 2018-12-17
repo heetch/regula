@@ -111,7 +111,9 @@ export default {
   },
 
   data: () => ({
+    // validation rules for S-Expressions. Only check if they're not empty.
     codeRules: [v => !!v || 'Code is required'],
+    // validation rules for return values. Only check if thery're not empty.
     resultsRules: [v => !!v || 'Result is required'],
     // editor customization
     editorOptions: {
@@ -123,7 +125,7 @@ export default {
   }),
 
   computed: {
-    // select the right input type based on the selected ruleset return type
+    // select the right input type based on the selected ruleset return type. JSON is handled separately in the component html.
     returnTypeInputType() {
       switch (this.value.signature.returnType) {
         case 'Int64':
@@ -141,10 +143,12 @@ export default {
   },
 
   methods: {
+    // add a new rule to the ruleset when a user clicks on the + button.
     addRule() {
       this.value.rules.push(new Rule());
     },
 
+    // remove the selected ruleset from the ruleset when a user clicks on the - button.
     removeRule(index) {
       this.value.rules.splice(index, 1);
     },
