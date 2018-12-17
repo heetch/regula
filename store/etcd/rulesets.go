@@ -532,28 +532,28 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
-// Under the key <namespace>/rulesets/entries/<p> there is the definition of the rulesets p.
+// The key <namespace>/rulesets/entries/<p> locates the definition of the ruleset p.
 func (s *RulesetService) rulesetsPath(p, v string) string {
 	return path.Join(s.Namespace, "rulesets", "entries", p, v)
 }
 
-// Under the key <namespace>/rulesets/checksums/<p> there is the encoded rulesets p.
-// It is used to compare two rulesets in order to avoid duplicates.
+// The key <namespace>/rulesets/checksums/<p> locates the encoded ruleset p.
+// checksumsPath is used to compare two rulesets in order to avoid duplicates.
 func (s *RulesetService) checksumsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "checksums", p)
 }
 
-// Under the key <namespace>/rulesets/signatures/<p> there is the signature of the rulesets p.
+// The key <namespace>/rulesets/signatures/<p> locates the signature of the ruleset p.
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
-// Under the key <namespace>/rulesets/latest/<p> there is the path to the latest version of the rulesets p.
+// The key <namespace>/rulesets/latest/<p> locates the path to the latest version of the ruleset p.
 func (s *RulesetService) latestRulesetPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
 }
 
-// Under the key <namespace>/rulesets/versions/<p> there are all versions (UIDs part) of the rulesets p.
+// The key <namespace>/rulesets/versions/<p> locates the list of all versions (UIDs part) of the ruleset p.
 func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
 }

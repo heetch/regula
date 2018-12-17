@@ -106,7 +106,7 @@ func NewSignature(rs *regula.Ruleset) *Signature {
 	}
 }
 
-// MatchWith checks if the given signature match the actual one.
+// MatchWith checks if the given signature matches the current one.
 func (s *Signature) MatchWith(other *Signature) error {
 	if s.ReturnType != other.ReturnType {
 		return &ValidationError{
