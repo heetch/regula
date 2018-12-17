@@ -1,4 +1,5 @@
 <template>
+  <!-- This component handles the form for the path and signature. -->
   <v-card class="mt-3">
     <v-card-title primary-title>
       <div>
@@ -131,21 +132,25 @@ export default {
   props: { value: Object },
 
   data: () => ({
+    // validation rules for the Path input. Match the API server regex
     pathRules: [
       v => !!v || 'Path is required',
       v => /^[a-z]+(?:[a-z0-9-/]?[a-z0-9])*$/.test(v) || 'Path must be valid',
     ],
+    // validation rules for the param names. Match the API server regex
     paramNameRules: [
       v => !!v || 'Param name is required',
       v =>
         /^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$/.test(v) || 'Param name must be valid',
     ],
+    // List of allowed parameter types
     paramTypes: [
       { value: 'Int64', hint: '123' },
       { value: 'Float64', hint: '123.45' },
       { value: 'Bool', hint: 'true' },
       { value: 'String', hint: 'foobar' },
     ],
+    // List of allowed return types
     returnTypes: [
       { value: 'Int64', hint: '123' },
       { value: 'Float64', hint: '123.45' },
@@ -156,10 +161,12 @@ export default {
   }),
 
   methods: {
+    // adds a param to the list when the user clicks on the + button.
     addParam() {
       this.value.params.push({ name: '', type: '' });
     },
 
+    // removes a param from the list when the user clicks on the - button.
     removeParam(index) {
       this.value.params.splice(index, 1);
     },
