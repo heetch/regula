@@ -41,7 +41,7 @@ func TestAPI(t *testing.T) {
 			Version:   "version",
 			Ruleset:   r1,
 			Versions:  []string{"version"},
-			Signature: store.NewSignature(r1),
+			Signature: regula.NewSignature(r1),
 		}
 
 		e2 := store.RulesetEntry{
@@ -49,7 +49,7 @@ func TestAPI(t *testing.T) {
 			Version:   "version2",
 			Ruleset:   r1,
 			Versions:  []string{"version1", "version2"},
-			Signature: store.NewSignature(r1),
+			Signature: regula.NewSignature(r1),
 		}
 
 		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {

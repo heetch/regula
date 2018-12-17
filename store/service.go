@@ -57,7 +57,7 @@ type RulesetEntry struct {
 	Path      string
 	Version   string
 	Ruleset   *regula.Ruleset
-	Signature *Signature
+	Signature *regula.Signature
 	Versions  []string
 }
 
@@ -85,55 +85,4 @@ type RulesetEvent struct {
 type RulesetEvents struct {
 	Events   []RulesetEvent
 	Revision string
-}
-
-// Signature represents the signature of a ruleset.
-type Signature struct {
-	ReturnType string
-	ParamTypes map[string]string
-}
-
-// NewSignature returns the Signature of the given ruleset.
-func NewSignature(rs *regula.Ruleset) *Signature {
-	pt := make(map[string]string)
-	for _, p := range rs.Params() {
-		pt[p.Name] = p.Type
-	}
-
-	return &Signature{
-		ParamTypes: pt,
-		ReturnType: rs.Type,
-	}
-}
-
-// MatchWith checks if the given signature matches the current one.
-func (s *Signature) MatchWith(other *Signature) error {
-	if s.ReturnType != other.ReturnType {
-		return &ValidationError{
-			Field:  "return type",
-			Value:  other.ReturnType,
-			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", s.ReturnType),
-		}
-	}
-
-	for name, tp := range other.ParamTypes {
-		stp, ok := s.ParamTypes[name]
-		if !ok {
-			return &ValidationError{
-				Field:  "param",
-				Value:  name,
-				Reason: "signature mismatch: unknown parameter",
-			}
-		}
-
-		if tp != stp {
-			return &ValidationError{
-				Field:  "param type",
-				Value:  tp,
-				Reason: fmt.Sprintf("signature mismatch: param must be of type %s", stp),
-			}
-		}
-	}
-
-	return nil
 }

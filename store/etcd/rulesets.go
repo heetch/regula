@@ -300,16 +300,21 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		// make sure signature didn't change
 		rawSig := stm.Get(s.signaturesPath(path))
 		if rawSig != "" {
-			var curSig store.Signature
+			var curSig regula.Signature
 			err := json.Unmarshal([]byte(rawSig), &curSig)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = curSig.MatchWith(sig)
+			_, err = curSig.Equal(sig)
 			if err != nil {
-				return err
+				serr := err.(*regula.Error)
+				return &store.ValidationError{
+					Field:  serr.Field,
+					Value:  serr.Value,
+					Reason: serr.Reason,
+				}
 			}
 		}
 
@@ -363,13 +368,13 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	return &entry, err
 }
 
-func validateRuleset(path string, rs *regula.Ruleset) (*store.Signature, error) {
+func validateRuleset(path string, rs *regula.Ruleset) (*regula.Signature, error) {
 	err := validateRulesetName(path)
 	if err != nil {
 		return nil, err
 	}
 
-	sig := store.NewSignature(rs)
+	sig := regula.NewSignature(rs)
 
 	for _, r := range rs.Rules {
 		params := r.Params()

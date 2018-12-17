@@ -70,7 +70,7 @@ func TestGet(t *testing.T) {
 	t.Run("Root", func(t *testing.T) {
 		path := "p/a/t/h"
 		rs1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		sig := store.NewSignature(rs1)
+		sig := regula.NewSignature(rs1)
 		createRuleset(t, s, path, rs1)
 
 		entry1, err := s.Get(context.Background(), path, "")

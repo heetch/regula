@@ -6,7 +6,6 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
 )
 
 // EvalResult is the response sent to the client after an eval.
@@ -31,11 +30,11 @@ func (e Error) Error() string {
 
 // Ruleset holds a ruleset and its metadata.
 type Ruleset struct {
-	Path      string           `json:"path"`
-	Version   string           `json:"version,omitempty"`
-	Ruleset   *regula.Ruleset  `json:"ruleset,omitempty"`
-	Signature *store.Signature `json:"signature,omitempty"`
-	Versions  []string         `json:"versions,omitempty"`
+	Path      string            `json:"path"`
+	Version   string            `json:"version,omitempty"`
+	Ruleset   *regula.Ruleset   `json:"ruleset,omitempty"`
+	Signature *regula.Signature `json:"signature,omitempty"`
+	Versions  []string          `json:"versions,omitempty"`
 }
 
 // Rulesets holds a list of rulesets.
