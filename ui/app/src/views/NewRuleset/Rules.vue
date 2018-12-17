@@ -1,4 +1,5 @@
 <template>
+  <!-- This component handles the form for the rules.-->
   <v-card class="mt-3">
     <v-card-title primary-title>
       <div>
@@ -7,9 +8,9 @@
     </v-card-title>
 
     <v-card-text>
-      <!-- parameters  -->
+      <!-- rules  -->
       <div
-        v-for="(rule, index) in value"
+        v-for="(rule, index) in value.rules"
         :key="index"
       >
         <h3 class="subheading mb-3">Rule {{index + 1}}</h3>
@@ -24,7 +25,6 @@
           >
             <editor
               v-model="rule.sExpr"
-              @init="editorInit"
               lang="lisp"
               theme="tomorrow"
               width="100%"
@@ -40,7 +40,7 @@
           >
             <v-text-field
               box
-              v-if="returnType !== 'JSON'"
+              v-if="value.signature.returnType !== 'JSON'"
               :rules="resultsRules"
               :type="returnTypeInputType"
               label="Result"
@@ -49,7 +49,7 @@
             ></v-text-field>
             <v-textarea
               box
-              v-if="returnType === 'JSON'"
+              v-if="value.signature.returnType === 'JSON'"
               :rules="resultsRules"
               label="Result"
               required
@@ -98,18 +98,22 @@
 
 <script>
 import editor from 'vue2-ace-editor';
+import 'brace/ext/language_tools';
+import 'brace/mode/lisp';
+import 'brace/theme/tomorrow';
+import { Ruleset, Rule } from './ruleset';
 
 export default {
   name: 'Rules',
 
   props: {
-    value: Array,
-    returnType: String,
+    value: Ruleset,
   },
 
   data: () => ({
     codeRules: [v => !!v || 'Code is required'],
     resultsRules: [v => !!v || 'Result is required'],
+    // editor customization
     editorOptions: {
       showGutter: false,
       showLineNumbers: false,
@@ -121,7 +125,7 @@ export default {
   computed: {
     // select the right input type based on the selected ruleset return type
     returnTypeInputType() {
-      switch (this.returnType) {
+      switch (this.value.signature.returnType) {
         case 'Int64':
           return 'number';
         case 'Float64':
@@ -137,18 +141,12 @@ export default {
   },
 
   methods: {
-    editorInit() {
-      require('brace/ext/language_tools');
-      require('brace/mode/lisp');
-      require('brace/theme/tomorrow');
-    },
-
     addRule() {
-      this.value.push({ sExpr: '(#true)', returnValue: '' });
+      this.value.rules.push(new Rule());
     },
 
     removeRule(index) {
-      this.value.splice(index, 1);
+      this.value.rules.splice(index, 1);
     },
   },
 };

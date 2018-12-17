@@ -25,7 +25,7 @@
       <v-layout
         row
         wrap
-        v-for="(param, index) in value.params"
+        v-for="(param, index) in value.signature.params"
         :key="index"
       >
         <v-flex
@@ -67,7 +67,8 @@
               slot="item"
               slot-scope="{ item, index }"
             >
-              <span>{{ item.value }} </span><span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
+              <span>{{ item.value }} </span>
+              <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
             </template>
           </v-select>
         </v-flex>
@@ -104,7 +105,7 @@
         box
         :items="returnTypes"
         label="Type"
-        v-model="value.returnType"
+        v-model="value.signature.returnType"
         item-text="text"
         item-value="value"
       >
@@ -118,7 +119,8 @@
           slot="item"
           slot-scope="{ item, index }"
         >
-          <span>{{ item.value }} </span><span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
+          <span>{{ item.value }} </span>
+          <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
         </template>
       </v-select>
     </v-card-text>
@@ -127,9 +129,11 @@
 
 
 <script>
+import { Ruleset, Param } from './ruleset';
+
 export default {
   name: 'Signature',
-  props: { value: Object },
+  props: { value: Ruleset },
 
   data: () => ({
     // validation rules for the Path input. Match the API server regex
@@ -163,12 +167,12 @@ export default {
   methods: {
     // adds a param to the list when the user clicks on the + button.
     addParam() {
-      this.value.params.push({ name: '', type: '' });
+      this.value.signature.params.push(new Param());
     },
 
     // removes a param from the list when the user clicks on the - button.
     removeParam(index) {
-      this.value.params.splice(index, 1);
+      this.value.signature.params.splice(index, 1);
     },
   },
 };

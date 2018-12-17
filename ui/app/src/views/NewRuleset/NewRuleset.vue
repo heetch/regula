@@ -1,4 +1,6 @@
+
 <template>
+  <!-- This page displays the form to create a new ruleset -->
   <v-container class="new-ruleset ">
     <h1 class="display-1">New ruleset</h1>
 
@@ -7,12 +9,11 @@
       v-model="valid"
     >
 
-      <Signature v-model="signature" />
+      <!-- delegate path and signature form to Signature component -->
+      <Signature v-model="ruleset" />
 
-      <Rules
-        v-model="rules"
-        :return-type="signature.returnType"
-      />
+      <!-- delegate rules form to Rules component -->
+      <Rules v-model="ruleset" />
 
       <div class="text-xs-right mt-3">
         <v-btn
@@ -30,6 +31,7 @@
 
 <script>
 import axios from 'axios';
+import { Ruleset, Rule } from './ruleset';
 import Signature from './Signature.vue';
 import Rules from './Rules.vue';
 
@@ -43,26 +45,17 @@ export default {
 
   data: () => ({
     valid: false,
-    signature: {
-      path: '',
-      returnType: '',
-      params: [],
-    },
-    rules: [{ sExpr: '(#true)', returnValue: '' }],
+    ruleset: new Ruleset({
+      // start with one rule with default values
+      rules: [new Rule()],
+    }),
   }),
 
   methods: {
     submit() {
       if (this.$refs.form.validate()) {
         axios
-          .put('/ui/i/rulesets', {
-            path: this.signature.path,
-            signature: {
-              params: this.signature.params,
-              returnType: this.signature.returnType,
-            },
-            rules: this.rules,
-          })
+          .put('/ui/i/rulesets', this.ruleset)
           // temporary error handling until we implement the backend endpoint
           .then(console.log)
           .catch(console.error);
