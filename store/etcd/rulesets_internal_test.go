@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/heetch/regula"
@@ -127,4 +128,61 @@ func TestPathMethods(t *testing.T) {
 
 	exp = "test/rulesets/versions/path"
 	require.Equal(t, exp, s.versionsPath("path"))
+}
+
+// compareSignature should return a ValidationError if the signatures aren't the same.
+func TestCompareSignature(t *testing.T) {
+	rs, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
+	require.NoError(t, err)
+	baseSig := regula.NewSignature(rs)
+
+	t.Run("OK", func(t *testing.T) {
+		err := compareSignature(baseSig, baseSig)
+		require.Nil(t, err)
+	})
+
+	t.Run("Bad return type", func(t *testing.T) {
+		rs1, err := regula.NewStringRuleset(rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("baz")), rule.StringValue("true")))
+		require.NoError(t, err)
+		sig := regula.NewSignature(rs1)
+
+		err = compareSignature(baseSig, sig)
+		exp := &store.ValidationError{
+			Field:  "return type",
+			Value:  sig.ReturnType,
+			Reason: "signature mismatch: return type must be of type bool",
+		}
+		require.EqualValues(t, exp, err)
+		require.Equal(t, fmt.Sprintf("invalid %s with value '%s': %s", exp.Field, exp.Value, exp.Reason), exp.Error())
+	})
+
+	t.Run("Bad param type", func(t *testing.T) {
+		rs1, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
+		require.NoError(t, err)
+		sig := regula.NewSignature(rs1)
+
+		err = compareSignature(baseSig, sig)
+		exp := &store.ValidationError{
+			Field:  "param type",
+			Value:  "bool",
+			Reason: "signature mismatch: param must be of type string",
+		}
+		require.EqualValues(t, exp, err)
+		require.Equal(t, fmt.Sprintf("invalid %s with value '%s': %s", exp.Field, exp.Value, exp.Reason), exp.Error())
+	})
+
+	t.Run("Bad param", func(t *testing.T) {
+		rs1, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringParam("bar"), rule.StringValue("baz")), rule.BoolValue(true)))
+		require.NoError(t, err)
+		sig := regula.NewSignature(rs1)
+
+		err = compareSignature(baseSig, sig)
+		exp := &store.ValidationError{
+			Field:  "param",
+			Value:  "bar",
+			Reason: "signature mismatch: unknown parameter",
+		}
+		require.EqualValues(t, exp, err)
+		require.Equal(t, fmt.Sprintf("invalid %s with value '%s': %s", exp.Field, exp.Value, exp.Reason), exp.Error())
+	})
 }

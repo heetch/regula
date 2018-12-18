@@ -16,23 +16,6 @@ var (
 	ErrInvalidContinueToken = errors.New("invalid continue token")
 )
 
-// ValidationError gives informations about the reason of failed validation.
-type ValidationError struct {
-	Field  string
-	Value  string
-	Reason string
-}
-
-func (v *ValidationError) Error() string {
-	return fmt.Sprintf("invalid %s with value '%s': %s", v.Field, v.Value, v.Reason)
-}
-
-// IsValidationError indicates if the given error is a ValidationError pointer.
-func IsValidationError(err error) bool {
-	_, ok := err.(*ValidationError)
-	return ok
-}
-
 // RulesetService manages rulesets.
 type RulesetService interface {
 	// Get returns the ruleset related to the given path. By default, it returns the latest one.
@@ -85,4 +68,21 @@ type RulesetEvent struct {
 type RulesetEvents struct {
 	Events   []RulesetEvent
 	Revision string
+}
+
+// ValidationError gives informations about the reason of failed validation.
+type ValidationError struct {
+	Field  string
+	Value  string
+	Reason string
+}
+
+func (v *ValidationError) Error() string {
+	return fmt.Sprintf("invalid %s with value '%s': %s", v.Field, v.Value, v.Reason)
+}
+
+// IsValidationError indicates if the given error is a ValidationError pointer.
+func IsValidationError(err error) bool {
+	_, ok := err.(*ValidationError)
+	return ok
 }

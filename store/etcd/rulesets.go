@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"path"
 	"regexp"
 	"strconv"
@@ -306,14 +307,9 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			_, err = curSig.Equal(sig)
+			err = compareSignature(&curSig, sig)
 			if err != nil {
-				serr := err.(*regula.Error)
-				return &store.ValidationError{
-					Field:  serr.Field,
-					Value:  serr.Value,
-					Reason: serr.Reason,
-				}
+				return err
 			}
 		}
 
@@ -365,6 +361,37 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	}
 
 	return &entry, err
+}
+
+func compareSignature(base, other *regula.Signature) error {
+	if base.ReturnType != other.ReturnType {
+		return &store.ValidationError{
+			Field:  "return type",
+			Value:  other.ReturnType,
+			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", base.ReturnType),
+		}
+	}
+
+	for name, tp := range other.ParamTypes {
+		stp, ok := base.ParamTypes[name]
+		if !ok {
+			return &store.ValidationError{
+				Field:  "param",
+				Value:  name,
+				Reason: "signature mismatch: unknown parameter",
+			}
+		}
+
+		if tp != stp {
+			return &store.ValidationError{
+				Field:  "param type",
+				Value:  tp,
+				Reason: fmt.Sprintf("signature mismatch: param must be of type %s", stp),
+			}
+		}
+	}
+
+	return nil
 }
 
 func validateRuleset(path string, rs *regula.Ruleset) (*regula.Signature, error) {
