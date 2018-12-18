@@ -240,8 +240,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	return &entry, nil
 }
 
-// All versions (UIDs part) of a rulesets are stored under the key returned by the versionsPath method.
-// putVersions stores the new version or appends it to the old ones.
+// putVersions stores the new version or appends it to the old ones under the key key <namespace>/rulesets/versions/<path>.
 func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
 	var versions []string
 
