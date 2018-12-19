@@ -241,7 +241,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	return &entry, nil
 }
 
-// putVersions stores the new version or appends it to the old ones under the key key <namespace>/rulesets/versions/<path>.
+// putVersions stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
 func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
 	var versions []string
 
@@ -563,28 +563,27 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
-// The key <namespace>/rulesets/entries/<p> locates the definition of the ruleset p.
+// rulesetsPath returns the path where the rulesets are stored in etcd.
 func (s *RulesetService) rulesetsPath(p, v string) string {
 	return path.Join(s.Namespace, "rulesets", "entries", p, v)
 }
 
-// The key <namespace>/rulesets/checksums/<p> locates the encoded ruleset p.
-// checksumsPath is used to compare two rulesets in order to avoid duplicates.
+// checksumsPath returns the path where the checksums are stored in etcd.
 func (s *RulesetService) checksumsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "checksums", p)
 }
 
-// The key <namespace>/rulesets/signatures/<p> locates the signature of the ruleset p.
+// signaturesPath returns the path where the signatures are stored in etcd.
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
-// The key <namespace>/rulesets/latest/<p> locates the path to the latest version of the ruleset p.
+// latestRulesetPath returns the path where the latest version of each ruleset is stored in etcd.
 func (s *RulesetService) latestRulesetPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
 }
 
-// The key <namespace>/rulesets/versions/<p> locates the list of all versions (UIDs part) of the ruleset p.
+// versionsPath returns the path where the versions of each rulesets are stored in etcd.
 func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
 }
