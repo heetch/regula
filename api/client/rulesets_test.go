@@ -354,7 +354,7 @@ func TestRulesetService(t *testing.T) {
 		ch := cli.Rulesets.Watch(ctx, "a", "")
 		evs := <-ch
 		require.NoError(t, evs.Err)
-		require.EqualValues(t, 4, i)
+		require.EqualValues(t, 4, atomic.LoadInt32(&i))
 	})
 
 	t.Run("WatchRuleset/NotFound", func(t *testing.T) {

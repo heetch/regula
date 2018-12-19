@@ -1,6 +1,5 @@
 <template>
   <div id="sidebar">
-    <h2>Rulesets</h2>
     <v-treeview
       v-model="tree"
       :items="items"
@@ -9,10 +8,23 @@
       open-on-click
     >
     </v-treeview>
+    <div class="new-ruleset mt-5">
+      <router-link to="/rulesets/new">
+        <v-btn
+          fab
+          dark
+          color="primary"
+        >
+          <v-icon dark>mdi-plus</v-icon>
+        </v-btn>
+      </router-link>
+    </div>
   </div>
 </template>
 
 <script>
+import axios from 'axios';
+
 // turns a list of rulesets to a tree compatible with the TreeView component
 export const rulesetsToTree = (rulesets = []) => {
   const tree = {};
@@ -36,8 +48,11 @@ export const rulesetsToTree = (rulesets = []) => {
 
   // walk is a private function that walks through a given object and returns
   // a tree compatible with the TreeView component
-  const walk = (o = {}) => Object.keys(o)
-    .map(k => ({ name: k, ...(!Array.isArray(o[k]) && { children: walk(o[k]) }) }));
+  const walk = (o = {}) =>
+    Object.keys(o).map(k => ({
+      name: k,
+      ...(!Array.isArray(o[k]) && { children: walk(o[k]) }),
+    }));
 
   return walk(tree);
 };
@@ -55,9 +70,11 @@ export default {
 
   methods: {
     fetchRulesets() {
-      fetch('i/rulesets/')
-        .then(stream => stream.json())
-        .then(({ rulesets = [] }) => {
+      axios
+        .get('/ui/i/rulesets/')
+        .then(({ data = {} }) => {
+          const { rulesets = [] } = data;
+
           this.items = rulesetsToTree(rulesets);
         })
         .catch(console.error);
@@ -66,10 +83,14 @@ export default {
 };
 </script>
 
-<style scoped>
-  #sidebar {
-    padding: 1em;
-    overflow: auto;
-    height: 100%;
+<style lang="scss" scoped>
+#sidebar {
+  padding: 1em;
+  overflow: auto;
+  height: 100%;
+
+  .new-ruleset a {
+    text-decoration: none;
   }
+}
 </style>
