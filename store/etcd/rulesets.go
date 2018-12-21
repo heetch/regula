@@ -36,6 +36,52 @@ func computeLimit(l int) int {
 	return l
 }
 
+// Get returns the ruleset related to the given path. By default, it returns the latest one.
+// It returns the related ruleset version if it's specified.
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	var (
+		entry *store.RulesetEntry
+		err   error
+	)
+
+	if version == "" {
+		entry, err = s.Latest(ctx, path)
+	} else {
+		entry, err = s.OneByVersion(ctx, path, version)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.KV.Get(ctx, s.versionsPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch versions of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset versions list")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Versions)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal versions")
+	}
+
+	resp, err = s.Client.KV.Get(ctx, s.signaturesPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch signature of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset signature")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Signature)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal signature")
+	}
+
+	return entry, nil
+}
+
 // List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
@@ -195,6 +241,29 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	return &entry, nil
 }
 
+// putVersions stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
+func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
+	var versions []string
+
+	v := stm.Get(s.versionsPath(path))
+	if v != "" {
+		err := json.Unmarshal([]byte(v), &versions)
+		if err != nil {
+			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
+			return errors.Wrap(err, "failed to unmarshal versions")
+		}
+	}
+
+	versions = append(versions, version)
+	bvs, err := json.Marshal(versions)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode versions")
+	}
+	stm.Put(s.versionsPath(path), string(bvs))
+
+	return nil
+}
+
 // Put adds a version of the given ruleset using an uuid.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	sig, err := validateRuleset(path, ruleset)
@@ -223,20 +292,22 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 				return errors.Wrap(err, "failed to unmarshal entry")
 			}
 
+			s.Logger.Debug().Str("path", path).Msg("ruleset didn't change, returning without creating a new version")
+
 			return store.ErrNotModified
 		}
 
 		// make sure signature didn't change
 		rawSig := stm.Get(s.signaturesPath(path))
 		if rawSig != "" {
-			var curSig signature
+			var curSig regula.Signature
 			err := json.Unmarshal([]byte(rawSig), &curSig)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = curSig.matchWith(sig)
+			err = compareSignature(&curSig, sig)
 			if err != nil {
 				return err
 			}
@@ -261,6 +332,8 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			return errors.Wrap(err, "failed to generate ruleset version")
 		}
 		version := k.String()
+
+		s.putVersions(stm, path, version)
 
 		re := store.RulesetEntry{
 			Path:    path,
@@ -290,34 +363,17 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	return &entry, err
 }
 
-type signature struct {
-	ReturnType string
-	ParamTypes map[string]string
-}
-
-func newSignature(rs *regula.Ruleset) *signature {
-	pt := make(map[string]string)
-	for _, p := range rs.Params() {
-		pt[p.Name] = p.Type
-	}
-
-	return &signature{
-		ParamTypes: pt,
-		ReturnType: rs.Type,
-	}
-}
-
-func (s *signature) matchWith(other *signature) error {
-	if s.ReturnType != other.ReturnType {
+func compareSignature(base, other *regula.Signature) error {
+	if base.ReturnType != other.ReturnType {
 		return &store.ValidationError{
 			Field:  "return type",
 			Value:  other.ReturnType,
-			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", s.ReturnType),
+			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", base.ReturnType),
 		}
 	}
 
 	for name, tp := range other.ParamTypes {
-		stp, ok := s.ParamTypes[name]
+		stp, ok := base.ParamTypes[name]
 		if !ok {
 			return &store.ValidationError{
 				Field:  "param",
@@ -338,13 +394,13 @@ func (s *signature) matchWith(other *signature) error {
 	return nil
 }
 
-func validateRuleset(path string, rs *regula.Ruleset) (*signature, error) {
+func validateRuleset(path string, rs *regula.Ruleset) (*regula.Signature, error) {
 	err := validateRulesetName(path)
 	if err != nil {
 		return nil, err
 	}
 
-	sig := newSignature(rs)
+	sig := regula.NewSignature(rs)
 
 	for _, r := range rs.Rules {
 		params := r.Params()
@@ -507,18 +563,27 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
+// rulesetsPath returns the path where the rulesets are stored in etcd.
 func (s *RulesetService) rulesetsPath(p, v string) string {
 	return path.Join(s.Namespace, "rulesets", "entries", p, v)
 }
 
+// checksumsPath returns the path where the checksums are stored in etcd.
 func (s *RulesetService) checksumsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "checksums", p)
 }
 
+// signaturesPath returns the path where the signatures are stored in etcd.
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
+// latestRulesetPath returns the path where the latest version of each ruleset is stored in etcd.
 func (s *RulesetService) latestRulesetPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
+}
+
+// versionsPath returns the path where the versions of each rulesets are stored in etcd.
+func (s *RulesetService) versionsPath(p string) string {
+	return path.Join(s.Namespace, "rulesets", "versions", p)
 }

@@ -119,3 +119,22 @@ func (r *Ruleset) validate() error {
 
 	return nil
 }
+
+// Signature represents the signature of a ruleset.
+type Signature struct {
+	ReturnType string
+	ParamTypes map[string]string
+}
+
+// NewSignature returns the Signature of the given ruleset.
+func NewSignature(rs *Ruleset) *Signature {
+	pt := make(map[string]string)
+	for _, p := range rs.Params() {
+		pt[p.Name] = p.Type
+	}
+
+	return &Signature{
+		ParamTypes: pt,
+		ReturnType: rs.Type,
+	}
+}

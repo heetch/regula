@@ -2,6 +2,7 @@ package etcd_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	ppath "path"
@@ -58,6 +59,57 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.
 		require.NoError(t, err)
 	}
 	return e
+}
+
+func TestGet(t *testing.T) {
+	t.Parallel()
+
+	s, cleanup := newEtcdRulesetService(t)
+	defer cleanup()
+
+	t.Run("Root", func(t *testing.T) {
+		path := "p/a/t/h"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		sig := regula.NewSignature(rs1)
+		createRuleset(t, s, path, rs1)
+
+		entry1, err := s.Get(context.Background(), path, "")
+		require.NoError(t, err)
+		require.Equal(t, path, entry1.Path)
+		require.Equal(t, rs1, entry1.Ruleset)
+		require.Equal(t, sig, entry1.Signature)
+		require.NotEmpty(t, entry1.Version)
+		require.Len(t, entry1.Versions, 1)
+
+		// we are waiting 1 second here to avoid creating the new version in the same second as the previous one
+		// ksuid gives a sorting with a one second precision
+		time.Sleep(time.Second)
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)))
+		createRuleset(t, s, path, rs2)
+
+		// by default, it should return the latest version
+		entry2, err := s.Get(context.Background(), path, "")
+		require.NoError(t, err)
+		require.Equal(t, path, entry2.Path)
+		require.Equal(t, rs2, entry2.Ruleset)
+		require.Equal(t, sig, entry2.Signature)
+		require.NotEmpty(t, entry2.Version)
+		require.Len(t, entry2.Versions, 2)
+
+		// get a specific version
+		entry3, err := s.Get(context.Background(), path, entry1.Version)
+		require.NoError(t, err)
+		require.Equal(t, entry1.Path, entry3.Path)
+		require.Equal(t, entry1.Ruleset, entry3.Ruleset)
+		require.Equal(t, entry1.Signature, entry3.Signature)
+		require.Equal(t, entry1.Version, entry3.Version)
+		require.Len(t, entry3.Versions, 2)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		_, err := s.Get(context.Background(), "doesntexist", "")
+		require.Equal(t, err, store.ErrNotFound)
+	})
 }
 
 // List returns all rulesets entries or not depending on the query string.
@@ -436,6 +488,17 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
+		// verify versions list creation
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "versions", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		var versions []string
+		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		require.NoError(t, err)
+		require.Len(t, versions, 1)
+		require.EqualValues(t, entry.Version, versions[0])
+
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
 		require.Equal(t, err, store.ErrNotModified)
@@ -451,6 +514,17 @@ func TestPut(t *testing.T) {
 		entry2, err = s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
 		require.NotEqual(t, entry.Version, entry2.Version)
+
+		// verify versions list append
+		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "versions", path), clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.EqualValues(t, 1, resp.Count)
+
+		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		require.NoError(t, err)
+		require.Len(t, versions, 2)
+		require.EqualValues(t, entry.Version, versions[0])
+		require.EqualValues(t, entry2.Version, versions[1])
 	})
 
 	t.Run("Signatures", func(t *testing.T) {

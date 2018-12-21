@@ -16,25 +16,11 @@ var (
 	ErrInvalidContinueToken = errors.New("invalid continue token")
 )
 
-// ValidationError gives informations about the reason of failed validation.
-type ValidationError struct {
-	Field  string
-	Value  string
-	Reason string
-}
-
-func (v *ValidationError) Error() string {
-	return fmt.Sprintf("invalid %s with value '%s': %s", v.Field, v.Value, v.Reason)
-}
-
-// IsValidationError indicates if the given error is a ValidationError pointer.
-func IsValidationError(err error) bool {
-	_, ok := err.(*ValidationError)
-	return ok
-}
-
 // RulesetService manages rulesets.
 type RulesetService interface {
+	// Get returns the ruleset related to the given path. By default, it returns the latest one.
+	// It returns the related ruleset version if it's specified.
+	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
 	// List returns the rulesets entries under the given prefix. if pathsOnly is set to true, only the rulesets paths are returned.
 	// If the prefix is empty it returns entries from the beginning following the ascii ordering.
 	// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
@@ -51,9 +37,11 @@ type RulesetService interface {
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Path    string
-	Version string
-	Ruleset *regula.Ruleset
+	Path      string
+	Version   string
+	Ruleset   *regula.Ruleset
+	Signature *regula.Signature
+	Versions  []string
 }
 
 // RulesetEntries holds a list of ruleset entries.
@@ -80,4 +68,21 @@ type RulesetEvent struct {
 type RulesetEvents struct {
 	Events   []RulesetEvent
 	Revision string
+}
+
+// ValidationError gives informations about the reason of failed validation.
+type ValidationError struct {
+	Field  string
+	Value  string
+	Reason string
+}
+
+func (v *ValidationError) Error() string {
+	return fmt.Sprintf("invalid %s with value '%s': %s", v.Field, v.Value, v.Reason)
+}
+
+// IsValidationError indicates if the given error is a ValidationError pointer.
+func IsValidationError(err error) bool {
+	_, ok := err.(*ValidationError)
+	return ok
 }
