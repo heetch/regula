@@ -85,75 +85,13 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 // List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
-func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
-	options := make([]clientv3.OpOption, 0, 3)
-
-	var key string
-
-	limit = computeLimit(limit)
-
-	if continueToken != "" {
-		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
-		if err != nil {
-			return nil, store.ErrInvalidContinueToken
-		}
-
-		key = string(lastPath)
-
-		var rangeEnd string
-		if pathsOnly {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
-		} else {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
-		}
-		options = append(options, clientv3.WithRange(rangeEnd))
-	} else {
-		key = prefix
-		options = append(options, clientv3.WithPrefix())
-	}
-
-	options = append(options, clientv3.WithLimit(int64(limit)))
-
-	if pathsOnly {
-		return s.listPaths(ctx, key, prefix, limit, options)
-	}
-	return s.listRulesets(ctx, key, prefix, limit, options)
-}
-
-func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	opts = append(opts, clientv3.WithKeysOnly())
-	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
+func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
+	key, options, err := s.computeOptions(prefix, limit, continueToken, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch all entries")
+		return nil, err
 	}
 
-	// if a prefix is provided it must always return results
-	// otherwise it doesn't exist.
-	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrNotFound
-	}
-
-	var entries store.RulesetEntries
-	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
-	for _, pair := range resp.Kvs {
-		p := strings.TrimPrefix(string(pair.Key), s.latestRulesetPath("")+"/")
-		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
-	}
-
-	if len(entries.Entries) < limit || !resp.More {
-		return &entries, nil
-	}
-
-	lastEntry := entries.Entries[len(entries.Entries)-1]
-
-	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
-
-	return &entries, nil
-}
-
-func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
@@ -183,6 +121,80 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 
 	// we want to start immediately after the last key
 	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
+
+	return &entries, nil
+}
+
+func (s *RulesetService) computeOptions(prefix string, limit int, continueToken string, listPaths bool) (string, []clientv3.OpOption, error) {
+	options := make([]clientv3.OpOption, 0, 3)
+
+	var key string
+
+	limit = computeLimit(limit)
+
+	if continueToken != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
+		if err != nil {
+			return "", nil, store.ErrInvalidContinueToken
+		}
+
+		key = string(lastPath)
+
+		var rangeEnd string
+		if listPaths {
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+		} else {
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
+		}
+		options = append(options, clientv3.WithRange(rangeEnd))
+	} else {
+		key = prefix
+		options = append(options, clientv3.WithPrefix())
+	}
+
+	options = append(options, clientv3.WithLimit(int64(limit)))
+	if listPaths {
+		options = append(options, clientv3.WithKeysOnly())
+	}
+
+	return key, options, nil
+}
+
+// ListPaths returns rulesets path under the given prefix.
+// If the prefix is empty it returns paths from the beginning following the ascii ordering.
+// If the given limit is lower or equal to 0 or greater than 100, it returns 50 paths.
+func (s *RulesetService) ListPaths(ctx context.Context, prefix string, limit int, continueToken string) (*store.RulesetEntries, error) {
+	key, options, err := s.computeOptions(prefix, limit, continueToken, true)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), options...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch all entries")
+	}
+
+	// if a prefix is provided it must always return results
+	// otherwise it doesn't exist.
+	if resp.Count == 0 && prefix != "" {
+		return nil, store.ErrNotFound
+	}
+
+	var entries store.RulesetEntries
+	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	for _, pair := range resp.Kvs {
+		p := strings.TrimPrefix(string(pair.Key), s.latestRulesetPath("")+"/")
+		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
+	}
+
+	if len(entries.Entries) < limit || !resp.More {
+		return &entries, nil
+	}
+
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// we want to start immediately after the last key
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
 	return &entries, nil
 }

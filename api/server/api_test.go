@@ -111,7 +111,7 @@ func TestAPI(t *testing.T) {
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error, backendCalledCount int) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -122,18 +122,19 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))
 				assert.Equal(t, token, tk)
 				return l, err
 			}
-			defer func() { s.ListFn = nil }()
+			defer func() { s.ListFn = nil; s.ListCount = 0 }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", u, nil)
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, code, w.Code)
+			require.Equal(t, backendCalledCount, s.ListCount)
 
 			if code == http.StatusOK {
 				var res api.Rulesets
@@ -150,35 +151,35 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/?list", http.StatusOK, &l, nil, 1)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list", http.StatusOK, &l, nil, 1)
 		})
 
 		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, nil, 1)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil, 1)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound, 1)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), store.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), store.ErrInvalidContinueToken, 1)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), errors.New("unexpected error"))
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), errors.New("unexpected error"), 1)
 		})
 
 		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil)
+			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil, 0)
 		})
 	})
 
@@ -192,7 +193,7 @@ func TestAPI(t *testing.T) {
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error, backendCalledCount int) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -203,18 +204,19 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
+			s.ListPathsFn = func(ctx context.Context, prefix string, lm int, tk string) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(lm))
 				assert.Equal(t, token, tk)
 				return l, err
 			}
-			defer func() { s.ListFn = nil }()
+			defer func() { s.ListPathsFn = nil; s.ListPathsCount = 0 }()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", u, nil)
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, code, w.Code)
+			require.Equal(t, backendCalledCount, s.ListPathsCount)
 
 			if code == http.StatusOK {
 				var res api.Rulesets
@@ -233,15 +235,15 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list&paths", http.StatusOK, &l, nil)
+			call(t, "/rulesets/?list&paths", http.StatusOK, &l, nil, 1)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil, 1)
 		})
 
 		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			call(t, "/rulesets/a?list&paths&limit=10&continue=abc123", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list&paths&limit=10&continue=abc123", http.StatusOK, &l, nil, 1)
 		})
 	})
 
