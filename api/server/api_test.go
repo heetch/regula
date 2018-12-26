@@ -122,9 +122,9 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
-				assert.Equal(t, limit, strconv.Itoa(lm))
-				assert.Equal(t, token, tk)
+			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
+				assert.Equal(t, token, opt.ContinueToken)
 				return l, err
 			}
 			defer func() { s.ListFn = nil }()
@@ -203,9 +203,9 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
-				assert.Equal(t, limit, strconv.Itoa(lm))
-				assert.Equal(t, token, tk)
+			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
+				assert.Equal(t, token, opt.ContinueToken)
 				return l, err
 			}
 			defer func() { s.ListFn = nil }()

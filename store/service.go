@@ -24,7 +24,7 @@ type RulesetService interface {
 	// List returns the rulesets entries under the given prefix. if pathsOnly is set to true, only the rulesets paths are returned.
 	// If the prefix is empty it returns entries from the beginning following the ascii ordering.
 	// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
-	List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*RulesetEntries, error)
+	List(ctx context.Context, prefix string, opt *ListOptions) (*RulesetEntries, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
 	// Put is used to store a ruleset version.
@@ -33,6 +33,13 @@ type RulesetService interface {
 	Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
 	EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+}
+
+// ListOptions contains list options.
+type ListOptions struct {
+	Limit         int
+	ContinueToken string
+	PathsOnly     bool
 }
 
 // RulesetEntry holds a ruleset and its metadata.

@@ -131,7 +131,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"a/1", "a", "b", "c"}
 
-		entries, err := s.List(context.Background(), "", 0, "", false)
+		entries, err := s.List(context.Background(), "", &store.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -149,7 +149,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{"x/1", "x", "x/2", "xx"}
 
-		entries, err := s.List(context.Background(), "x", 0, "", false)
+		entries, err := s.List(context.Background(), "x", &store.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -160,7 +160,7 @@ func TestList(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist.
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist", 0, "", false)
+		_, err := s.List(context.Background(), "doesntexist", &store.ListOptions{})
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
@@ -172,28 +172,33 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "y/2", rs)
 		createRuleset(t, s, "y/3", rs)
 
-		entries, err := s.List(context.Background(), "y", 2, "", false)
+		opt := store.ListOptions{Limit: 2}
+		entries, err := s.List(context.Background(), "y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
 		require.Equal(t, "y/1", entries.Entries[0].Path)
 		require.Equal(t, "y", entries.Entries[1].Path)
 		require.NotEmpty(t, entries.Continue)
 
+		opt.ContinueToken = entries.Continue
 		token := entries.Continue
-		entries, err = s.List(context.Background(), "y", 2, entries.Continue, false)
+		entries, err = s.List(context.Background(), "y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
 		require.Equal(t, "y/2", entries.Entries[0].Path)
 		require.Equal(t, "y/3", entries.Entries[1].Path)
 		require.NotEmpty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 2, entries.Continue, false)
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), "y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 1)
 		require.Equal(t, "yy", entries.Entries[0].Path)
 		require.Empty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 3, token, false)
+		opt.Limit = 3
+		opt.ContinueToken = token
+		entries, err = s.List(context.Background(), "y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 3)
 		require.Equal(t, "y/2", entries.Entries[0].Path)
@@ -201,10 +206,13 @@ func TestList(t *testing.T) {
 		require.Equal(t, "yy", entries.Entries[2].Path)
 		require.Empty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 3, "some token", false)
+		opt.ContinueToken = "some token"
+		entries, err = s.List(context.Background(), "y", &opt)
 		require.Equal(t, store.ErrInvalidContinueToken, err)
 
-		entries, err = s.List(context.Background(), "y", -10, "", false)
+		opt.Limit = -10
+		opt.ContinueToken = ""
+		entries, err = s.List(context.Background(), "y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 5)
 	})
@@ -233,7 +241,8 @@ func TestListPaths(t *testing.T) {
 
 		paths := []string{"a", "a/1", "a/2", "b", "c", "d"}
 
-		entries, err := s.List(context.Background(), "", 0, "", true)
+		opt := store.ListOptions{PathsOnly: true}
+		entries, err := s.List(context.Background(), "", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -256,7 +265,8 @@ func TestListPaths(t *testing.T) {
 
 		paths := []string{"xy", "xy/ab", "xyz"}
 
-		entries, err := s.List(context.Background(), "xy", 0, "", true)
+		opt := store.ListOptions{PathsOnly: true}
+		entries, err := s.List(context.Background(), "xy", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -270,7 +280,8 @@ func TestListPaths(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist with pathsOnly parameter set to true.
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist", 0, "", true)
+		opt := store.ListOptions{PathsOnly: true}
+		_, err := s.List(context.Background(), "doesntexist", &opt)
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
@@ -283,7 +294,8 @@ func TestListPaths(t *testing.T) {
 		createRuleset(t, s, "foo/babar", rs)
 		createRuleset(t, s, "foo", rs)
 
-		entries, err := s.List(context.Background(), "f", 2, "", true)
+		opt := store.ListOptions{Limit: 2, PathsOnly: true}
+		entries, err := s.List(context.Background(), "f", &opt)
 		require.NoError(t, err)
 		paths := []string{"foo", "foo/babar"}
 		require.Len(t, entries.Entries, len(paths))
@@ -295,7 +307,8 @@ func TestListPaths(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 		require.NotEmpty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "f", 2, entries.Continue, true)
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), "f", &opt)
 		require.NoError(t, err)
 		paths = []string{"foo/bar", "foo/bar/baz"}
 		require.Len(t, entries.Entries, len(paths))
@@ -307,10 +320,13 @@ func TestListPaths(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 		require.Zero(t, entries.Continue)
 
-		_, err = s.List(context.Background(), "f", 2, "bad token", true)
+		opt.ContinueToken = "bad token"
+		_, err = s.List(context.Background(), "f", &opt)
 		require.Equal(t, store.ErrInvalidContinueToken, err)
 
-		entries, err = s.List(context.Background(), "f", -10, "", true)
+		opt.Limit = -10
+		opt.ContinueToken = ""
+		entries, err = s.List(context.Background(), "f", &opt)
 		require.NoError(t, err)
 		paths = []string{"foo", "foo/babar", "foo/bar", "foo/bar/baz"}
 		require.Len(t, entries.Entries, len(paths))

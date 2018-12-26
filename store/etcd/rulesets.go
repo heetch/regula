@@ -85,15 +85,15 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 // List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
-func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
 	var key string
 
-	limit = computeLimit(limit)
+	limit := computeLimit(opt.Limit)
 
-	if continueToken != "" {
-		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
+	if opt.ContinueToken != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(opt.ContinueToken)
 		if err != nil {
 			return nil, store.ErrInvalidContinueToken
 		}
@@ -101,7 +101,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 		key = string(lastPath)
 
 		var rangeEnd string
-		if pathsOnly {
+		if opt.PathsOnly {
 			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
 		} else {
 			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
@@ -114,7 +114,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	options = append(options, clientv3.WithLimit(int64(limit)))
 
-	if pathsOnly {
+	if opt.PathsOnly {
 		return s.listPaths(ctx, key, prefix, limit, options)
 	}
 	return s.listRulesets(ctx, key, prefix, limit, options)
