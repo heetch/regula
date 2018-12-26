@@ -173,14 +173,15 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
 
+	// Responses handles responses for each OpGet calls in the transaction.
 	for i, resps := range txnresp.Responses {
 		rr := resps.GetResponseRange()
-		for _, pair := range rr.Kvs {
-			err = json.Unmarshal(pair.Value, &entries.Entries[i])
-			if err != nil {
-				s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
-				return nil, errors.Wrap(err, "failed to unmarshal entry")
-			}
+
+		// Given that we are getting a leaf in the tree (a ruleset entry), we are sure that we will always have one value in the Kvs slice.
+		err = json.Unmarshal(rr.Kvs[0].Value, &entries.Entries[i])
+		if err != nil {
+			s.Logger.Debug().Err(err).Bytes("entry", rr.Kvs[0].Value).Msg("list: unmarshalling failed")
+			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
 
