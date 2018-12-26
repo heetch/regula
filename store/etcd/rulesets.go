@@ -82,7 +82,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 	return entry, nil
 }
 
-// List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
+// List returns the latest version of each ruleset under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
 // If the prefix is empty it returns entries from the beginning following the lexical ordering.
 // If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
 func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
@@ -100,12 +100,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 		key = string(lastPath)
 
-		var rangeEnd string
-		if pathsOnly {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
-		} else {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
-		}
+		rangeEnd := clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
 		options = append(options, clientv3.WithRange(rangeEnd))
 	} else {
 		key = prefix
@@ -153,9 +148,9 @@ func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limi
 }
 
 func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch all entries")
+		return nil, errors.Wrap(err, "failed to fetch latests keys")
 	}
 
 	// if a prefix is provided it must always return results
@@ -164,14 +159,28 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 		return nil, store.ErrNotFound
 	}
 
+	ops := make([]clientv3.Op, 0, resp.Count)
+	txn := s.Client.KV.Txn(ctx)
+	for _, pair := range resp.Kvs {
+		ops = append(ops, clientv3.OpGet(string(pair.Value)))
+	}
+	txnresp, err := txn.Then(ops...).Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "transaction failed to fetch all entries")
+	}
+
 	var entries store.RulesetEntries
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
-	for i, pair := range resp.Kvs {
-		err = json.Unmarshal(pair.Value, &entries.Entries[i])
-		if err != nil {
-			s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
-			return nil, errors.Wrap(err, "failed to unmarshal entry")
+
+	for i, resps := range txnresp.Responses {
+		rr := resps.GetResponseRange()
+		for _, pair := range rr.Kvs {
+			err = json.Unmarshal(pair.Value, &entries.Entries[i])
+			if err != nil {
+				s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
+				return nil, errors.Wrap(err, "failed to unmarshal entry")
+			}
 		}
 	}
 
@@ -182,7 +191,7 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
 	return &entries, nil
 }

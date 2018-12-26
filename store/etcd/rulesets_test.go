@@ -129,7 +129,7 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "b", rs)
 		createRuleset(t, s, "a", rs)
 
-		paths := []string{"a/1", "a", "b", "c"}
+		paths := []string{"a", "a/1", "b", "c"}
 
 		entries, err := s.List(context.Background(), "", 0, "", false)
 		require.NoError(t, err)
@@ -140,6 +140,25 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	t.Run("Assert latest ruleset version is returned", func(t *testing.T) {
+		rs1, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		require.NoError(t, err)
+		rs2, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+		require.NoError(t, err)
+
+		createRuleset(t, s, "dd", rs)
+		createRuleset(t, s, "de", rs)
+		createRuleset(t, s, "dd", rs1)
+		createRuleset(t, s, "dd", rs2)
+
+		entries, err := s.List(context.Background(), "d", 0, "", false)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		d := entries.Entries[0]
+		require.Equal(t, rs2, d.Ruleset)
+		require.NotEmpty(t, entries.Revision)
+	})
+
 	// Prefix tests List with a given prefix.
 	t.Run("Prefix", func(t *testing.T) {
 		createRuleset(t, s, "x", rs)
@@ -147,7 +166,7 @@ func TestList(t *testing.T) {
 		createRuleset(t, s, "x/1", rs)
 		createRuleset(t, s, "x/2", rs)
 
-		paths := []string{"x/1", "x", "x/2", "xx"}
+		paths := []string{"x", "x/1", "x/2", "xx"}
 
 		entries, err := s.List(context.Background(), "x", 0, "", false)
 		require.NoError(t, err)
@@ -175,8 +194,8 @@ func TestList(t *testing.T) {
 		entries, err := s.List(context.Background(), "y", 2, "", false)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
-		require.Equal(t, "y/1", entries.Entries[0].Path)
-		require.Equal(t, "y", entries.Entries[1].Path)
+		require.Equal(t, "y", entries.Entries[0].Path)
+		require.Equal(t, "y/1", entries.Entries[1].Path)
 		require.NotEmpty(t, entries.Continue)
 
 		token := entries.Continue

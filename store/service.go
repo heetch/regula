@@ -21,7 +21,7 @@ type RulesetService interface {
 	// Get returns the ruleset related to the given path. By default, it returns the latest one.
 	// It returns the related ruleset version if it's specified.
 	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
-	// List returns the rulesets entries under the given prefix. if pathsOnly is set to true, only the rulesets paths are returned.
+	// List returns the latest version of each ruleset under the given prefix. If pathsOnly is set to true, only the rulesets paths will be returned.
 	// If the prefix is empty it returns entries from the beginning following the ascii ordering.
 	// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
 	List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*RulesetEntries, error)
