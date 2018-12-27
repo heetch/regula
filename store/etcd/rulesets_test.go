@@ -142,6 +142,25 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	// Assert that only latest version for each ruleset is returned by default.
+	t.Run("Last version only", func(t *testing.T) {
+		prefix := "list/last/version/"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+
+		createRuleset(t, s, prefix+"a", rs)
+		createRuleset(t, s, prefix+"a/1", rs)
+		createRuleset(t, s, prefix+"a", rs1)
+		createRuleset(t, s, prefix+"a", rs2)
+
+		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		a := entries.Entries[0]
+		require.Equal(t, rs2, a.Ruleset)
+		require.NotEmpty(t, entries.Revision)
+	})
+
 	// Prefix tests List with a given prefix.
 	t.Run("Prefix", func(t *testing.T) {
 		prefix := "list/prefix/"
