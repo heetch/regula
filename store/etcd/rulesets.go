@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -174,12 +175,15 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
+	// The last entry is stored before the sort is applied in case we need it for the pagination.
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// This sort the entries in the lexical order based on the ruleset's path.
+	sort.SliceStable(entries.Entries, func(i, j int) bool { return entries.Entries[i].Path < entries.Entries[j].Path })
 
 	if len(entries.Entries) < limit || !resp.More {
 		return &entries, nil
 	}
-
-	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	// we want to start immediately after the last key
 	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
