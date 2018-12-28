@@ -86,9 +86,9 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 	return entry, nil
 }
 
-// List returns the latest version of each ruleset under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
-// If the prefix is empty it returns entries from the beginning following the lexical ordering.
-// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
+// List returns the latest version of each ruleset under the given prefix.
+// If the prefix is empty, it returns entries from the beginning following the lexical order.
+// The listing can be customised using the ListOptions type.
 func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
@@ -120,15 +120,16 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 
 	switch {
 	case opt.PathsOnly:
-		return s.listPaths(ctx, key, prefix, limit, options)
+		return s.listPathsOnly(ctx, key, prefix, limit, options)
 	case opt.AllVersions:
-		return s.listRulesetsAllVersions(ctx, key, prefix, limit, options)
+		return s.listAllVersions(ctx, key, prefix, limit, options)
 	default:
-		return s.listRulesets(ctx, key, prefix, limit, options)
+		return s.listLastVersion(ctx, key, prefix, limit, options)
 	}
 }
 
-func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+// listPathsOnly returns only the path for each ruleset.
+func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	opts = append(opts, clientv3.WithKeysOnly())
 	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
 	if err != nil {
@@ -160,7 +161,8 @@ func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limi
 	return &entries, nil
 }
 
-func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+// listLastVersion returns only the latest version for each ruleset.
+func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch latests keys")
@@ -210,7 +212,8 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 	return &entries, nil
 }
 
-func (s *RulesetService) listRulesetsAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+// listAllVersions returns all available versions for each ruleset.
+func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	resp, err := s.Client.KV.Get(ctx, s.entriesPath(key, ""), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
