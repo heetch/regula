@@ -94,6 +94,11 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 
 	opt.ContinueToken = r.URL.Query().Get("continue")
 	_, opt.PathsOnly = r.URL.Query()["paths"]
+	_, opt.AllVersions = r.URL.Query()["versions"]
+	if opt.PathsOnly && opt.AllVersions {
+		writeError(w, r, errors.New("'paths' and 'versions' parameters can't be given in the same query"), http.StatusBadRequest)
+		return
+	}
 
 	entries, err := s.rulesets.List(r.Context(), prefix, &opt)
 
