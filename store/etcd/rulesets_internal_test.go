@@ -114,8 +114,8 @@ func TestPathMethods(t *testing.T) {
 		Namespace: "test",
 	}
 
-	exp := "test/rulesets/entries/path/version"
-	require.Equal(t, exp, s.rulesetsPath("path", "version"))
+	exp := "test/rulesets/entries/path" + versionSeparator + "/version"
+	require.Equal(t, exp, s.entriesPath("path", "version"))
 
 	exp = "test/rulesets/checksums/path"
 	require.Equal(t, exp, s.checksumsPath("path"))

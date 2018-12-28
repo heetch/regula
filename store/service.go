@@ -40,6 +40,7 @@ type ListOptions struct {
 	Limit         int
 	ContinueToken string
 	PathsOnly     bool
+	AllVersions   bool // return all versions of each rulesets
 }
 
 // RulesetEntry holds a ruleset and its metadata.

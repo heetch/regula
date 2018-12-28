@@ -22,6 +22,10 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+// versionSeparator separates the path from the version in the entries path in etcd.
+// The purpose is to have the same ordering with the others namespace (latest, versions, ...).
+const versionSeparator = "!"
+
 // RulesetService manages the rulesets using etcd.
 type RulesetService struct {
 	Client    *clientv3.Client
@@ -100,7 +104,12 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 
 		key = string(lastPath)
 
-		rangeEnd := clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+		var rangeEnd string
+		if opt.AllVersions {
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.entriesPath(prefix, ""))
+		} else {
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+		}
 		options = append(options, clientv3.WithRange(rangeEnd))
 	} else {
 		key = prefix
@@ -109,10 +118,14 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 
 	options = append(options, clientv3.WithLimit(int64(limit)))
 
-	if opt.PathsOnly {
+	switch {
+	case opt.PathsOnly:
 		return s.listPaths(ctx, key, prefix, limit, options)
+	case opt.AllVersions:
+		return s.listRulesetsAllVersions(ctx, key, prefix, limit, options)
+	default:
+		return s.listRulesets(ctx, key, prefix, limit, options)
 	}
-	return s.listRulesets(ctx, key, prefix, limit, options)
 }
 
 func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
@@ -184,15 +197,50 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 	}
-	// The last entry is stored before the sort is applied in case we need it for the pagination.
-	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	if len(entries.Entries) < limit || !resp.More {
 		return &entries, nil
 	}
 
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
 	// we want to start immediately after the last key
 	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+
+	return &entries, nil
+}
+
+func (s *RulesetService) listRulesetsAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(key, ""), opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch all entries")
+	}
+
+	// if a prefix is provided it must always return results
+	// otherwise it doesn't exist.
+	if resp.Count == 0 && prefix != "" {
+		return nil, store.ErrNotFound
+	}
+
+	var entries store.RulesetEntries
+	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
+	for i, pair := range resp.Kvs {
+		err = json.Unmarshal(pair.Value, &entries.Entries[i])
+		if err != nil {
+			s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
+			return nil, errors.Wrap(err, "failed to unmarshal entry")
+		}
+	}
+
+	if len(entries.Entries) < limit || !resp.More {
+		return &entries, nil
+	}
+
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// we want to start immediately after the last key
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path+versionSeparator, lastEntry.Version+"\x00")))
 
 	return &entries, nil
 }
@@ -204,7 +252,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...)
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path+versionSeparator, "")+"/", clientv3.WithLastKey()...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -231,7 +279,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, version))
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path, version))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -356,10 +404,10 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			return errors.Wrap(err, "failed to encode entry")
 		}
 
-		stm.Put(s.rulesetsPath(path, version), string(raw))
+		stm.Put(s.entriesPath(path, version), string(raw))
 
 		// update the pointer to the latest ruleset
-		stm.Put(s.latestRulesetPath(path), s.rulesetsPath(path, version))
+		stm.Put(s.latestRulesetPath(path), s.entriesPath(path, version))
 
 		entry = re
 		return nil
@@ -485,7 +533,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 		opts = append(opts, clientv3.WithRev(i+1))
 	}
 
-	wc := s.Client.Watch(ctx, s.rulesetsPath(prefix, ""), opts...)
+	wc := s.Client.Watch(ctx, s.entriesPath(prefix, ""), opts...)
 	for {
 		select {
 		case wresp := <-wc:
@@ -573,8 +621,13 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
-// rulesetsPath returns the path where the rulesets are stored in etcd.
-func (s *RulesetService) rulesetsPath(p, v string) string {
+// entriesPath returns the path where the rulesets are stored in etcd.
+func (s *RulesetService) entriesPath(p, v string) string {
+	// If the version parameter is not empty, we should suffix the path with the versionSeparator value
+	// because they are separated with it in each etcd keys (entries namespace only).
+	if v != "" {
+		p += versionSeparator
+	}
 	return path.Join(s.Namespace, "rulesets", "entries", p, v)
 }
 

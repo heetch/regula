@@ -161,6 +161,60 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	// Assert that all versions are returned when passing the AllVersions option.
+	t.Run("All versions", func(t *testing.T) {
+		prefix := "list/all/version/"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+
+		createRuleset(t, s, prefix+"a", rs)
+		time.Sleep(time.Second)
+		createRuleset(t, s, prefix+"a", rs1)
+		time.Sleep(time.Second)
+		createRuleset(t, s, prefix+"a", rs2)
+		createRuleset(t, s, prefix+"a/1", rs)
+
+		paths := []string{prefix + "a", prefix + "a", prefix + "a", prefix + "a/1"}
+
+		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{AllVersions: true})
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+		}
+		require.NotEmpty(t, entries.Revision)
+
+		// Assert that pagination is working well.
+		opt := store.ListOptions{
+			AllVersions: true,
+			Limit:       2,
+		}
+		entries, err = s.List(context.Background(), prefix+"", &opt)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, opt.Limit)
+		require.Equal(t, prefix+"a", entries.Entries[0].Path)
+		require.Equal(t, rs, entries.Entries[0].Ruleset)
+		require.Equal(t, prefix+"a", entries.Entries[1].Path)
+		require.Equal(t, rs1, entries.Entries[1].Ruleset)
+		require.NotEmpty(t, entries.Revision)
+
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), prefix+"", &opt)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, opt.Limit)
+		require.Equal(t, prefix+"a", entries.Entries[0].Path)
+		require.Equal(t, rs2, entries.Entries[0].Ruleset)
+		require.Equal(t, prefix+"a/1", entries.Entries[1].Path)
+		require.Equal(t, rs, entries.Entries[1].Ruleset)
+		require.NotEmpty(t, entries.Revision)
+
+		t.Run("NotFound", func(t *testing.T) {
+			_, err = s.List(context.Background(), prefix+"doesntexist", &store.ListOptions{AllVersions: true})
+			require.Equal(t, err, store.ErrNotFound)
+		})
+
+	})
+
 	// Prefix tests List with a given prefix.
 	t.Run("Prefix", func(t *testing.T) {
 		prefix := "list/prefix/"
@@ -523,7 +577,7 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"!/"))
 
 		// verify checksum creation
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())
