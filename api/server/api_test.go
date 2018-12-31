@@ -111,7 +111,7 @@ func TestAPI(t *testing.T) {
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, lopt *store.ListOptions, err error) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -125,6 +125,7 @@ func TestAPI(t *testing.T) {
 			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
 				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
 				assert.Equal(t, token, opt.ContinueToken)
+				assert.Equal(t, lopt, opt)
 				return l, err
 			}
 			defer func() { s.ListFn = nil }()
@@ -150,47 +151,57 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/?list", http.StatusOK, &l, &store.ListOptions{}, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list", http.StatusOK, &l, &store.ListOptions{}, nil)
 		})
 
 		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, nil)
+			opt := store.ListOptions{
+				Limit:         10,
+				ContinueToken: "abc123",
+			}
+			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), &store.ListOptions{}, nil)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), &store.ListOptions{}, store.ErrNotFound)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), store.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), &store.ListOptions{}, store.ErrInvalidContinueToken)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), errors.New("unexpected error"))
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), &store.ListOptions{}, errors.New("unexpected error"))
 		})
 
 		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil)
+			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
 		})
 
 		t.Run("PathsParameter", func(t *testing.T) {
-			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil)
+			opt := store.ListOptions{
+				PathsOnly: true,
+			}
+			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("VersionsParameter", func(t *testing.T) {
-			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, nil)
+			opt := store.ListOptions{
+				AllVersions: true,
+			}
+			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("InvalidParametersCombination", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, nil)
+			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
 		})
 	})
 
