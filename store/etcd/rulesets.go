@@ -23,7 +23,7 @@ import (
 )
 
 // versionSeparator separates the path from the version in the entries path in etcd.
-// The purpose is to have the same ordering with the others namespace (latest, versions, ...).
+// The purpose is to have the same ordering as the others namespace (latest, versions, ...).
 const versionSeparator = "!"
 
 // RulesetService manages the rulesets using etcd.

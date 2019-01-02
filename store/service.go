@@ -40,7 +40,7 @@ type RulesetService interface {
 type ListOptions struct {
 	Limit         int
 	ContinueToken string
-	PathsOnly     bool // return only the rulesets's path
+	PathsOnly     bool // return only the paths of the rulesets
 	AllVersions   bool // return all versions of each rulesets
 }
 
