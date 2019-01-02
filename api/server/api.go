@@ -80,21 +80,27 @@ func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 // the paths parameter is not given otherwise it fetches the rulesets paths only.
 func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
 	var (
-		err   error
-		limit int
+		opt store.ListOptions
+		err error
 	)
 
 	if l := r.URL.Query().Get("limit"); l != "" {
-		limit, err = strconv.Atoi(l)
+		opt.Limit, err = strconv.Atoi(l)
 		if err != nil {
 			writeError(w, r, errors.New("invalid limit"), http.StatusBadRequest)
 			return
 		}
 	}
 
-	continueToken := r.URL.Query().Get("continue")
-	_, ok := r.URL.Query()["paths"]
-	entries, err := s.rulesets.List(r.Context(), prefix, limit, continueToken, ok)
+	opt.ContinueToken = r.URL.Query().Get("continue")
+	_, opt.PathsOnly = r.URL.Query()["paths"]
+	_, opt.AllVersions = r.URL.Query()["versions"]
+	if opt.PathsOnly && opt.AllVersions {
+		writeError(w, r, errors.New("'paths' and 'versions' parameters can't be given in the same query"), http.StatusBadRequest)
+		return
+	}
+
+	entries, err := s.rulesets.List(r.Context(), prefix, &opt)
 
 	if err != nil {
 		if err == store.ErrNotFound {

@@ -123,15 +123,17 @@ func TestList(t *testing.T) {
 
 	// Root tests the basic behaviour without prefix.
 	t.Run("Root", func(t *testing.T) {
-		createRuleset(t, s, "c", rs)
-		createRuleset(t, s, "a", rs)
-		createRuleset(t, s, "a/1", rs)
-		createRuleset(t, s, "b", rs)
-		createRuleset(t, s, "a", rs)
+		prefix := "list/root/"
 
-		paths := []string{"a/1", "a", "b", "c"}
+		createRuleset(t, s, prefix+"c", rs)
+		createRuleset(t, s, prefix+"a", rs)
+		createRuleset(t, s, prefix+"a/1", rs)
+		createRuleset(t, s, prefix+"b", rs)
+		createRuleset(t, s, prefix+"a", rs)
 
-		entries, err := s.List(context.Background(), "", 0, "", false)
+		paths := []string{prefix + "a", prefix + "a/1", prefix + "b", prefix + "c"}
+
+		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -140,16 +142,91 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 	})
 
+	// Assert that only latest version for each ruleset is returned by default.
+	t.Run("Last version only", func(t *testing.T) {
+		prefix := "list/last/version/"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+
+		createRuleset(t, s, prefix+"a", rs)
+		createRuleset(t, s, prefix+"a/1", rs)
+		createRuleset(t, s, prefix+"a", rs1)
+		createRuleset(t, s, prefix+"a", rs2)
+
+		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 2)
+		a := entries.Entries[0]
+		require.Equal(t, rs2, a.Ruleset)
+		require.NotEmpty(t, entries.Revision)
+	})
+
+	// Assert that all versions are returned when passing the AllVersions option.
+	t.Run("All versions", func(t *testing.T) {
+		prefix := "list/all/version/"
+		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+
+		createRuleset(t, s, prefix+"a", rs)
+		time.Sleep(time.Second)
+		createRuleset(t, s, prefix+"a", rs1)
+		time.Sleep(time.Second)
+		createRuleset(t, s, prefix+"a", rs2)
+		createRuleset(t, s, prefix+"a/1", rs)
+
+		paths := []string{prefix + "a", prefix + "a", prefix + "a", prefix + "a/1"}
+
+		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{AllVersions: true})
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, len(paths))
+		for i, e := range entries.Entries {
+			require.Equal(t, paths[i], e.Path)
+		}
+		require.NotEmpty(t, entries.Revision)
+
+		// Assert that pagination is working well.
+		opt := store.ListOptions{
+			AllVersions: true,
+			Limit:       2,
+		}
+		entries, err = s.List(context.Background(), prefix+"", &opt)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, opt.Limit)
+		require.Equal(t, prefix+"a", entries.Entries[0].Path)
+		require.Equal(t, rs, entries.Entries[0].Ruleset)
+		require.Equal(t, prefix+"a", entries.Entries[1].Path)
+		require.Equal(t, rs1, entries.Entries[1].Ruleset)
+		require.NotEmpty(t, entries.Revision)
+
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), prefix+"", &opt)
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, opt.Limit)
+		require.Equal(t, prefix+"a", entries.Entries[0].Path)
+		require.Equal(t, rs2, entries.Entries[0].Ruleset)
+		require.Equal(t, prefix+"a/1", entries.Entries[1].Path)
+		require.Equal(t, rs, entries.Entries[1].Ruleset)
+		require.NotEmpty(t, entries.Revision)
+
+		t.Run("NotFound", func(t *testing.T) {
+			_, err = s.List(context.Background(), prefix+"doesntexist", &store.ListOptions{AllVersions: true})
+			require.Equal(t, err, store.ErrNotFound)
+		})
+
+	})
+
 	// Prefix tests List with a given prefix.
 	t.Run("Prefix", func(t *testing.T) {
-		createRuleset(t, s, "x", rs)
-		createRuleset(t, s, "xx", rs)
-		createRuleset(t, s, "x/1", rs)
-		createRuleset(t, s, "x/2", rs)
+		prefix := "list/prefix/"
 
-		paths := []string{"x/1", "x", "x/2", "xx"}
+		createRuleset(t, s, prefix+"x", rs)
+		createRuleset(t, s, prefix+"xx", rs)
+		createRuleset(t, s, prefix+"x/1", rs)
+		createRuleset(t, s, prefix+"x/2", rs)
 
-		entries, err := s.List(context.Background(), "x", 0, "", false)
+		paths := []string{prefix + "x", prefix + "x/1", prefix + "x/2", prefix + "xx"}
+
+		entries, err := s.List(context.Background(), prefix+"x", &store.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -160,51 +237,61 @@ func TestList(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist.
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist", 0, "", false)
+		_, err := s.List(context.Background(), "doesntexist", &store.ListOptions{})
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
 	// Paging tests List with pagination.
 	t.Run("Paging", func(t *testing.T) {
-		createRuleset(t, s, "y", rs)
-		createRuleset(t, s, "yy", rs)
-		createRuleset(t, s, "y/1", rs)
-		createRuleset(t, s, "y/2", rs)
-		createRuleset(t, s, "y/3", rs)
+		prefix := "list/paging/"
 
-		entries, err := s.List(context.Background(), "y", 2, "", false)
+		createRuleset(t, s, prefix+"y", rs)
+		createRuleset(t, s, prefix+"yy", rs)
+		createRuleset(t, s, prefix+"y/1", rs)
+		createRuleset(t, s, prefix+"y/2", rs)
+		createRuleset(t, s, prefix+"y/3", rs)
+
+		opt := store.ListOptions{Limit: 2}
+		entries, err := s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
-		require.Equal(t, "y/1", entries.Entries[0].Path)
-		require.Equal(t, "y", entries.Entries[1].Path)
+		require.Equal(t, prefix+"y", entries.Entries[0].Path)
+		require.Equal(t, prefix+"y/1", entries.Entries[1].Path)
 		require.NotEmpty(t, entries.Continue)
 
+		opt.ContinueToken = entries.Continue
 		token := entries.Continue
-		entries, err = s.List(context.Background(), "y", 2, entries.Continue, false)
+		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 2)
-		require.Equal(t, "y/2", entries.Entries[0].Path)
-		require.Equal(t, "y/3", entries.Entries[1].Path)
+		require.Equal(t, prefix+"y/2", entries.Entries[0].Path)
+		require.Equal(t, prefix+"y/3", entries.Entries[1].Path)
 		require.NotEmpty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 2, entries.Continue, false)
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 1)
-		require.Equal(t, "yy", entries.Entries[0].Path)
+		require.Equal(t, prefix+"yy", entries.Entries[0].Path)
 		require.Empty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 3, token, false)
+		opt.Limit = 3
+		opt.ContinueToken = token
+		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 3)
-		require.Equal(t, "y/2", entries.Entries[0].Path)
-		require.Equal(t, "y/3", entries.Entries[1].Path)
-		require.Equal(t, "yy", entries.Entries[2].Path)
+		require.Equal(t, prefix+"y/2", entries.Entries[0].Path)
+		require.Equal(t, prefix+"y/3", entries.Entries[1].Path)
+		require.Equal(t, prefix+"yy", entries.Entries[2].Path)
 		require.Empty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "y", 3, "some token", false)
+		opt.ContinueToken = "some token"
+		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.Equal(t, store.ErrInvalidContinueToken, err)
 
-		entries, err = s.List(context.Background(), "y", -10, "", false)
+		opt.Limit = -10
+		opt.ContinueToken = ""
+		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 5)
 	})
@@ -222,18 +309,21 @@ func TestListPaths(t *testing.T) {
 
 	// Root is the basic behaviour without prefix with pathsOnly parameter set to true.
 	t.Run("Root", func(t *testing.T) {
-		createRuleset(t, s, "a", rs)
-		createRuleset(t, s, "b", rs)
-		createRuleset(t, s, "a/1", rs)
-		createRuleset(t, s, "c", rs)
-		createRuleset(t, s, "a", rs)
-		createRuleset(t, s, "a/1", rs)
-		createRuleset(t, s, "a/2", rs)
-		createRuleset(t, s, "d", rs)
+		prefix := "list/paths/root/"
 
-		paths := []string{"a", "a/1", "a/2", "b", "c", "d"}
+		createRuleset(t, s, prefix+"a", rs)
+		createRuleset(t, s, prefix+"b", rs)
+		createRuleset(t, s, prefix+"a/1", rs)
+		createRuleset(t, s, prefix+"c", rs)
+		createRuleset(t, s, prefix+"a", rs)
+		createRuleset(t, s, prefix+"a/1", rs)
+		createRuleset(t, s, prefix+"a/2", rs)
+		createRuleset(t, s, prefix+"d", rs)
 
-		entries, err := s.List(context.Background(), "", 0, "", true)
+		paths := []string{prefix + "a", prefix + "a/1", prefix + "a/2", prefix + "b", prefix + "c", prefix + "d"}
+
+		opt := store.ListOptions{PathsOnly: true}
+		entries, err := s.List(context.Background(), prefix+"", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -247,16 +337,19 @@ func TestListPaths(t *testing.T) {
 
 	// Prefix tests List with a given prefix with pathsOnly parameter set to true.
 	t.Run("Prefix", func(t *testing.T) {
-		createRuleset(t, s, "x", rs)
-		createRuleset(t, s, "xx", rs)
-		createRuleset(t, s, "x/1", rs)
-		createRuleset(t, s, "xy", rs)
-		createRuleset(t, s, "xy/ab", rs)
-		createRuleset(t, s, "xyz", rs)
+		prefix := "list/paths/prefix/"
 
-		paths := []string{"xy", "xy/ab", "xyz"}
+		createRuleset(t, s, prefix+"x", rs)
+		createRuleset(t, s, prefix+"xx", rs)
+		createRuleset(t, s, prefix+"x/1", rs)
+		createRuleset(t, s, prefix+"xy", rs)
+		createRuleset(t, s, prefix+"xy/ab", rs)
+		createRuleset(t, s, prefix+"xyz", rs)
 
-		entries, err := s.List(context.Background(), "xy", 0, "", true)
+		paths := []string{prefix + "xy", prefix + "xy/ab", prefix + "xyz"}
+
+		opt := store.ListOptions{PathsOnly: true}
+		entries, err := s.List(context.Background(), prefix+"xy", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
@@ -270,22 +363,26 @@ func TestListPaths(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist with pathsOnly parameter set to true.
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist", 0, "", true)
+		opt := store.ListOptions{PathsOnly: true}
+		_, err := s.List(context.Background(), "doesntexist", &opt)
 		require.Equal(t, err, store.ErrNotFound)
 	})
 
 	// Paging tests List with pagination with pathsOnly parameter set to true.
 	t.Run("Paging", func(t *testing.T) {
-		createRuleset(t, s, "foo", rs)
-		createRuleset(t, s, "foo/bar", rs)
-		createRuleset(t, s, "foo/bar/baz", rs)
-		createRuleset(t, s, "foo/bar", rs)
-		createRuleset(t, s, "foo/babar", rs)
-		createRuleset(t, s, "foo", rs)
+		prefix := "list/paths/paging/"
 
-		entries, err := s.List(context.Background(), "f", 2, "", true)
+		createRuleset(t, s, prefix+"foo", rs)
+		createRuleset(t, s, prefix+"foo/bar", rs)
+		createRuleset(t, s, prefix+"foo/bar/baz", rs)
+		createRuleset(t, s, prefix+"foo/bar", rs)
+		createRuleset(t, s, prefix+"foo/babar", rs)
+		createRuleset(t, s, prefix+"foo", rs)
+
+		opt := store.ListOptions{Limit: 2, PathsOnly: true}
+		entries, err := s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
-		paths := []string{"foo", "foo/babar"}
+		paths := []string{prefix + "foo", prefix + "foo/babar"}
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
 			require.Equal(t, paths[i], e.Path)
@@ -295,9 +392,10 @@ func TestListPaths(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 		require.NotEmpty(t, entries.Continue)
 
-		entries, err = s.List(context.Background(), "f", 2, entries.Continue, true)
+		opt.ContinueToken = entries.Continue
+		entries, err = s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
-		paths = []string{"foo/bar", "foo/bar/baz"}
+		paths = []string{prefix + "foo/bar", prefix + "foo/bar/baz"}
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
 			require.Equal(t, paths[i], e.Path)
@@ -307,12 +405,15 @@ func TestListPaths(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 		require.Zero(t, entries.Continue)
 
-		_, err = s.List(context.Background(), "f", 2, "bad token", true)
+		opt.ContinueToken = "bad token"
+		_, err = s.List(context.Background(), prefix+"f", &opt)
 		require.Equal(t, store.ErrInvalidContinueToken, err)
 
-		entries, err = s.List(context.Background(), "f", -10, "", true)
+		opt.Limit = -10
+		opt.ContinueToken = ""
+		entries, err = s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
-		paths = []string{"foo", "foo/babar", "foo/bar", "foo/bar/baz"}
+		paths = []string{prefix + "foo", prefix + "foo/babar", prefix + "foo/bar", prefix + "foo/bar/baz"}
 		require.Len(t, entries.Entries, len(paths))
 		for i, e := range entries.Entries {
 			require.Equal(t, paths[i], e.Path)
@@ -476,7 +577,7 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"!"))
 
 		// verify checksum creation
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())

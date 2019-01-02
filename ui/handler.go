@@ -87,17 +87,20 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var resp response
-		var token string
+		opt := store.ListOptions{
+			Limit:     100,
+			PathsOnly: true,
+		}
 
 		// run the loop at least once, no matter of the value of token
-		for i := 0; i == 0 || token != ""; i++ {
-			list, err := h.service.List(r.Context(), "", 100, token, true)
+		for i := 0; i == 0 || opt.ContinueToken != ""; i++ {
+			list, err := h.service.List(r.Context(), "", &opt)
 			if err != nil {
 				writeError(w, r, err, http.StatusInternalServerError)
 				return
 			}
 
-			token = list.Continue
+			opt.ContinueToken = list.Continue
 			for _, rs := range list.Entries {
 				resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
 			}
