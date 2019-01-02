@@ -243,7 +243,7 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path+versionSeparator, lastEntry.Version+"\x00")))
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
 
 	return &entries, nil
 }
@@ -255,7 +255,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path+versionSeparator, "")+"/", clientv3.WithLastKey()...)
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path, "")+versionSeparator, clientv3.WithLastKey()...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -626,12 +626,11 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 
 // entriesPath returns the path where the rulesets are stored in etcd.
 func (s *RulesetService) entriesPath(p, v string) string {
-	// If the version parameter is not empty, we should suffix the path with the versionSeparator value
-	// because they are separated with it in each etcd keys (entries namespace only).
+	// If the version parameter is not empty, we concatenate to the path separated by the versionSeparator value.
 	if v != "" {
-		p += versionSeparator
+		p += versionSeparator + v
 	}
-	return path.Join(s.Namespace, "rulesets", "entries", p, v)
+	return path.Join(s.Namespace, "rulesets", "entries", p)
 }
 
 // checksumsPath returns the path where the checksums are stored in etcd.

@@ -577,7 +577,7 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"!/"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"!"))
 
 		// verify checksum creation
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())
