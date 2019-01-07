@@ -7,23 +7,20 @@ module.exports = {
     node: true,
     mocha: true,
   },
-  extends: [
-    'plugin:vue/essential',
-    '@vue/airbnb',
-  ],
+  extends: ['plugin:vue/essential', '@vue/airbnb'],
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
-    "import/extensions": ['error', "ignorePackages"]
+    'import/extensions': ['error', 'ignorePackages'],
+    quotes: ['error', 'single'],
   },
+
   parserOptions: {
     parser: 'babel-eslint',
   },
   settings: {
     'import/resolver': {
-      alias: [
-        ['@', path.join(__dirname, '/src')],
-      ]
-    }
-  }
+      alias: [['@', path.join(__dirname, '/src')]],
+    },
+  },
 };

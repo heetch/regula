@@ -13,8 +13,10 @@ var _ store.RulesetService = new(RulesetService)
 
 // RulesetService mocks the store.RulesetService interface.
 type RulesetService struct {
+	GetCount         int
+	GetFn            func(ctx context.Context, path, version string) (*store.RulesetEntry, error)
 	ListCount        int
-	ListFn           func(context.Context, string, int, string, bool) (*store.RulesetEntries, error)
+	ListFn           func(context.Context, string, *store.ListOptions) (*store.RulesetEntries, error)
 	WatchCount       int
 	WatchFn          func(context.Context, string, string) (*store.RulesetEvents, error)
 	PutCount         int
@@ -25,12 +27,23 @@ type RulesetService struct {
 	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
+// Get runs GetFn if provided and increments GetCount when invoked.
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	s.GetCount++
+
+	if s.GetFn != nil {
+		return s.GetFn(ctx, path, version)
+	}
+
+	return nil, nil
+}
+
 // List runs ListFn if provided and increments ListCount when invoked.
-func (s *RulesetService) List(ctx context.Context, prefix string, limit int, token string, pathsOnly bool) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
-		return s.ListFn(ctx, prefix, limit, token, pathsOnly)
+		return s.ListFn(ctx, prefix, opt)
 	}
 
 	return nil, nil

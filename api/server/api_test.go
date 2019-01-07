@@ -34,6 +34,71 @@ func TestAPI(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, w.Code)
 	})
 
+	t.Run("Get", func(t *testing.T) {
+		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		e1 := store.RulesetEntry{
+			Path:      "a",
+			Version:   "version",
+			Ruleset:   r1,
+			Versions:  []string{"version"},
+			Signature: regula.NewSignature(r1),
+		}
+
+		e2 := store.RulesetEntry{
+			Path:      "a",
+			Version:   "version2",
+			Ruleset:   r1,
+			Versions:  []string{"version1", "version2"},
+			Signature: regula.NewSignature(r1),
+		}
+
+		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {
+			t.Helper()
+
+			uu, uerr := url.Parse(u)
+			require.NoError(t, uerr)
+			version := uu.Query().Get("version")
+			s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+				require.Equal(t, v, version)
+				return e, err
+			}
+			defer func() { s.GetFn = nil }()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", u, nil)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusOK {
+				var res api.Ruleset
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				require.Len(t, res.Versions, len(e.Versions))
+				require.Equal(t, e.Path, res.Path)
+				require.Equal(t, e.Signature, res.Signature)
+				require.Equal(t, e.Version, res.Version)
+				require.Equal(t, e.Ruleset, res.Ruleset)
+			}
+		}
+
+		t.Run("Root", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
+		})
+
+		t.Run("NotFound", func(t *testing.T) {
+			call(t, "/rulesets/b", http.StatusNotFound, &e1, store.ErrNotFound)
+		})
+
+		t.Run("UnexpectedError", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusInternalServerError, &e1, errors.New("unexpected error"))
+		})
+
+		t.Run("Specific version", func(t *testing.T) {
+			call(t, "/rulesets/a?version=version2", http.StatusOK, &e2, nil)
+		})
+	})
+
 	t.Run("List", func(t *testing.T) {
 		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
@@ -46,7 +111,7 @@ func TestAPI(t *testing.T) {
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
+		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, lopt *store.ListOptions, err error) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -57,9 +122,10 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
-				assert.Equal(t, limit, strconv.Itoa(lm))
-				assert.Equal(t, token, tk)
+			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
+				assert.Equal(t, token, opt.ContinueToken)
+				assert.Equal(t, lopt, opt)
 				return l, err
 			}
 			defer func() { s.ListFn = nil }()
@@ -85,98 +151,57 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/?list", http.StatusOK, &l, &store.ListOptions{}, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, nil)
+			call(t, "/rulesets/a?list", http.StatusOK, &l, &store.ListOptions{}, nil)
 		})
 
 		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, nil)
+			opt := store.ListOptions{
+				Limit:         10,
+				ContinueToken: "abc123",
+			}
+			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), &store.ListOptions{}, nil)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), store.ErrNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), &store.ListOptions{}, store.ErrNotFound)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), store.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), &store.ListOptions{}, store.ErrInvalidContinueToken)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), errors.New("unexpected error"))
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), &store.ListOptions{}, errors.New("unexpected error"))
 		})
 
 		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, nil)
-		})
-	})
-
-	t.Run("ListPaths", func(t *testing.T) {
-		l := store.RulesetEntries{
-			Entries: []store.RulesetEntry{
-				{Path: "aa"},
-				{Path: "bb"},
-			},
-			Revision: "somerev",
-			Continue: "sometoken",
-		}
-
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, err error) {
-			t.Helper()
-
-			uu, uerr := url.Parse(u)
-			require.NoError(t, uerr)
-			limit := uu.Query().Get("limit")
-			if limit == "" {
-				limit = "0"
-			}
-			token := uu.Query().Get("continue")
-
-			s.ListFn = func(ctx context.Context, prefix string, lm int, tk string, pathsOnly bool) (*store.RulesetEntries, error) {
-				assert.Equal(t, limit, strconv.Itoa(lm))
-				assert.Equal(t, token, tk)
-				return l, err
-			}
-			defer func() { s.ListFn = nil }()
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", u, nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var res api.Rulesets
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				require.Equal(t, len(l.Entries), len(res.Rulesets))
-				for i := range l.Entries {
-					require.Equal(t, l.Entries[i].Path, res.Rulesets[i].Path)
-					require.Zero(t, l.Entries[i].Ruleset)
-					require.Zero(t, l.Entries[i].Version)
-				}
-				if len(l.Entries) > 0 {
-					require.Equal(t, "sometoken", res.Continue)
-				}
-			}
-		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list&paths", http.StatusOK, &l, nil)
+			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
 		})
 
-		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, nil)
+		t.Run("PathsParameter", func(t *testing.T) {
+			opt := store.ListOptions{
+				PathsOnly: true,
+			}
+			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, &opt, nil)
 		})
 
-		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			call(t, "/rulesets/a?list&paths&limit=10&continue=abc123", http.StatusOK, &l, nil)
+		t.Run("VersionsParameter", func(t *testing.T) {
+			opt := store.ListOptions{
+				AllVersions: true,
+			}
+			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, &opt, nil)
+		})
+
+		t.Run("InvalidParametersCombination", func(t *testing.T) {
+			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
 		})
 	})
 

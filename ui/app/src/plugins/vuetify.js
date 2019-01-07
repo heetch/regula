@@ -4,5 +4,5 @@ import 'vuetify/src/stylus/app.styl';
 
 Vue.use(Vuetify, {
   customProperties: true,
-  iconfont: 'fa', // select the Font Awesome iconfont for the entire app
+  iconfont: 'mdi', // select the Material Design Icons iconfont for the entire app
 });

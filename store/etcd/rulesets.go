@@ -22,6 +22,10 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+// versionSeparator separates the path from the version in the entries path in etcd.
+// The purpose is to have the same ordering as the others namespace (latest, versions, ...).
+const versionSeparator = "!"
+
 // RulesetService manages the rulesets using etcd.
 type RulesetService struct {
 	Client    *clientv3.Client
@@ -36,18 +40,64 @@ func computeLimit(l int) int {
 	return l
 }
 
-// List returns the rulesets entries under the given prefix.  If pathsOnly is set to true, only the rulesets paths will be returned.
-// If the prefix is empty it returns entries from the beginning following the lexical ordering.
-// If the given limit is lower or equal to 0 or greater than 100, it returns 50 entries.
-func (s *RulesetService) List(ctx context.Context, prefix string, limit int, continueToken string, pathsOnly bool) (*store.RulesetEntries, error) {
+// Get returns the ruleset related to the given path. By default, it returns the latest one.
+// It returns the related ruleset version if it's specified.
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+	var (
+		entry *store.RulesetEntry
+		err   error
+	)
+
+	if version == "" {
+		entry, err = s.Latest(ctx, path)
+	} else {
+		entry, err = s.OneByVersion(ctx, path, version)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.KV.Get(ctx, s.versionsPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch versions of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset versions list")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Versions)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal versions")
+	}
+
+	resp, err = s.Client.KV.Get(ctx, s.signaturesPath(path))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch signature of the entry: %s", path)
+	}
+	if resp.Count == 0 {
+		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset signature")
+		return nil, store.ErrNotFound
+	}
+	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Signature)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal signature")
+	}
+
+	return entry, nil
+}
+
+// List returns the latest version of each ruleset under the given prefix.
+// If the prefix is empty, it returns entries from the beginning following the lexical order.
+// The listing can be customised using the ListOptions type.
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
 	var key string
 
-	limit = computeLimit(limit)
+	limit := computeLimit(opt.Limit)
 
-	if continueToken != "" {
-		lastPath, err := base64.URLEncoding.DecodeString(continueToken)
+	if opt.ContinueToken != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(opt.ContinueToken)
 		if err != nil {
 			return nil, store.ErrInvalidContinueToken
 		}
@@ -55,10 +105,10 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 		key = string(lastPath)
 
 		var rangeEnd string
-		if pathsOnly {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+		if opt.AllVersions {
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.entriesPath(prefix, ""))
 		} else {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
 		}
 		options = append(options, clientv3.WithRange(rangeEnd))
 	} else {
@@ -68,13 +118,18 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	options = append(options, clientv3.WithLimit(int64(limit)))
 
-	if pathsOnly {
-		return s.listPaths(ctx, key, prefix, limit, options)
+	switch {
+	case opt.PathsOnly:
+		return s.listPathsOnly(ctx, key, prefix, limit, options)
+	case opt.AllVersions:
+		return s.listAllVersions(ctx, key, prefix, limit, options)
+	default:
+		return s.listLastVersion(ctx, key, prefix, limit, options)
 	}
-	return s.listRulesets(ctx, key, prefix, limit, options)
 }
 
-func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+// listPathsOnly returns only the path for each ruleset.
+func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	opts = append(opts, clientv3.WithKeysOnly())
 	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
 	if err != nil {
@@ -106,8 +161,60 @@ func (s *RulesetService) listPaths(ctx context.Context, key, prefix string, limi
 	return &entries, nil
 }
 
-func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), opts...)
+// listLastVersion returns only the latest version for each ruleset.
+func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch latests keys")
+	}
+
+	// if a prefix is provided it must always return results
+	// otherwise it doesn't exist.
+	if resp.Count == 0 && prefix != "" {
+		return nil, store.ErrNotFound
+	}
+
+	ops := make([]clientv3.Op, 0, resp.Count)
+	txn := s.Client.KV.Txn(ctx)
+	for _, pair := range resp.Kvs {
+		ops = append(ops, clientv3.OpGet(string(pair.Value)))
+	}
+	txnresp, err := txn.Then(ops...).Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "transaction failed to fetch all entries")
+	}
+
+	var entries store.RulesetEntries
+	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
+
+	// Responses handles responses for each OpGet calls in the transaction.
+	for i, resps := range txnresp.Responses {
+		rr := resps.GetResponseRange()
+
+		// Given that we are getting a leaf in the tree (a ruleset entry), we are sure that we will always have one value in the Kvs slice.
+		err = json.Unmarshal(rr.Kvs[0].Value, &entries.Entries[i])
+		if err != nil {
+			s.Logger.Debug().Err(err).Bytes("entry", rr.Kvs[0].Value).Msg("list: unmarshalling failed")
+			return nil, errors.Wrap(err, "failed to unmarshal entry")
+		}
+	}
+
+	if len(entries.Entries) < limit || !resp.More {
+		return &entries, nil
+	}
+
+	lastEntry := entries.Entries[len(entries.Entries)-1]
+
+	// we want to start immediately after the last key
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+
+	return &entries, nil
+}
+
+// listAllVersions returns all available versions for each ruleset.
+func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(key, ""), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
@@ -136,7 +243,7 @@ func (s *RulesetService) listRulesets(ctx context.Context, key, prefix string, l
 	lastEntry := entries.Entries[len(entries.Entries)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(path.Join(lastEntry.Path, lastEntry.Version+"\x00")))
+	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
 
 	return &entries, nil
 }
@@ -148,7 +255,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...)
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path, "")+versionSeparator, clientv3.WithLastKey()...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -175,7 +282,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, version))
+	resp, err := s.Client.KV.Get(ctx, s.entriesPath(path, version))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
@@ -193,6 +300,29 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	}
 
 	return &entry, nil
+}
+
+// putVersions stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
+func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
+	var versions []string
+
+	v := stm.Get(s.versionsPath(path))
+	if v != "" {
+		err := json.Unmarshal([]byte(v), &versions)
+		if err != nil {
+			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
+			return errors.Wrap(err, "failed to unmarshal versions")
+		}
+	}
+
+	versions = append(versions, version)
+	bvs, err := json.Marshal(versions)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode versions")
+	}
+	stm.Put(s.versionsPath(path), string(bvs))
+
+	return nil
 }
 
 // Put adds a version of the given ruleset using an uuid.
@@ -223,20 +353,22 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 				return errors.Wrap(err, "failed to unmarshal entry")
 			}
 
+			s.Logger.Debug().Str("path", path).Msg("ruleset didn't change, returning without creating a new version")
+
 			return store.ErrNotModified
 		}
 
 		// make sure signature didn't change
 		rawSig := stm.Get(s.signaturesPath(path))
 		if rawSig != "" {
-			var curSig signature
+			var curSig regula.Signature
 			err := json.Unmarshal([]byte(rawSig), &curSig)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = curSig.matchWith(sig)
+			err = compareSignature(&curSig, sig)
 			if err != nil {
 				return err
 			}
@@ -262,6 +394,8 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		}
 		version := k.String()
 
+		s.putVersions(stm, path, version)
+
 		re := store.RulesetEntry{
 			Path:    path,
 			Version: version,
@@ -273,10 +407,10 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			return errors.Wrap(err, "failed to encode entry")
 		}
 
-		stm.Put(s.rulesetsPath(path, version), string(raw))
+		stm.Put(s.entriesPath(path, version), string(raw))
 
 		// update the pointer to the latest ruleset
-		stm.Put(s.latestRulesetPath(path), s.rulesetsPath(path, version))
+		stm.Put(s.latestRulesetPath(path), s.entriesPath(path, version))
 
 		entry = re
 		return nil
@@ -290,34 +424,17 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	return &entry, err
 }
 
-type signature struct {
-	ReturnType string
-	ParamTypes map[string]string
-}
-
-func newSignature(rs *regula.Ruleset) *signature {
-	pt := make(map[string]string)
-	for _, p := range rs.Params() {
-		pt[p.Name] = p.Type
-	}
-
-	return &signature{
-		ParamTypes: pt,
-		ReturnType: rs.Type,
-	}
-}
-
-func (s *signature) matchWith(other *signature) error {
-	if s.ReturnType != other.ReturnType {
+func compareSignature(base, other *regula.Signature) error {
+	if base.ReturnType != other.ReturnType {
 		return &store.ValidationError{
 			Field:  "return type",
 			Value:  other.ReturnType,
-			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", s.ReturnType),
+			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", base.ReturnType),
 		}
 	}
 
 	for name, tp := range other.ParamTypes {
-		stp, ok := s.ParamTypes[name]
+		stp, ok := base.ParamTypes[name]
 		if !ok {
 			return &store.ValidationError{
 				Field:  "param",
@@ -338,13 +455,13 @@ func (s *signature) matchWith(other *signature) error {
 	return nil
 }
 
-func validateRuleset(path string, rs *regula.Ruleset) (*signature, error) {
+func validateRuleset(path string, rs *regula.Ruleset) (*regula.Signature, error) {
 	err := validateRulesetName(path)
 	if err != nil {
 		return nil, err
 	}
 
-	sig := newSignature(rs)
+	sig := regula.NewSignature(rs)
 
 	for _, r := range rs.Rules {
 		params := r.Params()
@@ -419,7 +536,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 		opts = append(opts, clientv3.WithRev(i+1))
 	}
 
-	wc := s.Client.Watch(ctx, s.rulesetsPath(prefix, ""), opts...)
+	wc := s.Client.Watch(ctx, s.entriesPath(prefix, ""), opts...)
 	for {
 		select {
 		case wresp := <-wc:
@@ -507,18 +624,31 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}, nil
 }
 
-func (s *RulesetService) rulesetsPath(p, v string) string {
-	return path.Join(s.Namespace, "rulesets", "entries", p, v)
+// entriesPath returns the path where the rulesets are stored in etcd.
+func (s *RulesetService) entriesPath(p, v string) string {
+	// If the version parameter is not empty, we concatenate to the path separated by the versionSeparator value.
+	if v != "" {
+		p += versionSeparator + v
+	}
+	return path.Join(s.Namespace, "rulesets", "entries", p)
 }
 
+// checksumsPath returns the path where the checksums are stored in etcd.
 func (s *RulesetService) checksumsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "checksums", p)
 }
 
+// signaturesPath returns the path where the signatures are stored in etcd.
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
+// latestRulesetPath returns the path where the latest version of each ruleset is stored in etcd.
 func (s *RulesetService) latestRulesetPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
+}
+
+// versionsPath returns the path where the versions of each rulesets are stored in etcd.
+func (s *RulesetService) versionsPath(p string) string {
+	return path.Join(s.Namespace, "rulesets", "versions", p)
 }

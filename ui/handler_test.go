@@ -68,6 +68,7 @@ func TestInternalHandler(t *testing.T) {
 		// 	// Posting invalid ruleset data returns an error.
 		//      t.Run("Validation Error", func(t *testing.T) {
 
+<<<<<<< HEAD
 		// 	})
 		// })
 
@@ -81,6 +82,19 @@ func TestInternalHandler(t *testing.T) {
 				// simulate a two page result
 				s.ListFn = func(ctx context.Context, _ string, limit int, token string, pathsOnly bool) (*store.RulesetEntries, error) {
 					var entries store.RulesetEntries
+=======
+			// simulate a two page result
+			s.ListFn = func(ctx context.Context, _ string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+				var entries store.RulesetEntries
+
+				switch opt.ContinueToken {
+				case "":
+					for i := 0; i < 2; i++ {
+						entries.Entries = append(entries.Entries, store.RulesetEntry{
+							Path: fmt.Sprintf("Path%d", i),
+						})
+					}
+>>>>>>> release-v0.6.0
 
 					switch token {
 					case "":
@@ -115,9 +129,18 @@ func TestInternalHandler(t *testing.T) {
 					return nil, errors.New("some error")
 				}
 
+<<<<<<< HEAD
 				rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
 				require.Equal(t, http.StatusInternalServerError, rec.Code)
 			})
+=======
+		// this test checks if the handler returns a 500 if a random error occurs in the ruleset service.
+		t.Run("Error", func(t *testing.T) {
+			s := new(mock.RulesetService)
+			s.ListFn = func(ctx context.Context, _ string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+				return nil, errors.New("some error")
+			}
+>>>>>>> release-v0.6.0
 
 		})
 	})
