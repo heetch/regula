@@ -82,7 +82,7 @@ func TestPOSTNewRuleset(t *testing.T) {
         }
     ]
 }`))
-	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, http.StatusCreated, rec.Code)
 	require.Equal(t, 1, s.PutCount)
 }
 

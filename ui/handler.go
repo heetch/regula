@@ -111,7 +111,7 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
-	reghttp.EncodeJSON(w, r, nil, http.StatusOK)
+	reghttp.EncodeJSON(w, r, nil, http.StatusCreated)
 
 }
 
