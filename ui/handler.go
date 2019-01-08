@@ -63,7 +63,12 @@ func writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
 		logger.Debug().Msg("http error")
 	}
 
-	reghttp.EncodeJSON(w, r, &uiError{Err: err.Error()}, code)
+	v, ok := err.(RuleError)
+	if ok {
+		reghttp.EncodeJSON(w, r, &v, code)
+	} else {
+		reghttp.EncodeJSON(w, r, &uiError{Err: err.Error()}, code)
+	}
 }
 
 // handler serving the UI internal API.
@@ -125,7 +130,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 				Limit:     100,
 				PathsOnly: true,
 			}
-			
+
 			// run the loop at least once, no matter of the value of token
 			for i := 0; i == 0 || opt.ContinueToken != ""; i++ {
 				list, err := h.service.List(r.Context(), "", &opt)
@@ -137,11 +142,11 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 				opt.ContinueToken = list.Continue
 				for _, rs := range list.Entries {
 					resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
+				}
+
+				reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 			}
-
-			reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 		}
-
 	})
 }
 
@@ -250,12 +255,11 @@ type RuleError struct {
 	err     error
 }
 
-func newRuleError(ruleNum int, qerr error) *RuleError {
-	return &RuleError{ruleNum: ruleNum, err: err}
+func newRuleError(ruleNum int, qerr error) RuleError {
+	return RuleError{ruleNum: ruleNum, err: qerr}
 }
 
-//
-func (re *RuleError) Error() string {
+func (re RuleError) Error() string {
 	pe, ok := re.err.(sexpr.ParserError)
 	if !ok {
 		return re.err.Error()
@@ -264,15 +268,16 @@ func (re *RuleError) Error() string {
 }
 
 //
-func (re *RuleError) MarshalJSON() ([]byte, error) {
+func (re RuleError) MarshalJSON() ([]byte, error) {
+	type errPos struct {
+		Message string `json:"message"`
+		Line    int    `json:"line"`
+		Char    int    `json:"char"`
+		AbsChar int    `json:"absChar"`
+	}
 	type field struct {
 		Path  []string `json:"path"`
-		Error struct {
-			Message string `json:"message"`
-			Line    int    `json:"line"`
-			Char    int    `json:"char"`
-			AbsChar int    `json:"absChar"`
-		} `json:"error"`
+		Error errPos   `json:"error"`
 	}
 
 	var err struct {
@@ -287,12 +292,12 @@ func (re *RuleError) MarshalJSON() ([]byte, error) {
 	}
 	err.Fields = []field{
 		{
-			Path: []string{"rules", strconv.Itoa(err.ruleNum), "sExpr"},
-			Error: {
+			Path: []string{"rules", strconv.Itoa(re.ruleNum), "sExpr"},
+			Error: errPos{
 				Message: errMsg,
 				Line:    pe.StartLine,
 				Char:    pe.StartCharInLine,
-				AbsChar: StartChar,
+				AbsChar: pe.StartChar,
 			},
 		},
 	}
