@@ -88,8 +88,35 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 	return &mux
 }
 
-// Returns an http handler that lists all existing rulesets paths.
-func (h *internalHandler) rulesetsHandler() http.Handler {
+// handleNewRulesetRequest consumes a POST to the ruleset endpoint and
+// attempts to create a new Ruleset from that data.
+func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+	}
+	nrr := &newRulesetRequest{}
+	err = json.Unmarshal(body, nrr)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+	rs, err := newRulesetFromRequest(nrr)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+	_, err = h.service.Put(r.Context(), nrr.Path, rs)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+	reghttp.EncodeJSON(w, r, nil, http.StatusOK)
+
+}
+
+// handleListRequest attempts to return a list of Rulesets based on the data provided in a GET request to the ruleset endpoint.
+func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Request) {
 
 	type ruleset struct {
 		Path string `json:"path"`
@@ -99,53 +126,39 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 		Rulesets []ruleset `json:"rulesets"`
 	}
 
+	var resp response
+
+	opt := store.ListOptions{
+		Limit:     100,
+		PathsOnly: true,
+	}
+
+	// run the loop at least once, no matter of the value of token
+	for i := 0; i == 0 || opt.ContinueToken != ""; i++ {
+		list, err := h.service.List(r.Context(), "", &opt)
+		if err != nil {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+
+		opt.ContinueToken = list.Continue
+		for _, rs := range list.Entries {
+			resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
+		}
+
+		reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
+	}
+
+}
+
+// Returns an http handler that lists all existing rulesets paths.
+func (h *internalHandler) rulesetsHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				writeError(w, r, err, http.StatusBadRequest)
-			}
-			nrr := &newRulesetRequest{}
-			err = json.Unmarshal(body, nrr)
-			if err != nil {
-				writeError(w, r, err, http.StatusBadRequest)
-				return
-			}
-			rs, err := newRulesetFromRequest(nrr)
-			if err != nil {
-				writeError(w, r, err, http.StatusBadRequest)
-				return
-			}
-			_, err = h.service.Put(r.Context(), nrr.Path, rs)
-			if err != nil {
-				writeError(w, r, err, http.StatusBadRequest)
-				return
-			}
-			reghttp.EncodeJSON(w, r, nil, http.StatusOK)
+			h.handleNewRulesetRequest(w, r)
 		case "GET":
-			var resp response
-
-			opt := store.ListOptions{
-				Limit:     100,
-				PathsOnly: true,
-			}
-
-			// run the loop at least once, no matter of the value of token
-			for i := 0; i == 0 || opt.ContinueToken != ""; i++ {
-				list, err := h.service.List(r.Context(), "", &opt)
-				if err != nil {
-					writeError(w, r, err, http.StatusInternalServerError)
-					return
-				}
-
-				opt.ContinueToken = list.Continue
-				for _, rs := range list.Entries {
-					resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
-				}
-
-				reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
-			}
+			h.handleListRequest(w, r)
 		}
 	})
 }
@@ -162,12 +175,15 @@ type rule struct {
 	ReturnValue string `json:"returnValue"`
 }
 
+// newRulesetRequest is the unmarshaled form a new ruleset request.
 type newRulesetRequest struct {
 	Path      string    `json:"path"`
 	Signature signature `json:"signature"`
 	Rules     []rule    `json:"rules"`
 }
 
+// convertParams takes a slice of param, unmarshalled from a
+// newRulesetRequest, and returns an equivalent sexpr.Paramaters map.
 func convertParams(input []param) (sexpr.Parameters, error) {
 	parm := make(sexpr.Parameters)
 	for _, p := range input {
@@ -182,6 +198,8 @@ func convertParams(input []param) (sexpr.Parameters, error) {
 	return parm, nil
 }
 
+// newRulesetFromRequest takes a newRulesetRequest and returns the
+// equivalent Regula.Ruleset.
 func newRulesetFromRequest(nrr *newRulesetRequest) (*regula.Ruleset, error) {
 	var rules []*regrule.Rule
 	parm, err := convertParams(nrr.Signature.Params)
@@ -209,7 +227,7 @@ func newRulesetFromRequest(nrr *newRulesetRequest) (*regula.Ruleset, error) {
 	return makeRuleset(nrr.Signature.ReturnType, rules...)
 }
 
-//
+// makeValue takes a string representation of a value and its type, and returns the appropriate Value expression from the Regula rule library.
 func makeValue(returnType, returnValue string) (*regrule.Value, error) {
 	switch returnType {
 	case "string":
@@ -250,15 +268,20 @@ func makeRuleset(returnType string, rules ...*regrule.Rule) (*regula.Ruleset, er
 	return nil, fmt.Errorf("Invalid return type %q", returnType)
 }
 
+// A RuleError represents an error found within a single Rule within a
+// Ruleset.  Currently these errors are all results of attempting to
+// parse the rule using the symbolic expression parser.
 type RuleError struct {
 	ruleNum int
 	err     error
 }
 
+// newRuleError creates a new RuleError for the provided ruleNum.  This RuleError will wrap the provided qerr.
 func newRuleError(ruleNum int, qerr error) RuleError {
 	return RuleError{ruleNum: ruleNum, err: qerr}
 }
 
+// Error makes RuleError comply with the error interface.
 func (re RuleError) Error() string {
 	pe, ok := re.err.(sexpr.ParserError)
 	if !ok {
@@ -267,7 +290,7 @@ func (re RuleError) Error() string {
 	return fmt.Sprintf("%s in rule %d: %s", pe.ErrorType, re.ruleNum, pe.Msg)
 }
 
-//
+// MarshalJSON makes RuleError implement the json.Marshaler interface.
 func (re RuleError) MarshalJSON() ([]byte, error) {
 	type errPos struct {
 		Message string `json:"message"`
