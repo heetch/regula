@@ -112,7 +112,6 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 // handleListRequest attempts to return a list of Rulesets based on the data provided in a GET request to the ruleset endpoint.
 func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Request) {
-
 	type ruleset struct {
 		Path string `json:"path"`
 	}
@@ -122,7 +121,6 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	var resp response
-
 	opt := store.ListOptions{
 		Limit:     100,
 		PathsOnly: true,
@@ -140,10 +138,9 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 		for _, rs := range list.Entries {
 			resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
 		}
-
-		reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 	}
 
+	reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 }
 
 // Returns an http handler that lists all existing rulesets paths.
