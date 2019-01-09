@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -91,12 +90,8 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 // handleNewRulesetRequest consumes a POST to the ruleset endpoint and
 // attempts to create a new Ruleset from that data.
 func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		writeError(w, r, err, http.StatusBadRequest)
-	}
 	nrr := &newRulesetRequest{}
-	err = json.Unmarshal(body, nrr)
+	err := json.NewDecoder(r.Body).Decode(nrr)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
