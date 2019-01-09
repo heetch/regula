@@ -183,7 +183,7 @@ type newRulesetRequest struct {
 }
 
 // convertParams takes a slice of param, unmarshalled from a
-// newRulesetRequest, and returns an equivalent sexpr.Paramaters map.
+// newRulesetRequest, and returns an equivalent sexpr.Parameters map.
 func convertParams(input []param) (sexpr.Parameters, error) {
 	parm := make(sexpr.Parameters)
 	for _, p := range input {
