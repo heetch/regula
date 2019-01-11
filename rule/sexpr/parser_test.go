@@ -73,6 +73,7 @@ func TestParser(t *testing.T) {
 
 }
 
+// Invoke a lisp file full of assertions and report these results in our test suite.
 func TestLispFileAssertions(t *testing.T) {
 	params := sexpr.Parameters{}
 	eParams := regula.Params{}
