@@ -163,7 +163,14 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 	o.contract = tmpExpr.Contract()
 
 	for _, expr := range node.Operands.Exprs {
-		o.PushExpr(expr)
+		err := o.PushExpr(expr)
+		if err != nil {
+			return err
+		}
+	}
+	err = o.Finalise()
+	if err != nil {
+		return err
 	}
 
 	return nil
