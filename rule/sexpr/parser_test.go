@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/rule/sexpr"
 	"github.com/stretchr/testify/require"
@@ -66,4 +67,31 @@ func TestParser(t *testing.T) {
 		})
 	}
 
+}
+
+func TestOperators(t *testing.T) {
+	params := sexpr.Parameters{}
+	eParams := regula.Params{}
+
+	cases := []struct {
+		Name string
+		Code string
+	}{
+		{
+			Name: "Plus-Int",
+			Code: "(= (+ 1 1) 2)",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			b := bytes.NewBufferString(c.Code)
+			p := sexpr.NewParser(b)
+			expr, err := p.Parse(params)
+			require.NoError(t, err)
+			result, err := expr.Eval(eParams)
+			require.NoError(t, err)
+			require.True(t, result.Equal(rule.BoolValue(true)))
+		})
+	}
 }
