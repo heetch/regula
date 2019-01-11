@@ -4,6 +4,7 @@ import "strconv"
 
 func init() {
 	Operators["add"] = func() Operator { return newExprAdd() }
+	Operators["sub"] = func() Operator { return newExprSub() }
 }
 
 type exprAdd struct {
