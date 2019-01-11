@@ -6,11 +6,11 @@ type exprPlus struct {
 	operator
 }
 
-func newExprPlus() *exprPlus {
-	return &exprPlus{
+func newExprAdd() *exprAdd {
+	return &exprAdd{
 		operator: operator{
 			contract: Contract{
-				OpCode:     "plus",
+				OpCode:     "add",
 				ReturnType: NUMBER,
 				Terms: []Term{
 					{
@@ -24,14 +24,14 @@ func newExprPlus() *exprPlus {
 	}
 }
 
-// Plus creates an expression that takes at least two operands, which must evaluate to either Float64Value or Int64Value, and returns their sum.
-func Plus(vN ...Expr) Expr {
-	e := newExprPlus()
+// Add creates an expression that takes at least two operands, which must evaluate to either Float64Value or Int64Value, and returns their sum.
+func Add(vN ...Expr) Expr {
+	e := newExprAdd()
 	e.consumeOperands(vN...)
 	return e
 }
 
-func (n *exprPlus) float64Plus(params Params) (*Value, error) {
+func (n *exprAdd) float64Add(params Params) (*Value, error) {
 	var sum float64
 
 	for _, o := range n.operands {
@@ -48,7 +48,7 @@ func (n *exprPlus) float64Plus(params Params) (*Value, error) {
 	return Float64Value(sum), nil
 }
 
-func (n *exprPlus) int64Plus(params Params) (*Value, error) {
+func (n *exprAdd) int64Add(params Params) (*Value, error) {
 	var sum int64
 
 	for _, o := range n.operands {
@@ -65,12 +65,12 @@ func (n *exprPlus) int64Plus(params Params) (*Value, error) {
 	return Int64Value(sum), nil
 }
 
-// Eval makes exprPlus comply with the Expr interface.
-func (n *exprPlus) Eval(params Params) (*Value, error) {
+// Eval makes exprAdd comply with the Expr interface.
+func (n *exprAdd) Eval(params Params) (*Value, error) {
 	// The ReturnType will be set to the concrete type that
 	// matches all the arguments by homogenisation.
 	if n.operator.Contract().ReturnType == FLOAT {
-		return n.float64Plus(params)
+		return n.float64Add(params)
 	}
-	return n.int64Plus(params)
+	return n.int64Add(params)
 }
