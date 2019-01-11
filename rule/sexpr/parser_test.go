@@ -78,8 +78,16 @@ func TestOperators(t *testing.T) {
 		Code string
 	}{
 		{
-			Name: "Plus-Int",
+			Name: "Plus-Integer",
 			Code: "(= (+ 1 1) 2)",
+		},
+		{
+			Name: "Plus-Float",
+			Code: "(= (+ 1.1 2.2) 3.3)",
+		},
+		{
+			Name: "Plus-Mixed-Number",
+			Code: "(= (+ 1 2.2 3 4.4) 10.6)",
 		},
 	}
 
