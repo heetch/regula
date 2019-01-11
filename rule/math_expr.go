@@ -2,7 +2,7 @@ package rule
 
 import "strconv"
 
-type exprPlus struct {
+type exprAdd struct {
 	operator
 }
 
