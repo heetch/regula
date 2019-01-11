@@ -1,7 +1,11 @@
 package sexpr_test
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/heetch/regula"
@@ -69,31 +73,26 @@ func TestParser(t *testing.T) {
 
 }
 
-func TestOperators(t *testing.T) {
+func TestLispFileAssertions(t *testing.T) {
 	params := sexpr.Parameters{}
 	eParams := regula.Params{}
 
-	cases := []struct {
-		Name string
-		Code string
-	}{
-		{
-			Name: "Plus-Integer",
-			Code: "(= (+ 1 1) 2)",
-		},
-		{
-			Name: "Plus-Float",
-			Code: "(= (+ 1.1 2.2) 3.3)",
-		},
-		{
-			Name: "Plus-Mixed-Number",
-			Code: "(= (+ 1 2.2 3 4.4) 10.6)",
-		},
-	}
+	fileHandle, err := os.Open("assertions.lisp")
+	require.NoError(t, err)
+	defer fileHandle.Close()
+	fileScanner := bufio.NewScanner(fileHandle)
 
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			b := bytes.NewBufferString(c.Code)
+	lineCount := 0
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+		parts := strings.Split(line, ";")
+		if len(parts) != 2 {
+			t.Fatalf("Malformed assertion in assertions.lisp, line %d", lineCount)
+		}
+		code := parts[0]
+		description := fmt.Sprintf("%d: %s", lineCount, parts[1])
+		t.Run(description, func(t *testing.T) {
+			b := bytes.NewBufferString(code)
 			p := sexpr.NewParser(b)
 			expr, err := p.Parse(params)
 			require.NoError(t, err)
@@ -101,5 +100,7 @@ func TestOperators(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, result.Equal(rule.BoolValue(true)))
 		})
+
+		lineCount++
 	}
 }
