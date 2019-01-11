@@ -2,6 +2,10 @@ package rule
 
 import "strconv"
 
+func init() {
+	Operators["intToFloat"] = func() Operator { return newExprIntToFloat() }
+}
+
 // exprIntToFloat is an operation that converts an Int64 type to a Float64 type.
 type exprIntToFloat struct {
 	operator

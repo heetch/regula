@@ -2,6 +2,10 @@ package rule
 
 import "errors"
 
+func init() {
+	Operators["in"] = func() Operator { return newExprIn() }
+}
+
 type exprIn struct {
 	operator
 }

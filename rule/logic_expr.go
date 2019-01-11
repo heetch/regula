@@ -2,6 +2,12 @@ package rule
 
 import "errors"
 
+func init() {
+	Operators["and"] = func() Operator { return newExprAnd() }
+	Operators["not"] = func() Operator { return newExprNot() }
+	Operators["or"] = func() Operator { return newExprOr() }
+}
+
 type exprNot struct {
 	operator
 }

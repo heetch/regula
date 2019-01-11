@@ -2,6 +2,10 @@ package rule
 
 import "strconv"
 
+func init() {
+	Operators["add"] = func() Operator { return newExprAdd() }
+}
+
 type exprAdd struct {
 	operator
 }

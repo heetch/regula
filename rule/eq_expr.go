@@ -2,6 +2,11 @@ package rule
 
 import "errors"
 
+func init() {
+	Operators["eq"] = func() Operator { return newExprEq() }
+
+}
+
 type exprEq struct {
 	operator
 }
