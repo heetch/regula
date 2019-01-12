@@ -85,13 +85,23 @@ func TestLispFileAssertions(t *testing.T) {
 
 	lineCount := 0
 	for fileScanner.Scan() {
-		line := fileScanner.Text()
-		parts := strings.Split(line, ";")
-		if len(parts) != 2 {
-			t.Fatalf("Malformed assertion in assertions.lisp, line %d", lineCount)
+		line := strings.TrimSpace(fileScanner.Text())
+		// Ignore empty lines
+		if len(line) == 0 {
+			continue
 		}
+		// Ignore lines that are completely commented
+		if line[0] == ';' {
+			continue
+		}
+		// Treat trailing comments as descripitons
+		parts := strings.Split(line, ";")
 		code := parts[0]
-		description := fmt.Sprintf("%d: %s", lineCount, parts[1])
+		description := code
+		if len(parts) > 1 {
+			description = fmt.Sprintf("%d: %s", lineCount, parts[1])
+		}
+
 		t.Run(description, func(t *testing.T) {
 			b := bytes.NewBufferString(code)
 			p := sexpr.NewParser(b)
@@ -99,7 +109,8 @@ func TestLispFileAssertions(t *testing.T) {
 			require.NoError(t, err)
 			result, err := expr.Eval(eParams)
 			require.NoError(t, err)
-			require.True(t, result.Equal(rule.BoolValue(true)))
+			require.Truef(t, result.Equal(rule.BoolValue(true)),
+				"Test at line %d of assertions.lisp failed", lineCount)
 		})
 
 		lineCount++
