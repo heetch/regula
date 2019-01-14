@@ -31,3 +31,8 @@
 
 
 
+;;;;;;;;;;;;;;;;;;;;;
+;; Cast operations ;;
+;;;;;;;;;;;;;;;;;;;;;
+(= 1.0 (int->float 1))          ; Cast positive integer to float
+(= -12.0 (int->float -12))	; Cast negative integer to float
