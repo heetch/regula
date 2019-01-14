@@ -1,14 +1,9 @@
 package sexpr_test
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
-	"os"
-	"strings"
 	"testing"
 
-	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/rule/sexpr"
 	"github.com/stretchr/testify/require"
@@ -69,50 +64,5 @@ func TestParser(t *testing.T) {
 
 			}
 		})
-	}
-
-}
-
-// Invoke a lisp file full of assertions and report these results in our test suite.
-func TestLispFileAssertions(t *testing.T) {
-	params := sexpr.Parameters{}
-	eParams := regula.Params{}
-
-	fileHandle, err := os.Open("assertions.lisp")
-	require.NoError(t, err)
-	defer fileHandle.Close()
-	fileScanner := bufio.NewScanner(fileHandle)
-
-	lineCount := 0
-	for fileScanner.Scan() {
-		line := strings.TrimSpace(fileScanner.Text())
-		// Ignore empty lines
-		if len(line) == 0 {
-			continue
-		}
-		// Ignore lines that are completely commented
-		if line[0] == ';' {
-			continue
-		}
-		// Treat trailing comments as descriptions
-		parts := strings.Split(line, ";")
-		code := parts[0]
-		description := code
-		if len(parts) > 1 {
-			description = fmt.Sprintf("%d: %s", lineCount, parts[1])
-		}
-
-		t.Run(description, func(t *testing.T) {
-			b := bytes.NewBufferString(code)
-			p := sexpr.NewParser(b)
-			expr, err := p.Parse(params)
-			require.NoError(t, err)
-			result, err := expr.Eval(eParams)
-			require.NoError(t, err)
-			require.Truef(t, result.Equal(rule.BoolValue(true)),
-				"Test at line %d of assertions.lisp failed", lineCount)
-		})
-
-		lineCount++
 	}
 }
