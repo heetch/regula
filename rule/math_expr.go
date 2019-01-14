@@ -5,7 +5,12 @@ import "strconv"
 func init() {
 	Operators["add"] = func() Operator { return newExprAdd() }
 	Operators["sub"] = func() Operator { return newExprSub() }
+	Operators["mult"] = func() Operator { return newExprMult() }
 }
+
+//////////////////
+// Add operator //
+//////////////////
 
 type exprAdd struct {
 	operator
@@ -29,7 +34,9 @@ func newExprAdd() *exprAdd {
 	}
 }
 
-// Add creates an expression that takes at least two operands, which must evaluate to either Float64Value or Int64Value, and returns their sum.
+// Add creates an expression that takes at least two operands, which
+// must evaluate to either Float64Value or Int64Value, and returns
+// their sum.
 func Add(vN ...Expr) Expr {
 	e := newExprAdd()
 	e.consumeOperands(vN...)
@@ -40,11 +47,7 @@ func (n *exprAdd) float64Add(params Params) (*Value, error) {
 	var sum float64
 
 	for _, o := range n.operands {
-		v, err := o.Eval(params)
-		if err != nil {
-			return nil, err
-		}
-		f, err := strconv.ParseFloat(v.Data, 64)
+		f, err := exprToFloat64(o, params)
 		if err != nil {
 			return nil, err
 		}
@@ -57,11 +60,7 @@ func (n *exprAdd) int64Add(params Params) (*Value, error) {
 	var sum int64
 
 	for _, o := range n.operands {
-		v, err := o.Eval(params)
-		if err != nil {
-			return nil, err
-		}
-		i, err := strconv.ParseInt(v.Data, 10, 64)
+		i, err := exprToInt64(o, params)
 		if err != nil {
 			return nil, err
 		}
@@ -80,6 +79,9 @@ func (n *exprAdd) Eval(params Params) (*Value, error) {
 	return n.int64Add(params)
 }
 
+//////////////////
+// Sub operator //
+//////////////////
 type exprSub struct {
 	operator
 }
@@ -114,24 +116,13 @@ func Sub(vN ...Expr) Expr {
 }
 
 func (n *exprSub) float64Sub(params Params) (*Value, error) {
-	o0 := n.operands[0]
-	v0, err := o0.Eval(params)
-	if err != nil {
-		return nil, err
-	}
-
-	f0, err := strconv.ParseFloat(v0.Data, 64)
+	f0, err := exprToFloat64(n.operands[0], params)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := 1; i < len(n.operands); i++ {
-		o := n.operands[i]
-		v, err := o.Eval(params)
-		if err != nil {
-			return nil, err
-		}
-		f, err := strconv.ParseFloat(v.Data, 64)
+		f, err := exprToFloat64(n.operands[i], params)
 		if err != nil {
 			return nil, err
 		}
@@ -141,24 +132,13 @@ func (n *exprSub) float64Sub(params Params) (*Value, error) {
 }
 
 func (n *exprSub) int64Sub(params Params) (*Value, error) {
-	o0 := n.operands[0]
-	v0, err := o0.Eval(params)
-	if err != nil {
-		return nil, err
-	}
-
-	i0, err := strconv.ParseInt(v0.Data, 10, 64)
+	i0, err := exprToInt64(n.operands[0], params)
 	if err != nil {
 		return nil, err
 	}
 
 	for j := 1; j < len(n.operands); j++ {
-		o := n.operands[j]
-		v, err := o.Eval(params)
-		if err != nil {
-			return nil, err
-		}
-		i, err := strconv.ParseInt(v.Data, 10, 64)
+		i, err := exprToInt64(n.operands[j], params)
 		if err != nil {
 			return nil, err
 		}
@@ -175,4 +155,106 @@ func (n *exprSub) Eval(params Params) (*Value, error) {
 		return n.float64Sub(params)
 	}
 	return n.int64Sub(params)
+}
+
+///////////////////
+// Mult Operator //
+///////////////////
+type exprMult struct {
+	operator
+}
+
+func newExprMult() *exprMult {
+	return &exprMult{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "mult",
+				ReturnType: NUMBER,
+				Terms: []Term{
+					{
+						Type:        NUMBER,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
+		},
+	}
+}
+
+// Mult creates an expression that takes at least two operands, which
+// must evaluate to either Float64Value or Int64Value, and returns the
+// product of all operands.
+func Mult(vN ...Expr) Expr {
+	e := newExprMult()
+	e.consumeOperands(vN...)
+	return e
+}
+
+// Perform multiplication of Float64Value types.
+func (n *exprMult) float64Mult(params Params) (*Value, error) {
+	var product float64 = 1.0
+	for _, o := range n.operands {
+		f, err := exprToFloat64(o, params)
+		if err != nil {
+			return nil, err
+		}
+		product = product * f
+	}
+	return Float64Value(product), nil
+}
+
+// Perform multiplication of Int64Value types.
+func (n *exprMult) int64Mult(params Params) (*Value, error) {
+	var product int64 = 1
+	for _, o := range n.operands {
+		i, err := exprToInt64(o, params)
+		if err != nil {
+			return nil, err
+		}
+		product = product * i
+	}
+	return Int64Value(product), nil
+}
+
+// Eval makes exprMult comply with the Expr interface.
+func (n *exprMult) Eval(params Params) (*Value, error) {
+	// The ReturnType will be set to the concrete type that
+	// matches all the arguments by homogenisation.
+	if n.operator.Contract().ReturnType == FLOAT {
+		return n.float64Mult(params)
+	}
+	return n.int64Mult(params)
+}
+
+///////////////////////
+// Utility functions //
+///////////////////////
+
+// exprToInt64 returns the go-native int64 value of an expression
+// evaluated with params.
+func exprToInt64(e Expr, params Params) (int64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(v.Data, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return i, err
+}
+
+// exprToFloat64 returns the go-native float64 value of an expression
+// evaluated with params.
+func exprToFloat64(e Expr, params Params) (float64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0.0, err
+	}
+	f, err := strconv.ParseFloat(v.Data, 64)
+	if err != nil {
+		return 0.0, err
+	}
+	return f, nil
 }

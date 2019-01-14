@@ -22,7 +22,12 @@
 (= -2.2 (- 1 1.1 2 0.1))        ; Mixed subtraction with a negative result
 (= 4 (- -2 -6))			; Subtraction of negative integers
 (= 6.0 (- -4.1 -10.1))		; Subtraction of negatives floats
-
+(= 99 (* 11 9))			; Multiplication of integers
+(= 146.8944 (* 12.12 12.12))	; Multiplication of floats
+(= 220 (* -22 -10))		; Multiplicaton of negative integers
+(= 475.6 (* -20.5 -23.2))	; Multiplicatoin of negative floats
+(= -220 (* 22 -10))		; Multiplication of mixed sign integers
+(= -475.6 (* 20.5 -23.2))	; Multiplication of mixed sign floats
 
 
 

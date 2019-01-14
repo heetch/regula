@@ -34,8 +34,8 @@ func TestSub(t *testing.T) {
 		n1 := rule.Int64Value(1)
 		n2 := rule.Int64Value(1)
 		params := regula.Params{}
-		add := rule.Sub(n1, n2)
-		val, err := add.Eval(params)
+		sub := rule.Sub(n1, n2)
+		val, err := sub.Eval(params)
 		require.NoError(t, err)
 		require.True(t, val.Same(rule.Int64Value(0)))
 	})
@@ -43,10 +43,32 @@ func TestSub(t *testing.T) {
 		n1 := rule.Float64Value(2.2)
 		n2 := rule.Float64Value(1.1)
 		params := regula.Params{}
-		add := rule.Sub(n1, n2)
-		val, err := add.Eval(params)
+		sub := rule.Sub(n1, n2)
+		val, err := sub.Eval(params)
 		require.NoError(t, err)
 		require.True(t, val.Same(rule.Float64Value(1.1)))
+	})
+
+}
+
+func TestMult(t *testing.T) {
+	t.Run("Eval/Int64/OK", func(t *testing.T) {
+		n1 := rule.Int64Value(11)
+		n2 := rule.Int64Value(9)
+		params := regula.Params{}
+		mult := rule.Mult(n1, n2)
+		val, err := mult.Eval(params)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.Int64Value(99)))
+	})
+	t.Run("Eval/Float64/OK", func(t *testing.T) {
+		n1 := rule.Float64Value(2.2)
+		n2 := rule.Float64Value(1.1)
+		params := regula.Params{}
+		mult := rule.Mult(n1, n2)
+		val, err := mult.Eval(params)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.Float64Value(2.42)))
 	})
 
 }
