@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Note: the tests here are minimal in their coverage.  For more
+// extensive operator coverage look at rule/sexpr/assertions.lisp
+
 func TestAdd(t *testing.T) {
 	t.Run("Eval/Int64/OK", func(t *testing.T) {
 		n1 := rule.Int64Value(1)
@@ -93,4 +96,14 @@ func TestDiv(t *testing.T) {
 		require.True(t, val.Same(rule.Float64Value(2.0)))
 	})
 
+}
+
+func TestMod(t *testing.T) {
+	n1 := rule.Int64Value(5)
+	n2 := rule.Int64Value(3)
+	params := regula.Params{}
+	mod := rule.Mod(n1, n2)
+	val, err := mod.Eval(params)
+	require.NoError(t, err)
+	require.True(t, val.Same(rule.Int64Value(2)))
 }

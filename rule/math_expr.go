@@ -7,6 +7,7 @@ func init() {
 	Operators["sub"] = func() Operator { return newExprSub() }
 	Operators["mult"] = func() Operator { return newExprMult() }
 	Operators["div"] = func() Operator { return newExprDiv() }
+	Operators["mod"] = func() Operator { return newExprMod() }
 }
 
 //////////////////
@@ -305,6 +306,58 @@ func (n *exprDiv) Eval(params Params) (*Value, error) {
 		return n.float64Div(params)
 	}
 	return n.int64Div(params)
+}
+
+///////////////////
+// Mod Operator //
+///////////////////
+type exprMod struct {
+	operator
+}
+
+func newExprMod() *exprMod {
+	return &exprMod{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "mod",
+				ReturnType: INTEGER,
+				Terms: []Term{
+					{
+						Type:        INTEGER,
+						Cardinality: ONE,
+					},
+					{
+						Type:        INTEGER,
+						Cardinality: ONE,
+					},
+				},
+			},
+		},
+	}
+}
+
+// Mod creates an expression that takes exactly two operands, which
+// must evaluate to Int64Value, and returns the remainder of Euclidean
+// division of the first integer value by the second.
+func Mod(v0, v1 Expr) Expr {
+	e := newExprMod()
+	e.pushExprOrPanic(v0)
+	e.pushExprOrPanic(v1)
+	e.finaliseOrPanic()
+	return e
+}
+
+// Eval makes exprMod comply with the Expr interface.
+func (n *exprMod) Eval(params Params) (*Value, error) {
+	dividend, err := exprToInt64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	divisor, err := exprToInt64(n.operands[1], params)
+	if err != nil {
+		return nil, err
+	}
+	return Int64Value(dividend % divisor), nil
 }
 
 ///////////////////////

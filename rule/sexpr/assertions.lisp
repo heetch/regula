@@ -34,6 +34,10 @@
 (assert= -1 (/ 10 -10 1))		; Integer division with mixed signs
 (assert= 1.0 (/ -2.2 -1.1 -1.0 -2.0))	; Division of negative floats
 (assert= -2.0 (/ 2.2 -1.1))		; Float division with mixed signs
+(assert=  2 (% 5 3))			; Modulo of integers
+(assert= -2 (% -5 3))			; Modulo of mixed sign integers (negative dividend)
+(assert= 2 (% 5 -3))			; Modulo of mixed sign integers (negative divisor)
+(assert= -2 (% -5 -3))			; Modulo of negative integers
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Cast operations ;;
