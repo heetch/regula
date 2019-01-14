@@ -94,7 +94,7 @@ func TestLispFileAssertions(t *testing.T) {
 		if line[0] == ';' {
 			continue
 		}
-		// Treat trailing comments as descripitons
+		// Treat trailing comments as descriptions
 		parts := strings.Split(line, ";")
 		code := parts[0]
 		description := code

@@ -72,3 +72,25 @@ func TestMult(t *testing.T) {
 	})
 
 }
+
+func TestDiv(t *testing.T) {
+	t.Run("Eval/Int64/OK", func(t *testing.T) {
+		n1 := rule.Int64Value(10)
+		n2 := rule.Int64Value(10)
+		params := regula.Params{}
+		div := rule.Div(n1, n2)
+		val, err := div.Eval(params)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.Int64Value(1)))
+	})
+	t.Run("Eval/Float64/OK", func(t *testing.T) {
+		n1 := rule.Float64Value(2.2)
+		n2 := rule.Float64Value(1.1)
+		params := regula.Params{}
+		div := rule.Div(n1, n2)
+		val, err := div.Eval(params)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.Float64Value(2.0)))
+	})
+
+}

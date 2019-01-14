@@ -6,6 +6,7 @@ func init() {
 	Operators["add"] = func() Operator { return newExprAdd() }
 	Operators["sub"] = func() Operator { return newExprSub() }
 	Operators["mult"] = func() Operator { return newExprMult() }
+	Operators["div"] = func() Operator { return newExprDiv() }
 }
 
 //////////////////
@@ -225,6 +226,85 @@ func (n *exprMult) Eval(params Params) (*Value, error) {
 		return n.float64Mult(params)
 	}
 	return n.int64Mult(params)
+}
+
+///////////////////
+// Div Operator //
+///////////////////
+type exprDiv struct {
+	operator
+}
+
+func newExprDiv() *exprDiv {
+	return &exprDiv{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "div",
+				ReturnType: NUMBER,
+				Terms: []Term{
+					{
+						Type:        NUMBER,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
+		},
+	}
+}
+
+// Div creates an expression that takes at least two operands, which
+// must evaluate to either Float64Value or Int64Value, and returns the
+// value of the first operand successively divided by the operands
+// that follow.
+func Div(vN ...Expr) Expr {
+	e := newExprDiv()
+	e.consumeOperands(vN...)
+	return e
+}
+
+// Perform division of Float64Value types.
+func (n *exprDiv) float64Div(params Params) (*Value, error) {
+	quotient, err := exprToFloat64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		f, err := exprToFloat64(n.operands[i], params)
+		if err != nil {
+			return nil, err
+		}
+		quotient = quotient / f
+	}
+	return Float64Value(quotient), nil
+}
+
+// Perform division of Int64Value types.
+func (n *exprDiv) int64Div(params Params) (*Value, error) {
+	quotient, err := exprToInt64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+
+	for j := 1; j < len(n.operands); j++ {
+		i, err := exprToInt64(n.operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		quotient = quotient / i
+	}
+	return Int64Value(quotient), nil
+}
+
+// Eval makes exprDiv comply with the Expr interface.
+func (n *exprDiv) Eval(params Params) (*Value, error) {
+	// The ReturnType will be set to the concrete type that
+	// matches all the arguments by homogenisation.
+	if n.operator.Contract().ReturnType == FLOAT {
+		return n.float64Div(params)
+	}
+	return n.int64Div(params)
 }
 
 ///////////////////////

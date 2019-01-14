@@ -28,8 +28,12 @@
 (= 475.6 (* -20.5 -23.2))	; Multiplicatoin of negative floats
 (= -220 (* 22 -10))		; Multiplication of mixed sign integers
 (= -475.6 (* 20.5 -23.2))	; Multiplication of mixed sign floats
-
-
+(= 1 (/ 10 10))			; Integer division
+(= 2.0 (/ 2.2 1.1))		; Float division
+(= 1 (/ -10 -10 1))		; Division of negative integers
+(= -1 (/ 10 -10 1))		; Integer division with mixed signs
+(= 1.0 (/ -2.2 -1.1 -1.0 -2.0)) ; Division of negative floats
+(= -2.0 (/ 2.2 -1.1))		; Float division with mixed signs
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Cast operations ;;
