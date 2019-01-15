@@ -3,7 +3,7 @@ package regula
 import (
 	"strconv"
 
-	"github.com/heetch/regula/errortype"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/param"
 	"github.com/pkg/errors"
 )
@@ -15,12 +15,12 @@ type Params map[string]interface{}
 func (p Params) GetString(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", errortype.ErrParamNotFound
+		return "", rerrors.ErrParamNotFound
 	}
 
 	s, ok := v.(string)
 	if !ok {
-		return "", errortype.ErrParamTypeMismatch
+		return "", rerrors.ErrParamTypeMismatch
 	}
 
 	return s, nil
@@ -30,12 +30,12 @@ func (p Params) GetString(key string) (string, error) {
 func (p Params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
-		return false, errortype.ErrParamNotFound
+		return false, rerrors.ErrParamNotFound
 	}
 
 	b, ok := v.(bool)
 	if !ok {
-		return false, errortype.ErrParamTypeMismatch
+		return false, rerrors.ErrParamTypeMismatch
 	}
 
 	return b, nil
@@ -45,12 +45,12 @@ func (p Params) GetBool(key string) (bool, error) {
 func (p Params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, errortype.ErrParamNotFound
+		return 0, rerrors.ErrParamNotFound
 	}
 
 	i, ok := v.(int64)
 	if !ok {
-		return 0, errortype.ErrParamTypeMismatch
+		return 0, rerrors.ErrParamTypeMismatch
 	}
 
 	return i, nil
@@ -60,12 +60,12 @@ func (p Params) GetInt64(key string) (int64, error) {
 func (p Params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, errortype.ErrParamNotFound
+		return 0, rerrors.ErrParamNotFound
 	}
 
 	f, ok := v.(float64)
 	if !ok {
-		return 0, errortype.ErrParamTypeMismatch
+		return 0, rerrors.ErrParamTypeMismatch
 	}
 
 	return f, nil
@@ -85,7 +85,7 @@ func (p Params) Keys() []string {
 func (p Params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", errortype.ErrParamNotFound
+		return "", rerrors.ErrParamNotFound
 	}
 
 	switch t := v.(type) {

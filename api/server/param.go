@@ -3,9 +3,8 @@ package server
 import (
 	"strconv"
 
-	"github.com/heetch/regula/errortype"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/param"
-	"github.com/pkg/errors"
 )
 
 // params represents the parameters computed from the query string.
@@ -16,7 +15,7 @@ type params map[string]string
 func (p params) GetString(key string) (string, error) {
 	s, ok := p[key]
 	if !ok {
-		return "", errortype.ErrParamNotFound
+		return "", rerrors.ErrParamNotFound
 	}
 
 	return s, nil
@@ -26,12 +25,13 @@ func (p params) GetString(key string) (string, error) {
 func (p params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
-		return false, errortype.ErrParamNotFound
+
+		return false, rerrors.ErrParamNotFound
 	}
 
 	b, err := strconv.ParseBool(v)
 	if err != nil {
-		return false, errortype.ErrParamTypeMismatch
+		return false, rerrors.ErrParamTypeMismatch
 	}
 
 	return b, nil
@@ -41,12 +41,12 @@ func (p params) GetBool(key string) (bool, error) {
 func (p params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, errortype.ErrParamNotFound
+		return 0, rerrors.ErrParamNotFound
 	}
 
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
-		return 0, errortype.ErrParamTypeMismatch
+		return 0, rerrors.ErrParamTypeMismatch
 	}
 
 	return i, nil
@@ -56,12 +56,12 @@ func (p params) GetInt64(key string) (int64, error) {
 func (p params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, errortype.ErrParamNotFound
+		return 0, rerrors.ErrParamNotFound
 	}
 
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		return 0, errortype.ErrParamTypeMismatch
+		return 0, rerrors.ErrParamTypeMismatch
 	}
 
 	return f, err
@@ -81,7 +81,7 @@ func (p params) Keys() []string {
 func (p params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", errortype.ErrParamNotFound
+		return "", rerrors.ErrParamNotFound
 	}
 
 	return v, nil
@@ -90,7 +90,7 @@ func (p params) EncodeValue(key string) (string, error) {
 //
 func (p params) AddParam(key string, value interface{}) (param.Params, error) {
 	if _, exists := p[key]; exists {
-		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
+		return nil, rerrors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
 	}
 	newParams := make(params)
 	var newValue string
@@ -104,7 +104,7 @@ func (p params) AddParam(key string, value interface{}) (param.Params, error) {
 	case bool:
 		newValue = strconv.FormatBool(t)
 	default:
-		return nil, errors.Errorf("type %t is not supported", t)
+		return nil, rerrors.Errorf("type %t is not supported", t)
 	}
 	newParams[key] = newValue
 	for k, v := range p {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/errortype"
+	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
@@ -105,16 +105,16 @@ func TestEngine(t *testing.T) {
 		require.Equal(t, -3.14, f)
 
 		_, _, err = e.GetString(ctx, "match-bool", nil)
-		require.Equal(t, errortype.ErrTypeMismatch, err)
+		require.Equal(t, errors.ErrTypeMismatch, err)
 
 		_, _, err = e.GetString(ctx, "type-mismatch", nil)
-		require.Equal(t, errortype.ErrTypeMismatch, err)
+		require.Equal(t, errors.ErrTypeMismatch, err)
 
 		_, _, err = e.GetString(ctx, "no-match", nil)
-		require.Equal(t, errortype.ErrNoMatch, err)
+		require.Equal(t, errors.ErrNoMatch, err)
 
 		_, _, err = e.GetString(ctx, "not-found", nil)
-		require.Equal(t, errortype.ErrRulesetNotFound, err)
+		require.Equal(t, errors.ErrRulesetNotFound, err)
 	})
 
 	t.Run("StructLoading", func(t *testing.T) {
