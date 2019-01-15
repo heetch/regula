@@ -60,7 +60,15 @@ const (
 type Term struct {
 	Type        Type
 	Cardinality Cardinality
-	Min         int // For Terms with Cardinality == MANY, we can specify a minimum number
+	// For Terms with Cardinality == MANY, we can specify a minimum number
+	Min int
+	// A term in a contract can be considered to be
+	// the body of an operator.  This is used for
+	// forms like 'let' and 'if'.  The type of all
+	// body forms in a operator must be homogeneous
+	// and will be promoted to the ReturnType of the
+	// operator.
+	IsBody bool
 }
 
 // IsFulfilledBy returns true when a provided Expr has a return type
