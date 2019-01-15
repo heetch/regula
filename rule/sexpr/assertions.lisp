@@ -49,4 +49,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Control operations ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
-(assert= 10 (let x (+ 5 5) x))          ; Return bound value from let
+(assert= 10 (let x 10 x))               ; Return bound value from let
+(assert= 10 (let x (+ 5 5) x))          ; Let identifier equal result of value form
+(assert= #true (let f #false (not f)))  ; Operate on bound value
+

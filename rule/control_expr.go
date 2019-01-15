@@ -104,5 +104,5 @@ func (n *exprLet) Eval(params param.Params) (*Value, error) {
 	}
 
 	// Evaluate the body form within the new scope
-	return n.operands[1].Eval(scopedParams)
+	return n.operands[2].Eval(scopedParams)
 }
