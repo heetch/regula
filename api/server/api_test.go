@@ -269,7 +269,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
 				return nil, rerrors.ErrRulesetNotFound
 			}
 

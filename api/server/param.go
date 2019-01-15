@@ -5,6 +5,7 @@ import (
 
 	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/param"
+	"github.com/pkg/errors"
 )
 
 // params represents the parameters computed from the query string.
@@ -90,7 +91,7 @@ func (p params) EncodeValue(key string) (string, error) {
 //
 func (p params) AddParam(key string, value interface{}) (param.Params, error) {
 	if _, exists := p[key]; exists {
-		return nil, rerrors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
+		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
 	}
 	newParams := make(params)
 	var newValue string
@@ -104,7 +105,7 @@ func (p params) AddParam(key string, value interface{}) (param.Params, error) {
 	case bool:
 		newValue = strconv.FormatBool(t)
 	default:
-		return nil, rerrors.Errorf("type %t is not supported", t)
+		return nil, errors.Errorf("type %t is not supported", t)
 	}
 	newParams[key] = newValue
 	for k, v := range p {
