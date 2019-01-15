@@ -29,6 +29,7 @@ type Params interface {
 	GetFloat64(key string) (float64, error)
 	Keys() []string
 	EncodeValue(key string) (string, error)
+	AddParam(key string, value interface{}) (Params, error)
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
@@ -274,7 +275,7 @@ func walk(expr Expr, fn func(Expr) error) error {
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.
-func exprToInt64(e Expr, params param.Params) (int64, error) {
+func exprToInt64(e Expr, params Params) (int64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0, err
@@ -288,7 +289,7 @@ func exprToInt64(e Expr, params param.Params) (int64, error) {
 
 // exprToFloat64 returns the go-native float64 value of an expression
 // evaluated with params.
-func exprToFloat64(e Expr, params param.Params) (float64, error) {
+func exprToFloat64(e Expr, params Params) (float64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0.0, err
@@ -302,7 +303,7 @@ func exprToFloat64(e Expr, params param.Params) (float64, error) {
 
 // exprToBool returns the go-native bool value of an expression
 // evaluated with params.
-func exprToBool(e Expr, params param.Params) (bool, error) {
+func exprToBool(e Expr, params Params) (bool, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return false, err
