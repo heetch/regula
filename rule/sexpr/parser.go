@@ -314,3 +314,25 @@ func (p *Parser) makeParameter(le *lexicalElement, params Parameters) (rule.Expr
 	// 🛈: NUMBER and ANY are not valid types for parameters
 	return nil, newParserError(le, fmt.Errorf("parameter %q has an invalid Type: %s", le.Literal, t))
 }
+
+// addParameter creates a new Parameters which is identical to the
+// provided parameters but with one additional named parameter.  This
+// operation is non-destructive and side effect free.  The intent is
+// that the returned Parameters will be used as a nested scope.
+func (p *Parser) addParameter(le *lexicalElement, expr rule.Expr, params Parameters) (Parameters, error) {
+	var newParams Parameters
+
+	if _, exists := params[le.Literal]; exists {
+		return nil, newParserError(le, fmt.Errorf("cannot create new variable %q as this name is already in use", le.Literal))
+	}
+
+	newParams = Parameters{}
+	// We're only concerned with type information at parse time.
+	// We'll do evaluation of the value expression only when we
+	// evaluate a rule.
+	newParams[le.Literal] = expr.Contract().ReturnType
+	for k, v := range params {
+		newParams[k] = v
+	}
+	return newParams, nil
+}
