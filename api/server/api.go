@@ -11,7 +11,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
-	"github.com/heetch/regula/errortype"
+	rerrors "github.com/heetch/regula/errors"
 	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
@@ -145,14 +145,14 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 	}
 
 	if err != nil {
-		if err == errortype.ErrRulesetNotFound {
+		if err == rerrors.ErrRulesetNotFound {
 			writeError(w, r, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
 			return
 		}
 
-		if err == errortype.ErrParamNotFound ||
-			err == errortype.ErrParamTypeMismatch ||
-			err == errortype.ErrNoMatch {
+		if err == rerrors.ErrParamNotFound ||
+			err == rerrors.ErrParamTypeMismatch ||
+			err == rerrors.ErrNoMatch {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}

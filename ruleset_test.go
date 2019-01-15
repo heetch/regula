@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/heetch/regula/errortype"
+	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +39,7 @@ func TestRulesetEval(t *testing.T) {
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)),
 		)
-		require.Equal(t, errortype.ErrRulesetIncoherentType, err)
+		require.Equal(t, errors.ErrRulesetIncoherentType, err)
 	})
 
 	t.Run("No match", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestRulesetEval(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = r.Eval(nil)
-		require.Equal(t, errortype.ErrNoMatch, err)
+		require.Equal(t, errors.ErrNoMatch, err)
 	})
 
 	t.Run("Default", func(t *testing.T) {

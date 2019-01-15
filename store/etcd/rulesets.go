@@ -15,7 +15,7 @@ import (
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/errortype"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
@@ -586,7 +586,7 @@ func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Para
 	re, err := s.Latest(ctx, path)
 	if err != nil {
 		if err == store.ErrNotFound {
-			return nil, errortype.ErrRulesetNotFound
+			return nil, rerrors.ErrRulesetNotFound
 		}
 
 		return nil, err
@@ -608,7 +608,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	re, err := s.OneByVersion(ctx, path, version)
 	if err != nil {
 		if err == store.ErrNotFound {
-			return nil, errortype.ErrRulesetNotFound
+			return nil, rerrors.ErrRulesetNotFound
 		}
 
 		return nil, err

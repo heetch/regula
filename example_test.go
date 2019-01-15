@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/heetch/regula/errortype"
+	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 
 	"github.com/heetch/regula"
@@ -111,11 +111,11 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
-		case errortype.ErrRulesetNotFound:
+		case errors.ErrRulesetNotFound:
 			// when the ruleset doesn't exist
-		case errortype.ErrTypeMismatch:
+		case errors.ErrTypeMismatch:
 			// when the ruleset returns the bad type
-		case errortype.ErrNoMatch:
+		case errors.ErrNoMatch:
 			// when the ruleset doesn't match
 		default:
 			// something unexpected happened

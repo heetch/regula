@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/heetch/regula/errortype"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/tidwall/gjson"
 )
 
@@ -69,7 +69,7 @@ func (r *Rule) Eval(params Params) (*Value, error) {
 	}
 
 	if !ok {
-		return nil, errortype.ErrNoMatch
+		return nil, rerrors.ErrNoMatch
 	}
 
 	return r.Result, nil
