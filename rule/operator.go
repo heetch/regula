@@ -92,7 +92,40 @@ func (o *operator) Finalise() error {
 	if pos < minPos {
 		return ArityError{MinPos: minPos, ErrorPos: pos, OpCode: o.GetKind()}
 	}
+	if o.contract.ReturnType == ANY {
+		err := o.checkAndPromoteBodyTypes()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
+//
+func (o *operator) checkAndPromoteBodyTypes() error {
+	var bodyType Type = ANY
+	for pos, arg := range o.operands {
+		term, err := o.contract.GetTerm(pos)
+		if err != nil {
+			return err
+		}
+		if term.IsBody {
+			argType := arg.Contract().ReturnType
+			if bodyType != argType {
+				if bodyType == ANY {
+					bodyType = argType
+					continue
+				}
+				if (bodyType == INTEGER && argType == FLOAT) ||
+					(bodyType == FLOAT && argType == INTEGER) {
+					bodyType = FLOAT
+					continue
+				}
+				return o.newHomogeneousBodyTypeError(pos, bodyType, argType)
+			}
+		}
+	}
+	o.contract.ReturnType = bodyType
 	return nil
 }
 
@@ -319,7 +352,7 @@ func (o *operator) promoteToFloat(startIndex int) {
 	}
 }
 
-//newHomogeneousTypeError returns a HomogeneousTypeError for the operator
+// newHomogeneousTypeError returns a HomogeneousTypeError for the operator
 func (o *operator) newHomogeneousTypeError(pos, startPos int, expected, received Type) HomogeneousTypeError {
 
 	return HomogeneousTypeError{
@@ -329,5 +362,14 @@ func (o *operator) newHomogeneousTypeError(pos, startPos int, expected, received
 		ExpectedType: expected,
 		ReceivedType: received,
 	}
+}
 
+// newHomogeneousBodyTypeError returns a HomogeneousBodyTypeError for the operator
+func (o *operator) newHomogeneousBodyTypeError(pos int, expected, received Type) HomogeneousBodyTypeError {
+	hbte := HomogeneousBodyTypeError{}
+	hbte.OpCode = o.contract.OpCode
+	hbte.ErrorPos = pos
+	hbte.ExpectedType = expected
+	hbte.ReceivedType = received
+	return hbte
 }

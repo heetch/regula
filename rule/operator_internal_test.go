@@ -135,3 +135,36 @@ func TestHomogenisedOperatorPromotesReturnTypeWhenNumber(t *testing.T) {
 	op.homogenise()
 	require.Equal(t, FLOAT, op.Contract().ReturnType)
 }
+
+// cheakAndPromoteBodyTypes enforces homogeneity of the type of body
+// blocks, and copies that type to the parent expression.
+func TestCheckAndPromoteBodyTypes(t *testing.T) {
+	op := operator{
+		contract: Contract{
+			OpCode:     "if",
+			ReturnType: ANY,
+			Terms: []Term{
+				{
+					Type:        BOOLEAN,
+					Cardinality: ONE,
+				},
+				{
+					Type:        ANY,
+					Cardinality: ONE,
+					IsBody:      true,
+				},
+				{
+					Type:        ANY,
+					Cardinality: ONE,
+					IsBody:      true,
+				},
+			},
+		},
+	}
+	op.PushExpr(BoolValue(true))
+	op.PushExpr(Int64Value(1))
+	op.PushExpr(Int64Value(2))
+	err := op.checkAndPromoteBodyTypes()
+	require.NoError(t, err)
+	require.Equal(t, INTEGER, op.contract.ReturnType)
+}
