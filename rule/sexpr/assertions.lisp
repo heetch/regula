@@ -44,3 +44,9 @@
 ;;;;;;;;;;;;;;;;;;;;;
 (assert= 1.0 (int->float 1))		; Cast positive integer to float
 (assert= -12.0 (int->float -12))	; Cast negative integer to float
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; Control operations ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+(assert= 10 (let x (+ 5 5) x))          ; Return bound value from let
