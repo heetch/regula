@@ -3,7 +3,7 @@ package regula
 import (
 	"strconv"
 
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula/errortype"
 	"github.com/pkg/errors"
 )
 
@@ -14,12 +14,12 @@ type Params map[string]interface{}
 func (p Params) GetString(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", rule.ErrParamNotFound
+		return "", errortype.ErrParamNotFound
 	}
 
 	s, ok := v.(string)
 	if !ok {
-		return "", rule.ErrParamTypeMismatch
+		return "", errortype.ErrParamTypeMismatch
 	}
 
 	return s, nil
@@ -29,12 +29,12 @@ func (p Params) GetString(key string) (string, error) {
 func (p Params) GetBool(key string) (bool, error) {
 	v, ok := p[key]
 	if !ok {
-		return false, rule.ErrParamNotFound
+		return false, errortype.ErrParamNotFound
 	}
 
 	b, ok := v.(bool)
 	if !ok {
-		return false, rule.ErrParamTypeMismatch
+		return false, errortype.ErrParamTypeMismatch
 	}
 
 	return b, nil
@@ -44,12 +44,12 @@ func (p Params) GetBool(key string) (bool, error) {
 func (p Params) GetInt64(key string) (int64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, rule.ErrParamNotFound
+		return 0, errortype.ErrParamNotFound
 	}
 
 	i, ok := v.(int64)
 	if !ok {
-		return 0, rule.ErrParamTypeMismatch
+		return 0, errortype.ErrParamTypeMismatch
 	}
 
 	return i, nil
@@ -59,12 +59,12 @@ func (p Params) GetInt64(key string) (int64, error) {
 func (p Params) GetFloat64(key string) (float64, error) {
 	v, ok := p[key]
 	if !ok {
-		return 0, rule.ErrParamNotFound
+		return 0, errortype.ErrParamNotFound
 	}
 
 	f, ok := v.(float64)
 	if !ok {
-		return 0, rule.ErrParamTypeMismatch
+		return 0, errortype.ErrParamTypeMismatch
 	}
 
 	return f, nil
@@ -84,7 +84,7 @@ func (p Params) Keys() []string {
 func (p Params) EncodeValue(key string) (string, error) {
 	v, ok := p[key]
 	if !ok {
-		return "", rule.ErrParamNotFound
+		return "", errortype.ErrParamNotFound
 	}
 
 	switch t := v.(type) {
@@ -99,4 +99,17 @@ func (p Params) EncodeValue(key string) (string, error) {
 	default:
 		return "", errors.Errorf("type %t is not supported", t)
 	}
+}
+
+//
+func (p Params) AddParam(key string, value interface{}) (Params, error) {
+	if _, exists := p[key]; exists {
+		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists")
+	}
+	newParams := make(Params)
+	newParams[key] = value
+	for k, v := range p {
+		newParams[k] = v
+	}
+	return newParams, nil
 }
