@@ -64,5 +64,14 @@ type HomogeneousTypeError struct {
 
 // Error returns a string representation of the HomogeneousTypeError.   This makes HomogeneousTypeError implement the Error interface.
 func (hte HomogeneousTypeError) Error() string {
-	return fmt.Sprintf(`attempt to call %q with a %s in position %d, but all arguments after position %d must be a the same type, and you previously passed %s.`, hte.OpCode, hte.ReceivedType, hte.ErrorPos, hte.HomoStartPos, hte.ExpectedType)
+	return fmt.Sprintf(`attempt to call %q with a %s in position %d, but all arguments after position %d must be of the same type, and you previously passed %s.`, hte.OpCode, hte.ReceivedType, hte.ErrorPos, hte.HomoStartPos, hte.ExpectedType)
+}
+
+type HomogeneousBodyTypeError struct {
+	HomogeneousTypeError
+}
+
+// Error returns a string representation of the HomogeneousBodyTypeError.   This makes HomogeneousBodyTypeError implement the Error interface.
+func (hbte HomogeneousBodyTypeError) Error() string {
+	return fmt.Sprintf(`attempt to call %q with a %s in position %d, but all body arguments must be of the same type, and you previously passed %s.`, hbte.OpCode, hbte.ReceivedType, hbte.ErrorPos, hbte.ExpectedType)
 }
