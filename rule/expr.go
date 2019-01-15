@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"go/token"
 	"strconv"
+
+	"github.com/heetch/regula/param"
 )
 
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
-	Eval(Params) (*Value, error)
+	Eval(param.Params) (*Value, error)
 	Contract() Contract
 }
 
@@ -18,18 +20,6 @@ type Expr interface {
 type ComparableExpression interface {
 	Same(ComparableExpression) bool
 	GetKind() string
-}
-
-// A Params is a set of parameters passed on rule evaluation.
-// It provides type safe methods to query params.
-type Params interface {
-	GetString(key string) (string, error)
-	GetBool(key string) (bool, error)
-	GetInt64(key string) (int64, error)
-	GetFloat64(key string) (float64, error)
-	Keys() []string
-	EncodeValue(key string) (string, error)
-	AddParam(key string, value interface{}) (Params, error)
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
@@ -118,7 +108,7 @@ func Float64Param(name string) *Param {
 }
 
 // Eval extracts a value from the given parameters.
-func (p *Param) Eval(params Params) (*Value, error) {
+func (p *Param) Eval(params param.Params) (*Value, error) {
 	if params == nil {
 		return nil, errors.New("params is nil")
 	}
@@ -226,7 +216,7 @@ func Float64Value(value float64) *Value {
 }
 
 // Eval evaluates the value to itself.
-func (v *Value) Eval(Params) (*Value, error) {
+func (v *Value) Eval(param.Params) (*Value, error) {
 	return v, nil
 }
 
@@ -275,7 +265,7 @@ func walk(expr Expr, fn func(Expr) error) error {
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.
-func exprToInt64(e Expr, params Params) (int64, error) {
+func exprToInt64(e Expr, params param.Params) (int64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0, err
@@ -289,7 +279,7 @@ func exprToInt64(e Expr, params Params) (int64, error) {
 
 // exprToFloat64 returns the go-native float64 value of an expression
 // evaluated with params.
-func exprToFloat64(e Expr, params Params) (float64, error) {
+func exprToFloat64(e Expr, params param.Params) (float64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0.0, err
@@ -303,7 +293,7 @@ func exprToFloat64(e Expr, params Params) (float64, error) {
 
 // exprToBool returns the go-native bool value of an expression
 // evaluated with params.
-func exprToBool(e Expr, params Params) (bool, error) {
+func exprToBool(e Expr, params param.Params) (bool, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return false, err

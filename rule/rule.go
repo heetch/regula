@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/heetch/regula/errortype"
+	"github.com/heetch/regula/param"
 	"github.com/tidwall/gjson"
 )
 
@@ -53,7 +54,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(params Params) (*Value, error) {
+func (r *Rule) Eval(params param.Params) (*Value, error) {
 	value, err := r.Expr.Eval(params)
 	if err != nil {
 		return nil, err

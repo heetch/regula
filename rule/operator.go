@@ -3,6 +3,8 @@ package rule
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/heetch/regula/param"
 )
 
 // An Operator is an Expr that is also an Operander.
@@ -214,7 +216,7 @@ func (o *operator) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&op)
 }
 
-func (o *operator) Eval(params Params) (*Value, error) {
+func (o *operator) Eval(params param.Params) (*Value, error) {
 	return nil, nil
 }
 
