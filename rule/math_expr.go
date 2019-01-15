@@ -367,7 +367,7 @@ func (n *exprMod) Eval(params param.Params) (*Value, error) {
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.
-func exprToInt64(e Expr, params Params) (int64, error) {
+func exprToInt64(e Expr, params param.Params) (int64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0, err
@@ -381,7 +381,7 @@ func exprToInt64(e Expr, params Params) (int64, error) {
 
 // exprToFloat64 returns the go-native float64 value of an expression
 // evaluated with params.
-func exprToFloat64(e Expr, params Params) (float64, error) {
+func exprToFloat64(e Expr, params param.Params) (float64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0.0, err
