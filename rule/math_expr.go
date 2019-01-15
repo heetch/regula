@@ -359,35 +359,3 @@ func (n *exprMod) Eval(params Params) (*Value, error) {
 	}
 	return Int64Value(dividend % divisor), nil
 }
-
-///////////////////////
-// Utility functions //
-///////////////////////
-
-// exprToInt64 returns the go-native int64 value of an expression
-// evaluated with params.
-func exprToInt64(e Expr, params Params) (int64, error) {
-	v, err := e.Eval(params)
-	if err != nil {
-		return 0, err
-	}
-	i, err := strconv.ParseInt(v.Data, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return i, err
-}
-
-// exprToFloat64 returns the go-native float64 value of an expression
-// evaluated with params.
-func exprToFloat64(e Expr, params Params) (float64, error) {
-	v, err := e.Eval(params)
-	if err != nil {
-		return 0.0, err
-	}
-	f, err := strconv.ParseFloat(v.Data, 64)
-	if err != nil {
-		return 0.0, err
-	}
-	return f, nil
-}
