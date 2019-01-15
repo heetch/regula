@@ -142,10 +142,10 @@ func Version(version string) Option {
 // Long running implementations must listen to the given context for timeout and cancelation.
 type Evaluator interface {
 	// Eval evaluates a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return errortype.ErrRulesetNotFound.
+	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
 	Eval(ctx context.Context, path string, params param.Params) (*EvalResult, error)
 	// EvalVersion evaluates a specific version of a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return errortype.ErrRulesetNotFound.
+	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
 	EvalVersion(ctx context.Context, path string, version string, params param.Params) (*EvalResult, error)
 }
 
@@ -210,7 +210,7 @@ func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
 	return ri.r, nil
 }
 
-// Eval evaluates the latest added ruleset or returns errortype.ErrRulesetNotFound if not found.
+// Eval evaluates the latest added ruleset or returns ErrRulesetNotFound if not found.
 func (b *RulesetBuffer) Eval(ctx context.Context, path string, params param.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
@@ -246,7 +246,7 @@ func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 	return nil, rerrors.ErrRulesetNotFound
 }
 
-// EvalVersion evaluates the selected ruleset version or returns errortype.ErrRulesetNotFound if not found.
+// EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
 func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params param.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
