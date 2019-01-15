@@ -271,3 +271,45 @@ func walk(expr Expr, fn func(Expr) error) error {
 
 	return nil
 }
+
+// exprToInt64 returns the go-native int64 value of an expression
+// evaluated with params.
+func exprToInt64(e Expr, params param.Params) (int64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(v.Data, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return i, err
+}
+
+// exprToFloat64 returns the go-native float64 value of an expression
+// evaluated with params.
+func exprToFloat64(e Expr, params param.Params) (float64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0.0, err
+	}
+	f, err := strconv.ParseFloat(v.Data, 64)
+	if err != nil {
+		return 0.0, err
+	}
+	return f, nil
+}
+
+// exprToBool returns the go-native bool value of an expression
+// evaluated with params.
+func exprToBool(e Expr, params param.Params) (bool, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return false, err
+	}
+	b, err := strconv.ParseBool(v.Data)
+	if err != nil {
+		return false, err
+	}
+	return b, nil
+}
