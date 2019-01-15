@@ -15,6 +15,7 @@ import (
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
@@ -581,7 +582,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 }
 
 // Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
 	re, err := s.Latest(ctx, path)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -603,7 +604,7 @@ func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Para
 }
 
 // EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params param.Params) (*regula.EvalResult, error) {
 	re, err := s.OneByVersion(ctx, path, version)
 	if err != nil {
 		if err == store.ErrNotFound {

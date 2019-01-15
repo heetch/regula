@@ -1,6 +1,10 @@
 package rule
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/heetch/regula/param"
+)
 
 func init() {
 	Operators["intToFloat"] = func() Operator { return newExprIntToFloat() }
@@ -37,7 +41,7 @@ func IntToFloat(vN ...Expr) Expr {
 }
 
 // Eval will convert the operand provided to exprIntToFloat to a Float64Value.  Eval makes exprIntToFloat implement the Expr interface.
-func (n *exprIntToFloat) Eval(params Params) (*Value, error) {
+func (n *exprIntToFloat) Eval(params param.Params) (*Value, error) {
 	op := n.operands[0]
 	val, err := op.Eval(params)
 	if err != nil {

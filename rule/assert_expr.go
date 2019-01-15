@@ -2,6 +2,8 @@ package rule
 
 import (
 	"testing"
+
+	"github.com/heetch/regula/param"
 )
 
 // exprAssertEquals defines a special operator that can only be used
@@ -38,7 +40,7 @@ func MakeAssertEqualsConstructor(t *testing.T) func() *exprAssertEquals {
 	}
 }
 
-func (n *exprAssertEquals) Eval(params Params) (*Value, error) {
+func (n *exprAssertEquals) Eval(params param.Params) (*Value, error) {
 	opA := n.operands[0]
 	vA, err := opA.Eval(params)
 	if err != nil {

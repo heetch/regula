@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 )
 
@@ -53,7 +54,7 @@ func newRuleset(typ string, rules ...*rule.Rule) (*Ruleset, error) {
 
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
-func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
+func (r *Ruleset) Eval(params param.Params) (*rule.Value, error) {
 	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != rule.ErrNoMatch {

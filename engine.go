@@ -7,6 +7,7 @@ import (
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend"
+	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
@@ -27,7 +28,7 @@ func NewEngine(evaluator Evaluator) *Engine {
 }
 
 // Get evaluates a ruleset and returns the result.
-func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, opts ...Option) (*EvalResult, error) {
+func (e *Engine) get(ctx context.Context, typ, path string, params param.Params, opts ...Option) (*EvalResult, error) {
 	var cfg engineConfig
 	for _, opt := range opts {
 		opt(&cfg)
@@ -58,7 +59,7 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 }
 
 // GetString evaluates a ruleset and returns the result as a string.
-func (e *Engine) GetString(ctx context.Context, path string, params rule.Params, opts ...Option) (string, *EvalResult, error) {
+func (e *Engine) GetString(ctx context.Context, path string, params param.Params, opts ...Option) (string, *EvalResult, error) {
 	res, err := e.get(ctx, "string", path, params, opts...)
 	if err != nil {
 		return "", nil, err
@@ -68,7 +69,7 @@ func (e *Engine) GetString(ctx context.Context, path string, params rule.Params,
 }
 
 // GetBool evaluates a ruleset and returns the result as a bool.
-func (e *Engine) GetBool(ctx context.Context, path string, params rule.Params, opts ...Option) (bool, *EvalResult, error) {
+func (e *Engine) GetBool(ctx context.Context, path string, params param.Params, opts ...Option) (bool, *EvalResult, error) {
 	res, err := e.get(ctx, "bool", path, params, opts...)
 	if err != nil {
 		return false, nil, err
@@ -79,7 +80,7 @@ func (e *Engine) GetBool(ctx context.Context, path string, params rule.Params, o
 }
 
 // GetInt64 evaluates a ruleset and returns the result as an int64.
-func (e *Engine) GetInt64(ctx context.Context, path string, params rule.Params, opts ...Option) (int64, *EvalResult, error) {
+func (e *Engine) GetInt64(ctx context.Context, path string, params param.Params, opts ...Option) (int64, *EvalResult, error) {
 	res, err := e.get(ctx, "int64", path, params, opts...)
 	if err != nil {
 		return 0, nil, err
@@ -90,7 +91,7 @@ func (e *Engine) GetInt64(ctx context.Context, path string, params rule.Params, 
 }
 
 // GetFloat64 evaluates a ruleset and returns the result as a float64.
-func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params, opts ...Option) (float64, *EvalResult, error) {
+func (e *Engine) GetFloat64(ctx context.Context, path string, params param.Params, opts ...Option) (float64, *EvalResult, error) {
 	res, err := e.get(ctx, "float64", path, params, opts...)
 	if err != nil {
 		return 0, nil, err
@@ -102,7 +103,7 @@ func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params
 
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
 // tagged with the "ruleset" struct tag.
-func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Params) error {
+func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params param.Params) error {
 	b := backend.Func("regula", func(ctx context.Context, path string) ([]byte, error) {
 		res, err := e.evaluator.Eval(ctx, path, params)
 		if err != nil {
@@ -141,10 +142,10 @@ func Version(version string) Option {
 type Evaluator interface {
 	// Eval evaluates a ruleset using the given params.
 	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
-	Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error)
+	Eval(ctx context.Context, path string, params param.Params) (*EvalResult, error)
 	// EvalVersion evaluates a specific version of a ruleset using the given params.
 	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
-	EvalVersion(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
+	EvalVersion(ctx context.Context, path string, version string, params param.Params) (*EvalResult, error)
 }
 
 // EvalResult is the product of an evaluation. It contains the value generated as long as some metadata.
@@ -209,7 +210,7 @@ func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
 }
 
 // Eval evaluates the latest added ruleset or returns ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error) {
+func (b *RulesetBuffer) Eval(ctx context.Context, path string, params param.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
@@ -246,7 +247,7 @@ func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 }
 
 // EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
+func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params param.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 

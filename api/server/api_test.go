@@ -14,6 +14,7 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/mock"
+	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
@@ -206,16 +207,16 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params rule.Params)) {
+		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params param.Params)) {
 			t.Helper()
 			resetStore(s)
 
-			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
 				testParamsFn(params)
 				return (*regula.EvalResult)(result), nil
 			}
 
-			s.EvalVersionFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalVersionFn = func(ctx context.Context, path, version string, params param.Params) (*regula.EvalResult, error) {
 				return (*regula.EvalResult)(result), nil
 			}
 
@@ -238,7 +239,7 @@ func TestAPI(t *testing.T) {
 				Value: rule.StringValue("success"),
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
+			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params param.Params) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
@@ -258,7 +259,7 @@ func TestAPI(t *testing.T) {
 				Version: "123",
 			}
 
-			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
+			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params param.Params) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
@@ -267,7 +268,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
 				return nil, regula.ErrRulesetNotFound
 			}
 
@@ -294,7 +295,7 @@ func TestAPI(t *testing.T) {
 			}
 
 			for _, e := range errs {
-				s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+				s.EvalFn = func(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
 					return nil, e
 				}
 
