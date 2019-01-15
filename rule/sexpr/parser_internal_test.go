@@ -147,6 +147,33 @@ func TestParseOperatorNonOperatorSymbolInOperatorPosition(t *testing.T) {
 	require.EqualError(t, err, `"wobbly" is not a valid symbol`)
 }
 
+func TestParseLetOperator(t *testing.T) {
+	params := make(Parameters)
+	b := bytes.NewBufferString(`(let x #true x)`)
+	// Note, we force the above expression to be a boolean type
+	// (by assigning the value #true to x, and returning x),
+	// because the top level Parse function will complain about
+	// not boolean rules.
+	p := NewParser(b)
+	expr, err := p.Parse(params)
+	require.NoError(t, err)
+	ce := expr.(rule.ComparableExpression)
+	require.True(t, ce.Same(
+		rule.Let(
+			rule.BoolParam("x"),
+			rule.BoolValue(true),
+			rule.BoolParam("x"),
+		).(rule.ComparableExpression)))
+}
+
+func TestParseLetOperatorWithBadSyntax(t *testing.T) {
+	params := make(Parameters)
+	b := bytes.NewBufferString(`(let 5 #true 5)`)
+	p := NewParser(b)
+	_, err := p.Parse(params)
+	require.EqualError(t, err, `1:5: Error. expected symbol in position 1 of a let form, but got "5"`)
+}
+
 // makeBoolValue correctly constructs a BoolValue
 func TestMakeBoolValue(t *testing.T) {
 	b := bytes.NewBufferString(`#true #false`)
