@@ -4,6 +4,8 @@ import (
 	"strconv"
 
 	"github.com/heetch/regula/errortype"
+	"github.com/heetch/regula/param"
+	"github.com/pkg/errors"
 )
 
 // params represents the parameters computed from the query string.
@@ -83,4 +85,30 @@ func (p params) EncodeValue(key string) (string, error) {
 	}
 
 	return v, nil
+}
+
+//
+func (p params) AddParam(key string, value interface{}) (param.Params, error) {
+	if _, exists := p[key]; exists {
+		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
+	}
+	newParams := make(params)
+	var newValue string
+	switch t := value.(type) {
+	case string:
+		newValue = t
+	case int64:
+		newValue = strconv.FormatInt(t, 10)
+	case float64:
+		newValue = strconv.FormatFloat(t, 'f', 6, 64)
+	case bool:
+		newValue = strconv.FormatBool(t)
+	default:
+		return nil, errors.Errorf("type %t is not supported", t)
+	}
+	newParams[key] = newValue
+	for k, v := range p {
+		newParams[k] = v
+	}
+	return newParams, nil
 }
