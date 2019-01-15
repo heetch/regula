@@ -285,7 +285,37 @@ func TestMakeParameterInvalidLiteral(t *testing.T) {
 	le := &lexicalElement{Literal: "foo"}
 	_, err := p.makeParameter(le, params)
 	require.EqualError(t, err, `0:0: Error. unknown parameter name "foo"`)
+}
 
+// addParameter returns a new Parameters representing a nested scope.
+func TestAddParameter(t *testing.T) {
+	params := Parameters{}
+	p := NewParser(nil)
+	le := &lexicalElement{Literal: "foo"}
+	expr := rule.BoolValue(true)
+	newParams, err := p.addParameter(le, expr, params)
+	require.NoError(t, err)
+	_, err = p.makeParameter(le, params)
+	require.Error(t, err)
+	bp, err := p.makeParameter(le, newParams)
+	require.NoError(t, err)
+	ce := bp.(rule.ComparableExpression)
+	require.True(t, ce.Same(rule.BoolParam("foo")))
+}
+
+// addParameter doesn't allow reusing parameter names.  Technically we
+// could allow this, but it could be a source of errors in rules, so
+// let's be strict.
+func TestAddParameterExistingName(t *testing.T) {
+	params0 := Parameters{}
+	p := NewParser(nil)
+	le := &lexicalElement{Literal: "foo"}
+	expr := rule.BoolValue(true)
+	params1, err := p.addParameter(le, expr, params0)
+	require.NoError(t, err)
+	// Attempt to add the same named parameter
+	_, err = p.addParameter(le, expr, params1)
+	require.EqualError(t, err, `0:0: Error. cannot create new variable "foo" as this name is already in use`)
 }
 
 // Invoke a lisp file full of assertions and report these results in our test suite.
