@@ -102,6 +102,9 @@ func (p Params) EncodeValue(key string) (string, error) {
 	}
 }
 
+// AddParam generates a new scoped Params which is a copy of the
+// current Params with one additional Param mapping key to value.
+// This is used by the let operator to create new lexical scopes.
 func (p Params) AddParam(key string, value interface{}) (rule.Params, error) {
 	if _, exists := p[key]; exists {
 		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
