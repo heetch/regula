@@ -13,6 +13,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/mock"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
@@ -268,7 +269,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
 			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
-				return nil, regula.ErrRulesetNotFound
+				return nil, rerrors.ErrRulesetNotFound
 			}
 
 			w := httptest.NewRecorder()
@@ -288,9 +289,9 @@ func TestAPI(t *testing.T) {
 
 		t.Run("NOK - errors", func(t *testing.T) {
 			errs := []error{
-				rule.ErrParamNotFound,
-				rule.ErrParamTypeMismatch,
-				rule.ErrNoMatch,
+				rerrors.ErrParamNotFound,
+				rerrors.ErrParamTypeMismatch,
+				rerrors.ErrNoMatch,
 			}
 
 			for _, e := range errs {

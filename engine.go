@@ -7,6 +7,7 @@ import (
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend"
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
@@ -44,14 +45,14 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 		result, err = e.evaluator.Eval(ctx, path, params)
 	}
 	if err != nil {
-		if err == ErrRulesetNotFound || err == rule.ErrNoMatch {
+		if err == rerrors.ErrRulesetNotFound || err == rerrors.ErrNoMatch {
 			return nil, err
 		}
 		return nil, errors.Wrap(err, "failed to evaluate ruleset")
 	}
 
 	if result.Value.Type != typ {
-		return nil, ErrTypeMismatch
+		return nil, rerrors.ErrTypeMismatch
 	}
 
 	return result, nil
@@ -106,7 +107,7 @@ func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Par
 	b := backend.Func("regula", func(ctx context.Context, path string) ([]byte, error) {
 		res, err := e.evaluator.Eval(ctx, path, params)
 		if err != nil {
-			if err == ErrRulesetNotFound {
+			if err == rerrors.ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
 			}
 
@@ -140,10 +141,10 @@ func Version(version string) Option {
 // Long running implementations must listen to the given context for timeout and cancelation.
 type Evaluator interface {
 	// Eval evaluates a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
+	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
 	Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error)
 	// EvalVersion evaluates a specific version of a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return ErrRulesetNotFound.
+	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
 	EvalVersion(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
 }
 
@@ -189,7 +190,7 @@ func (b *RulesetBuffer) Latest(path string) (*Ruleset, string, error) {
 
 	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
-		return nil, "", ErrRulesetNotFound
+		return nil, "", rerrors.ErrRulesetNotFound
 	}
 
 	return l[len(l)-1].r, l[len(l)-1].version, nil
@@ -208,14 +209,14 @@ func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
 	return ri.r, nil
 }
 
-// Eval evaluates the latest added ruleset or returns ErrRulesetNotFound if not found.
+// Eval evaluates the latest added ruleset or returns rerrors.ErrRulesetNotFound if not found.
 func (b *RulesetBuffer) Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
 	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
-		return nil, ErrRulesetNotFound
+		return nil, rerrors.ErrRulesetNotFound
 	}
 
 	ri := l[len(l)-1]
@@ -233,7 +234,7 @@ func (b *RulesetBuffer) Eval(ctx context.Context, path string, params rule.Param
 func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 	l, ok := b.rulesets[path]
 	if !ok || len(l) == 0 {
-		return nil, ErrRulesetNotFound
+		return nil, rerrors.ErrRulesetNotFound
 	}
 
 	for _, ri := range l {
@@ -242,10 +243,10 @@ func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 		}
 	}
 
-	return nil, ErrRulesetNotFound
+	return nil, rerrors.ErrRulesetNotFound
 }
 
-// EvalVersion evaluates the selected ruleset version or returns ErrRulesetNotFound if not found.
+// EvalVersion evaluates the selected ruleset version or returns rerrors.ErrRulesetNotFound if not found.
 func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()

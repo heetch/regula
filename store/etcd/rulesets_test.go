@@ -13,6 +13,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
@@ -817,7 +818,7 @@ func TestEval(t *testing.T) {
 		_, err := s.Eval(context.Background(), "notexists", regula.Params{
 			"id": "123",
 		})
-		require.Equal(t, regula.ErrRulesetNotFound, err)
+		require.Equal(t, errors.ErrRulesetNotFound, err)
 	})
 }
 
@@ -852,13 +853,13 @@ func TestEvalVersion(t *testing.T) {
 		_, err := s.EvalVersion(context.Background(), "b", entry.Version, regula.Params{
 			"id": "123",
 		})
-		require.Equal(t, regula.ErrRulesetNotFound, err)
+		require.Equal(t, errors.ErrRulesetNotFound, err)
 	})
 
 	t.Run("BadVersion", func(t *testing.T) {
 		_, err := s.EvalVersion(context.Background(), "a", "someversion", regula.Params{
 			"id": "123",
 		})
-		require.Equal(t, regula.ErrRulesetNotFound, err)
+		require.Equal(t, errors.ErrRulesetNotFound, err)
 	})
 }

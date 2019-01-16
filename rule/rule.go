@@ -5,24 +5,8 @@ import (
 	"errors"
 	"strconv"
 
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/tidwall/gjson"
-)
-
-var (
-	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
-	ErrRulesetNotFound = errors.New("ruleset not found")
-
-	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
-	ErrParamTypeMismatch = errors.New("parameter type mismatches")
-
-	// ErrParamNotFound is returned when a parameter is not defined.
-	ErrParamNotFound = errors.New("parameter not found")
-
-	// ErrNoMatch is returned when the rule doesn't match the given params.
-	ErrNoMatch = errors.New("rule doesn't match the given params")
-
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
-	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
 )
 
 // A Rule represents a logical boolean expression that evaluates to a result.
@@ -85,7 +69,7 @@ func (r *Rule) Eval(params Params) (*Value, error) {
 	}
 
 	if !ok {
-		return nil, ErrNoMatch
+		return nil, rerrors.ErrNoMatch
 	}
 
 	return r.Result, nil

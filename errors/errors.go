@@ -1,4 +1,4 @@
-package regula
+package errors
 
 import "errors"
 
@@ -11,4 +11,13 @@ var (
 
 	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
 	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
+
+	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
+	ErrParamTypeMismatch = errors.New("parameter type mismatches")
+
+	// ErrParamNotFound is returned when a parameter is not defined.
+	ErrParamNotFound = errors.New("parameter not found")
+
+	// ErrNoMatch is returned when the rule doesn't match the given params.
+	ErrNoMatch = errors.New("rule doesn't match the given params")
 )

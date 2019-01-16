@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 )
 
@@ -56,12 +57,12 @@ func newRuleset(typ string, rules ...*rule.Rule) (*Ruleset, error) {
 func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
 	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
-		if err != rule.ErrNoMatch {
+		if err != rerrors.ErrNoMatch {
 			return res, err
 		}
 	}
 
-	return nil, rule.ErrNoMatch
+	return nil, rerrors.ErrNoMatch
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
@@ -101,7 +102,7 @@ func (r *Ruleset) validate() error {
 
 	for _, rl := range r.Rules {
 		if rl.Result.Type != r.Type {
-			return ErrRulesetIncoherentType
+			return rerrors.ErrRulesetIncoherentType
 		}
 
 		ps := rl.Params()
@@ -109,7 +110,7 @@ func (r *Ruleset) validate() error {
 			tp, ok := paramTypes[p.Name]
 			if ok {
 				if p.Type != tp {
-					return ErrRulesetIncoherentType
+					return rerrors.ErrRulesetIncoherentType
 				}
 			} else {
 				paramTypes[p.Name] = p.Type
