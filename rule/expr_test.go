@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,13 +12,13 @@ import (
 type mockExpr struct {
 	val        *rule.Value
 	err        error
-	evalFn     func(params param.Params) (*rule.Value, error)
+	evalFn     func(params rule.Params) (*rule.Value, error)
 	evalCount  int
-	lastParams param.Params
+	lastParams rule.Params
 	returnType rule.Type
 }
 
-func (m *mockExpr) Eval(params param.Params) (*rule.Value, error) {
+func (m *mockExpr) Eval(params rule.Params) (*rule.Value, error) {
 	m.evalCount++
 	m.lastParams = params
 

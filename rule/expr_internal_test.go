@@ -3,7 +3,6 @@ package rule
 import (
 	"testing"
 
-	"github.com/heetch/regula/param"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,12 +12,12 @@ type mockParams struct {
 }
 
 // These methods are included here to make mockParams implment the
-// rule.Params interface
-func (p *mockParams) Keys() []string                                               { return nil }
-func (p *mockParams) EncodeValue(key string) (string, error)                       { return "", nil }
-func (p *mockParams) GetString(key string) (string, error)                         { return "", nil }
-func (p *mockParams) GetBool(key string) (bool, error)                             { return true, nil }
-func (p *mockParams) AddParam(key string, value interface{}) (param.Params, error) { return nil, nil }
+// Params interface
+func (p *mockParams) Keys() []string                                         { return nil }
+func (p *mockParams) EncodeValue(key string) (string, error)                 { return "", nil }
+func (p *mockParams) GetString(key string) (string, error)                   { return "", nil }
+func (p *mockParams) GetBool(key string) (bool, error)                       { return true, nil }
+func (p *mockParams) AddParam(key string, value interface{}) (Params, error) { return nil, nil }
 
 func (p *mockParams) GetInt64(key string) (int64, error) {
 	p.IntCount++
