@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	rerrors "github.com/heetch/regula/errors"
-	"github.com/heetch/regula/param"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
@@ -102,7 +102,7 @@ func (p Params) EncodeValue(key string) (string, error) {
 	}
 }
 
-func (p Params) AddParam(key string, value interface{}) (param.Params, error) {
+func (p Params) AddParam(key string, value interface{}) (rule.Params, error) {
 	if _, exists := p[key]; exists {
 		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
 	}
