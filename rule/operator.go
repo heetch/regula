@@ -11,24 +11,18 @@ type Operator interface {
 	Operander
 }
 
+type OperatorConstructor func() Operator
+
+var Operators = make(map[string]OperatorConstructor)
+
 // GetOperator returns an Operator that matches the provided operator
 // name. If no matching expression exists, an error will be returned.
 func GetOperator(name string) (Operator, error) {
-	switch name {
-	case "eq":
-		return newExprEq(), nil
-	case "not":
-		return newExprNot(), nil
-	case "and":
-		return newExprAnd(), nil
-	case "or":
-		return newExprOr(), nil
-	case "in":
-		return newExprIn(), nil
-	case "intToFloat":
-		return newExprIntToFloat(), nil
+	opCon, ok := Operators[name]
+	if !ok {
+		return nil, fmt.Errorf("no operator Expression called %q exists", name)
 	}
-	return nil, fmt.Errorf("no operator Expression called %q exists", name)
+	return opCon(), nil
 }
 
 // The operator is the representation of an operation to be performed
@@ -163,7 +157,14 @@ func (o *operator) UnmarshalJSON(data []byte) error {
 	o.contract = tmpExpr.Contract()
 
 	for _, expr := range node.Operands.Exprs {
-		o.PushExpr(expr)
+		err := o.PushExpr(expr)
+		if err != nil {
+			return err
+		}
+	}
+	err = o.Finalise()
+	if err != nil {
+		return err
 	}
 
 	return nil

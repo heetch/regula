@@ -51,7 +51,7 @@ func TestUnmarshalExpr(t *testing.T) {
 		}{
 			{"eq", []byte(`{"kind": "eq","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprEq)},
 			{"in", []byte(`{"kind":"in","operands": [{"kind": "value", "type": "string"}, {"kind": "param", "type": "string"}]}`), new(exprIn)},
-			{"not", []byte(`{"kind":"not","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprNot)},
+			{"not", []byte(`{"kind":"not","operands": [{"kind": "value", "type": "bool"}]}`), new(exprNot)},
 			{"and", []byte(`{"kind":"and","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprAnd)},
 			{"or", []byte(`{"kind":"or","operands": [{"kind": "value", "type": "bool"}, {"kind": "param", "type": "bool"}]}`), new(exprOr)},
 			{"param", []byte(`{"kind":"param"}`), new(Param)},

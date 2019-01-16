@@ -1,9 +1,14 @@
 package sexpr
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
@@ -281,4 +286,59 @@ func TestMakeParameterInvalidLiteral(t *testing.T) {
 	_, err := p.makeParameter(le, params)
 	require.EqualError(t, err, `0:0: Error. unknown parameter name "foo"`)
 
+}
+
+// Invoke a lisp file full of assertions and report these results in our test suite.
+func TestLispFileAssertions(t *testing.T) {
+	sm := makeSymbolMap()
+	sm.mapSymbol("assert=", "assertEquals")
+
+	params := Parameters{}
+	eParams := regula.Params{}
+
+	fileHandle, err := os.Open("assertions.lisp")
+	require.NoError(t, err)
+	defer fileHandle.Close()
+	fileScanner := bufio.NewScanner(fileHandle)
+
+	lineCount := 0
+	for fileScanner.Scan() {
+		lineCount++
+		line := strings.TrimSpace(fileScanner.Text())
+		// Ignore empty lines
+		if len(line) == 0 {
+			continue
+		}
+		// Ignore lines that are completely commented
+		if line[0] == ';' {
+			continue
+		}
+		// Treat trailing comments as descriptions
+		parts := strings.Split(line, ";")
+		code := parts[0]
+		description := code
+		if len(parts) > 1 {
+			description = fmt.Sprintf("line %d: %s", lineCount, parts[1])
+		}
+
+		t.Run(description, func(t *testing.T) {
+			// Every t.Run adds new contextual information
+			// via testing.T, so we need to remap the
+			// operator for each run to make this work
+			// nicely.
+			rule.Operators["assertEquals"] = func() rule.Operator {
+				return rule.MakeAssertEqualsConstructor(t)()
+			}
+
+			b := bytes.NewBufferString(code)
+			p := &Parser{
+				s:         NewScanner(b),
+				opCodeMap: sm,
+			}
+			expr, err := p.Parse(params)
+			require.NoError(t, err)
+			_, err = expr.Eval(eParams)
+			require.NoError(t, err)
+		})
+	}
 }
