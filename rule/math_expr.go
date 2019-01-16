@@ -1,7 +1,8 @@
 package rule
 
-import "strconv"
-import "github.com/heetch/regula/param"
+import (
+	"strconv"
+)
 
 func init() {
 	Operators["add"] = func() Operator { return newExprAdd() }
@@ -46,7 +47,7 @@ func Add(vN ...Expr) Expr {
 	return e
 }
 
-func (n *exprAdd) float64Add(params param.Params) (*Value, error) {
+func (n *exprAdd) float64Add(params Params) (*Value, error) {
 	var sum float64
 
 	for _, o := range n.operands {
@@ -59,7 +60,7 @@ func (n *exprAdd) float64Add(params param.Params) (*Value, error) {
 	return Float64Value(sum), nil
 }
 
-func (n *exprAdd) int64Add(params param.Params) (*Value, error) {
+func (n *exprAdd) int64Add(params Params) (*Value, error) {
 	var sum int64
 
 	for _, o := range n.operands {
@@ -73,7 +74,7 @@ func (n *exprAdd) int64Add(params param.Params) (*Value, error) {
 }
 
 // Eval makes exprAdd comply with the Expr interface.
-func (n *exprAdd) Eval(params param.Params) (*Value, error) {
+func (n *exprAdd) Eval(params Params) (*Value, error) {
 	// The ReturnType will be set to the concrete type that
 	// matches all the arguments by homogenisation.
 	if n.operator.Contract().ReturnType == FLOAT {
@@ -118,7 +119,7 @@ func Sub(vN ...Expr) Expr {
 	return e
 }
 
-func (n *exprSub) float64Sub(params param.Params) (*Value, error) {
+func (n *exprSub) float64Sub(params Params) (*Value, error) {
 	f0, err := exprToFloat64(n.operands[0], params)
 	if err != nil {
 		return nil, err
@@ -134,7 +135,7 @@ func (n *exprSub) float64Sub(params param.Params) (*Value, error) {
 	return Float64Value(f0), nil
 }
 
-func (n *exprSub) int64Sub(params param.Params) (*Value, error) {
+func (n *exprSub) int64Sub(params Params) (*Value, error) {
 	i0, err := exprToInt64(n.operands[0], params)
 	if err != nil {
 		return nil, err
@@ -151,7 +152,7 @@ func (n *exprSub) int64Sub(params param.Params) (*Value, error) {
 }
 
 // Eval makes exprSub comply with the Expr interface.
-func (n *exprSub) Eval(params param.Params) (*Value, error) {
+func (n *exprSub) Eval(params Params) (*Value, error) {
 	// The ReturnType will be set to the concrete type that
 	// matches all the arguments by homogenisation.
 	if n.operator.Contract().ReturnType == FLOAT {
@@ -195,7 +196,7 @@ func Mult(vN ...Expr) Expr {
 }
 
 // Perform multiplication of Float64Value types.
-func (n *exprMult) float64Mult(params param.Params) (*Value, error) {
+func (n *exprMult) float64Mult(params Params) (*Value, error) {
 	var product float64 = 1.0
 	for _, o := range n.operands {
 		f, err := exprToFloat64(o, params)
@@ -208,7 +209,7 @@ func (n *exprMult) float64Mult(params param.Params) (*Value, error) {
 }
 
 // Perform multiplication of Int64Value types.
-func (n *exprMult) int64Mult(params param.Params) (*Value, error) {
+func (n *exprMult) int64Mult(params Params) (*Value, error) {
 	var product int64 = 1
 	for _, o := range n.operands {
 		i, err := exprToInt64(o, params)
@@ -221,7 +222,7 @@ func (n *exprMult) int64Mult(params param.Params) (*Value, error) {
 }
 
 // Eval makes exprMult comply with the Expr interface.
-func (n *exprMult) Eval(params param.Params) (*Value, error) {
+func (n *exprMult) Eval(params Params) (*Value, error) {
 	// The ReturnType will be set to the concrete type that
 	// matches all the arguments by homogenisation.
 	if n.operator.Contract().ReturnType == FLOAT {
@@ -266,7 +267,7 @@ func Div(vN ...Expr) Expr {
 }
 
 // Perform division of Float64Value types.
-func (n *exprDiv) float64Div(params param.Params) (*Value, error) {
+func (n *exprDiv) float64Div(params Params) (*Value, error) {
 	quotient, err := exprToFloat64(n.operands[0], params)
 	if err != nil {
 		return nil, err
@@ -283,7 +284,7 @@ func (n *exprDiv) float64Div(params param.Params) (*Value, error) {
 }
 
 // Perform division of Int64Value types.
-func (n *exprDiv) int64Div(params param.Params) (*Value, error) {
+func (n *exprDiv) int64Div(params Params) (*Value, error) {
 	quotient, err := exprToInt64(n.operands[0], params)
 	if err != nil {
 		return nil, err
@@ -300,7 +301,7 @@ func (n *exprDiv) int64Div(params param.Params) (*Value, error) {
 }
 
 // Eval makes exprDiv comply with the Expr interface.
-func (n *exprDiv) Eval(params param.Params) (*Value, error) {
+func (n *exprDiv) Eval(params Params) (*Value, error) {
 	// The ReturnType will be set to the concrete type that
 	// matches all the arguments by homogenisation.
 	if n.operator.Contract().ReturnType == FLOAT {
@@ -349,7 +350,7 @@ func Mod(v0, v1 Expr) Expr {
 }
 
 // Eval makes exprMod comply with the Expr interface.
-func (n *exprMod) Eval(params param.Params) (*Value, error) {
+func (n *exprMod) Eval(params Params) (*Value, error) {
 	dividend, err := exprToInt64(n.operands[0], params)
 	if err != nil {
 		return nil, err
@@ -367,7 +368,7 @@ func (n *exprMod) Eval(params param.Params) (*Value, error) {
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.
-func exprToInt64(e Expr, params param.Params) (int64, error) {
+func exprToInt64(e Expr, params Params) (int64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0, err
@@ -381,7 +382,7 @@ func exprToInt64(e Expr, params param.Params) (int64, error) {
 
 // exprToFloat64 returns the go-native float64 value of an expression
 // evaluated with params.
-func exprToFloat64(e Expr, params param.Params) (float64, error) {
+func exprToFloat64(e Expr, params Params) (float64, error) {
 	v, err := e.Eval(params)
 	if err != nil {
 		return 0.0, err

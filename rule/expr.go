@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"go/token"
 	"strconv"
-
-	"github.com/heetch/regula/param"
 )
 
 // An Expr is a logical expression that can be evaluated to a value.
 type Expr interface {
-	Eval(param.Params) (*Value, error)
+	Eval(Params) (*Value, error)
 	Contract() Contract
 }
 
@@ -27,6 +25,17 @@ type Param struct {
 	Kind string `json:"kind"`
 	Type string `json:"type"`
 	Name string `json:"name"`
+}
+
+// A Params is a set of parameters passed on rule evaluation.
+// It provides type safe methods to query params.
+type Params interface {
+	GetString(key string) (string, error)
+	GetBool(key string) (bool, error)
+	GetInt64(key string) (int64, error)
+	GetFloat64(key string) (float64, error)
+	Keys() []string
+	EncodeValue(key string) (string, error)
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -108,7 +117,7 @@ func Float64Param(name string) *Param {
 }
 
 // Eval extracts a value from the given parameters.
-func (p *Param) Eval(params param.Params) (*Value, error) {
+func (p *Param) Eval(params Params) (*Value, error) {
 	if params == nil {
 		return nil, errors.New("params is nil")
 	}
@@ -216,7 +225,7 @@ func Float64Value(value float64) *Value {
 }
 
 // Eval evaluates the value to itself.
-func (v *Value) Eval(param.Params) (*Value, error) {
+func (v *Value) Eval(Params) (*Value, error) {
 	return v, nil
 }
 
