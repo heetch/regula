@@ -1,6 +1,9 @@
 package rule
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Type represents the type of a typed expression.  Any expression has
 // a return type, and some expressions also receive typed parameters.
@@ -18,6 +21,7 @@ const (
 	FLOAT
 	NUMBER // A special type that can be promoted to INTEGER or FLOAT
 	ANY    // A special type that can be promoted to any other.
+	INVALID
 )
 
 // String returns a human readable representation of the Type.  This
@@ -38,6 +42,27 @@ func (t Type) String() string {
 		return "Any"
 	}
 	return "invalid type"
+}
+
+// TypeFromName takes a string representation of a type and returns
+// the corresponding Type, or an error.
+func TypeFromName(name string) (Type, error) {
+	ts := strings.TrimSpace((strings.ToLower(name)))
+	switch ts {
+	case "bool", "boolean":
+		return BOOLEAN, nil
+	case "string":
+		return STRING, nil
+	case "integer", "int", "int64":
+		return INTEGER, nil
+	case "float", "float64":
+		return FLOAT, nil
+	case "number":
+		return NUMBER, nil
+	case "any":
+		return ANY, nil
+	}
+	return INVALID, fmt.Errorf("Invalid Type: %s", name)
 }
 
 // Cardinality expresses the number of times a term might be repeated
