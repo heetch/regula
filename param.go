@@ -100,3 +100,16 @@ func (p Params) EncodeValue(key string) (string, error) {
 		return "", errors.Errorf("type %t is not supported", t)
 	}
 }
+
+//
+func (p Params) AddParam(key string, value interface{}) (Params, error) {
+	if _, exists := p[key]; exists {
+		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists")
+	}
+	newParams := make(Params)
+	newParams[key] = value
+	for k, v := range p {
+		newParams[k] = v
+	}
+	return newParams, nil
+}
