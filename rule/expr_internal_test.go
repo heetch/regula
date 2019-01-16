@@ -12,7 +12,6 @@ type mockParams struct {
 }
 
 // These methods are included here to make mockParams implment the
-
 // rule.Params interface
 func (p *mockParams) Keys() []string                                         { return nil }
 func (p *mockParams) EncodeValue(key string) (string, error)                 { return "", nil }
