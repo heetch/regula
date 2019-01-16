@@ -1,6 +1,10 @@
 package rule
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/heetch/regula/param"
+)
 
 func init() {
 	Operators["in"] = func() Operator { return newExprIn() }
@@ -39,7 +43,7 @@ func In(vN ...Expr) Expr {
 	return e
 }
 
-func (n *exprIn) Eval(params Params) (*Value, error) {
+func (n *exprIn) Eval(params param.Params) (*Value, error) {
 	if len(n.operands) < 2 {
 		return nil, errors.New("invalid number of operands in In func")
 	}

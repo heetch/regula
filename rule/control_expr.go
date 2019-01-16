@@ -1,5 +1,7 @@
 package rule
 
+import "github.com/heetch/regula/param"
+
 func init() {
 	Operators["let"] = func() Operator { return newExprLet() }
 }
@@ -51,10 +53,10 @@ func Let(parameter Expr, value Expr, body Expr) Expr {
 }
 
 // Eval makes exprMod comply with the Expr interface.
-func (n *exprLet) Eval(params Params) (*Value, error) {
+func (n *exprLet) Eval(params param.Params) (*Value, error) {
 	// Not, we don't evaluate the symbol in position 0.  It will
 	// be passed as a Param, but it isn't resolvable outside the
-	// scoped Params we create below.
+	// scoped param.Params we create below.
 	symb := n.operands[0].(*Param)
 
 	// The Expression in position 1 is the value form we'll bind
@@ -64,8 +66,8 @@ func (n *exprLet) Eval(params Params) (*Value, error) {
 		return nil, err
 	}
 
-	// Create a new scoped Params with the symbol added
-	var scopedParams Params
+	// Create a new scoped param.Params with the symbol added
+	var scopedParams param.Params
 	switch symb.Type {
 	case "string":
 		scopedParams, err = params.AddParam(symb.Name, val.Data)

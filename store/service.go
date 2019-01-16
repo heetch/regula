@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/rule"
+	"github.com/heetch/regula/param"
 )
 
 // Common errors.
@@ -30,9 +30,9 @@ type RulesetService interface {
 	// Put is used to store a ruleset version.
 	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-	Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
+	Eval(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error)
 	// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-	EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+	EvalVersion(ctx context.Context, path, version string, params param.Params) (*regula.EvalResult, error)
 }
 
 // ListOptions contains list options.

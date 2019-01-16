@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Params is a map based rule.Params implementation.
+// Params is a map based param.Params implementation.
 type Params map[string]interface{}
 
 // GetString extracts a string parameter corresponding to the given key.
@@ -101,7 +101,6 @@ func (p Params) EncodeValue(key string) (string, error) {
 	}
 }
 
-//
 func (p Params) AddParam(key string, value interface{}) (Params, error) {
 	if _, exists := p[key]; exists {
 		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists")
