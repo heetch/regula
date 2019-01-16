@@ -2,8 +2,6 @@ package rule
 
 import (
 	"errors"
-
-	"github.com/heetch/regula/param"
 )
 
 func init() {
@@ -36,7 +34,7 @@ func Not(e Expr) Expr {
 	return expr
 }
 
-func (n *exprNot) Eval(params param.Params) (*Value, error) {
+func (n *exprNot) Eval(params Params) (*Value, error) {
 	if len(n.operands) < 1 {
 		return nil, errors.New("invalid number of operands in Not func")
 	}
@@ -82,7 +80,7 @@ func Or(vN ...Expr) Expr {
 	return e
 }
 
-func (n *exprOr) Eval(params param.Params) (*Value, error) {
+func (n *exprOr) Eval(params Params) (*Value, error) {
 	if len(n.operands) < 2 {
 		return nil, errors.New("invalid number of operands in Or func")
 	}
@@ -147,7 +145,7 @@ func And(vN ...Expr) Expr {
 	return e
 }
 
-func (n *exprAnd) Eval(params param.Params) (*Value, error) {
+func (n *exprAnd) Eval(params Params) (*Value, error) {
 	if len(n.operands) < 2 {
 		return nil, errors.New("invalid number of operands in And func")
 	}

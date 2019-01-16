@@ -53,7 +53,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 // Eval evaluates the rule against the given params.
 // If it matches it returns a result, otherwise it returns ErrNoMatch
 // or any encountered error.
-func (r *Rule) Eval(params rule.Params) (*Value, error) {
+func (r *Rule) Eval(params Params) (*Value, error) {
 	value, err := r.Expr.Eval(params)
 	if err != nil {
 		return nil, err

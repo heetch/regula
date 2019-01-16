@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/param"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 )
 
@@ -22,9 +22,9 @@ type RulesetService struct {
 	PutCount         int
 	PutFn            func(context.Context, string) (*store.RulesetEntry, error)
 	EvalCount        int
-	EvalFn           func(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error)
+	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	EvalVersionCount int
-	EvalVersionFn    func(ctx context.Context, path, version string, params param.Params) (*regula.EvalResult, error)
+	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
 // Get runs GetFn if provided and increments GetCount when invoked.
@@ -71,7 +71,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 }
 
 // Eval runs EvalFn if provided and increments EvalCount when invoked.
-func (s *RulesetService) Eval(ctx context.Context, path string, params param.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalCount++
 
 	if s.EvalFn != nil {
@@ -81,7 +81,7 @@ func (s *RulesetService) Eval(ctx context.Context, path string, params param.Par
 }
 
 // EvalVersion runs EvalVersionFn if provided and increments EvalVersionCount when invoked.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params param.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalVersionCount++
 
 	if s.EvalVersionFn != nil {

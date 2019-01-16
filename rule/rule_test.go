@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/param"
 	"github.com/heetch/regula/rule"
 	"github.com/stretchr/testify/require"
 )
@@ -13,7 +12,7 @@ func TestRuleEval(t *testing.T) {
 	t.Run("Match", func(t *testing.T) {
 		tests := []struct {
 			expr   rule.Expr
-			params param.Params
+			params rule.Params
 		}{
 			{rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), nil},
 			{rule.Eq(rule.StringValue("foo"), rule.StringParam("bar")), regula.Params{"bar": "foo"}},
@@ -40,7 +39,7 @@ func TestRuleEval(t *testing.T) {
 	t.Run("Invalid return", func(t *testing.T) {
 		tests := []struct {
 			expr   rule.Expr
-			params param.Params
+			params rule.Params
 		}{
 			{rule.StringValue("foo"), nil},
 			{rule.StringParam("bar"), regula.Params{"bar": "foo"}},
