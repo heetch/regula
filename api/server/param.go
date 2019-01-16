@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	rerrors "github.com/heetch/regula/errors"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
