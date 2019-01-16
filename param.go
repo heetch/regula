@@ -4,10 +4,11 @@ import (
 	"strconv"
 
 	rerrors "github.com/heetch/regula/errors"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
-// Params is a map based param.Params implementation.
+// Params is a map based rule.Params implementation.
 type Params map[string]interface{}
 
 // GetString extracts a string parameter corresponding to the given key.
@@ -101,9 +102,9 @@ func (p Params) EncodeValue(key string) (string, error) {
 	}
 }
 
-func (p Params) AddParam(key string, value interface{}) (Params, error) {
+func (p Params) AddParam(key string, value interface{}) (rule.Params, error) {
 	if _, exists := p[key]; exists {
-		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists")
+		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
 	}
 	newParams := make(Params)
 	newParams[key] = value
