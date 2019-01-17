@@ -52,7 +52,7 @@ func Let(parameter Expr, value Expr, body Expr) Expr {
 
 // Eval makes exprMod comply with the Expr interface.
 func (n *exprLet) Eval(params Params) (*Value, error) {
-	// Not, we don't evaluate the symbol in position 0.  It will
+	// Note we don't evaluate the symbol in position 0.  It will
 	// be passed as a Param, but it isn't resolvable outside the
 	// scoped Params we create below.
 	symb := n.operands[0].(*Param)
