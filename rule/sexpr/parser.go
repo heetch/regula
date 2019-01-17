@@ -257,7 +257,7 @@ Loop:
 					return nil, err
 				}
 				// We have no better expression of a
-				// paramter to be bound than the typed
+				// parameter to be bound than the typed
 				// paramter itself, so lets make that.
 				expr, err = p.makeParameter(le, params)
 				if err != nil {
