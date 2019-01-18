@@ -25,3 +25,15 @@ func TestStackCanAccessRootParams(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, baz)
 }
+
+func TestStackCanAccessCurrentFrame(t *testing.T) {
+	params := NewMockParams(map[string]interface{}{
+		"foo": int64(1),
+		"bar": "shoe",
+		"baz": true,
+	})
+	stack := newStack("quux", 10.1, params)
+	quux, err := stack.GetFloat64("quux")
+	require.NoError(t, err)
+	require.Equal(t, 10.1, quux)
+}
