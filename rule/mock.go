@@ -10,34 +10,11 @@ import (
 // MockParams is intended to provide an implementation of the Params
 // interface for testing.  It cannot live in the top-level mock
 // package because that package already import this one.
-type MockParams struct {
-	params      map[string]interface{}
-	BoolCount   int
-	IntCount    int
-	FloatCount  int
-	StringCount int
-	KeyCount    map[string]int
-}
-
-// NewMockParams returns a MockParams with its maps and counts
-// initialised.
-func NewMockParams(params map[string]interface{}) *MockParams {
-	keyCount := make(map[string]int)
-	for k, _ := range params {
-		keyCount[k] = 0
-	}
-	return &MockParams{
-		params:   params,
-		KeyCount: keyCount,
-	}
-
-}
+type MockParams map[string]interface{}
 
 // GetString extracts a string parameter corresponding to the given key.
 func (p MockParams) GetString(key string) (string, error) {
-	p.StringCount++
-	p.KeyCount[key]++
-	v, ok := p.params[key]
+	v, ok := p[key]
 	if !ok {
 		return "", rerrors.ErrParamNotFound
 	}
@@ -52,9 +29,7 @@ func (p MockParams) GetString(key string) (string, error) {
 
 // GetBool extracts a bool parameter corresponding to the given key.
 func (p MockParams) GetBool(key string) (bool, error) {
-	p.BoolCount++
-	p.KeyCount[key]++
-	v, ok := p.params[key]
+	v, ok := p[key]
 	if !ok {
 		return false, rerrors.ErrParamNotFound
 	}
@@ -69,9 +44,7 @@ func (p MockParams) GetBool(key string) (bool, error) {
 
 // GetInt64 extracts an int64 parameter corresponding to the given key.
 func (p MockParams) GetInt64(key string) (int64, error) {
-	p.IntCount++
-	p.KeyCount[key]++
-	v, ok := p.params[key]
+	v, ok := p[key]
 	if !ok {
 		return 0, rerrors.ErrParamNotFound
 	}
@@ -86,9 +59,7 @@ func (p MockParams) GetInt64(key string) (int64, error) {
 
 // GetFloat64 extracts a float64 parameter corresponding to the given key.
 func (p MockParams) GetFloat64(key string) (float64, error) {
-	p.FloatCount++
-	p.KeyCount[key]++
-	v, ok := p.params[key]
+	v, ok := p[key]
 	if !ok {
 		return 0, rerrors.ErrParamNotFound
 	}
@@ -103,8 +74,8 @@ func (p MockParams) GetFloat64(key string) (float64, error) {
 
 // Keys returns the list of all the keys.
 func (p MockParams) Keys() []string {
-	keys := make([]string, 0, len(p.params))
-	for k := range p.params {
+	keys := make([]string, 0, len(p))
+	for k := range p {
 		keys = append(keys, k)
 	}
 
@@ -113,7 +84,7 @@ func (p MockParams) Keys() []string {
 
 // EncodeValue returns the string representation of the selected value.
 func (p MockParams) EncodeValue(key string) (string, error) {
-	v, ok := p.params[key]
+	v, ok := p[key]
 	if !ok {
 		return "", rerrors.ErrParamNotFound
 	}
