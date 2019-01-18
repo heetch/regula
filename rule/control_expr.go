@@ -50,7 +50,7 @@ func Let(parameter Expr, value Expr, body Expr) Expr {
 	return e
 }
 
-// Eval makes exprMod comply with the Expr interface.
+// Eval makes exprLet comply with the Expr interface.
 func (n *exprLet) Eval(params Params) (*Value, error) {
 	// Note we don't evaluate the symbol in position 0.  It will
 	// be passed as a Param, but it isn't resolvable outside the
@@ -66,7 +66,28 @@ func (n *exprLet) Eval(params Params) (*Value, error) {
 
 	// Create a new scoped Params with the symbol added
 	var scopedParams *stack
-	scopedParams = newStack(symb.Name, val.Data, params)
+	switch symb.Type {
+	case "string":
+		scopedParams = newStack(symb.Name, val.Data, params)
+	case "int64":
+		i, err := exprToInt64(val, params)
+		if err != nil {
+			return nil, err
+		}
+		scopedParams = newStack(symb.Name, i, params)
+	case "float64":
+		f, err := exprToFloat64(val, params)
+		if err != nil {
+			return nil, err
+		}
+		scopedParams = newStack(symb.Name, f, params)
+	case "bool":
+		b, err := exprToBool(val, params)
+		if err != nil {
+			return nil, err
+		}
+		scopedParams = newStack(symb.Name, b, params)
+	}
 
 	// Evaluate the body form within the new scope
 	return n.operands[2].Eval(scopedParams)
