@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	rerrors "github.com/heetch/regula/errors"
-	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
@@ -100,19 +99,4 @@ func (p Params) EncodeValue(key string) (string, error) {
 	default:
 		return "", errors.Errorf("type %t is not supported", t)
 	}
-}
-
-// AddParam generates a new scoped Params which is a copy of the
-// current Params with one additional Param mapping key to value.
-// This is used by the let operator to create new lexical scopes.
-func (p Params) AddParam(key string, value interface{}) (rule.Params, error) {
-	if _, exists := p[key]; exists {
-		return nil, errors.Errorf("cannot create parameter %q as a parameter with that name already exists", key)
-	}
-	newParams := make(Params)
-	newParams[key] = value
-	for k, v := range p {
-		newParams[k] = v
-	}
-	return newParams, nil
 }

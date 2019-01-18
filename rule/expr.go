@@ -36,7 +36,6 @@ type Params interface {
 	GetFloat64(key string) (float64, error)
 	Keys() []string
 	EncodeValue(key string) (string, error)
-	AddParam(key string, value interface{}) (Params, error)
 }
 
 // Same compares the Param with a ComparableExpression to see if they
