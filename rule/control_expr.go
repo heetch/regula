@@ -65,41 +65,8 @@ func (n *exprLet) Eval(params Params) (*Value, error) {
 	}
 
 	// Create a new scoped Params with the symbol added
-	var scopedParams Params
-	switch symb.Type {
-	case "string":
-		scopedParams, err = params.AddParam(symb.Name, val.Data)
-		if err != nil {
-			return nil, err
-		}
-	case "int64":
-		i, err := exprToInt64(val, params)
-		if err != nil {
-			return nil, err
-		}
-		scopedParams, err = params.AddParam(symb.Name, i)
-		if err != nil {
-			return nil, err
-		}
-	case "float64":
-		f, err := exprToFloat64(val, params)
-		if err != nil {
-			return nil, err
-		}
-		scopedParams, err = params.AddParam(symb.Name, f)
-		if err != nil {
-			return nil, err
-		}
-	case "bool":
-		b, err := exprToBool(val, params)
-		if err != nil {
-			return nil, err
-		}
-		scopedParams, err = params.AddParam(symb.Name, b)
-		if err != nil {
-			return nil, err
-		}
-	}
+	var scopedParams *stack
+	scopedParams = newStack(symb.Name, val.Data, params)
 
 	// Evaluate the body form within the new scope
 	return n.operands[2].Eval(scopedParams)
