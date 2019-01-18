@@ -6,27 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockParams struct {
-	IntCount   int
-	FloatCount int
-}
-
-// These methods are included here to make mockParams implment the
-// rule.Params interface
-func (p *mockParams) Keys() []string                         { return nil }
-func (p *mockParams) EncodeValue(key string) (string, error) { return "", nil }
-func (p *mockParams) GetString(key string) (string, error)   { return "", nil }
-func (p *mockParams) GetBool(key string) (bool, error)       { return true, nil }
-
-func (p *mockParams) GetInt64(key string) (int64, error) {
-	p.IntCount++
-	return 100, nil
-}
-func (p *mockParams) GetFloat64(key string) (float64, error) {
-	p.FloatCount++
-	return 10.1, nil
-}
-
 func TestExprToInt64(t *testing.T) {
 	cases := []struct {
 		Name       string
@@ -67,7 +46,10 @@ func TestExprToInt64(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			params := &mockParams{}
+			params := NewMockParams(
+				map[string]interface{}{
+					"foo": 100,
+				})
 			i, err := exprToInt64(tc.Expr, params)
 			if len(tc.Error) != 0 {
 				require.EqualError(t, err, tc.Error)
@@ -120,7 +102,10 @@ func TestExprToFloat64(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			params := &mockParams{}
+			params := NewMockParams(
+				map[string]interface{}{
+					"foo": 10.1,
+				})
 			i, err := exprToFloat64(tc.Expr, params)
 			if len(tc.Error) != 0 {
 				require.EqualError(t, err, tc.Error)
