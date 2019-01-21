@@ -2,6 +2,7 @@ package rule
 
 func init() {
 	Operators["let"] = func() Operator { return newExprLet() }
+	Operators["if"] = func() Operator { return newExprIf() }
 }
 
 //////////////////
