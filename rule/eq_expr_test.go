@@ -32,3 +32,32 @@ func TestEq(t *testing.T) {
 		require.Equal(t, rule.BoolValue(false), val)
 	})
 }
+
+func TestLT(t *testing.T) {
+	t.Run("Integer LessThan (True)", func(t *testing.T) {
+		lt := rule.LT(rule.Int64Value(50), rule.Int64Value(60))
+		val, err := lt.Eval(nil)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.BoolValue(true)))
+	})
+	t.Run("Integer LessThan Sequence(True)", func(t *testing.T) {
+		lt := rule.LT(rule.Int64Value(50), rule.Int64Value(60), rule.Int64Value(61))
+		val, err := lt.Eval(nil)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.BoolValue(true)))
+	})
+
+	t.Run("Integer LessThan (False)", func(t *testing.T) {
+		lt := rule.LT(rule.Int64Value(70), rule.Int64Value(60))
+		val, err := lt.Eval(nil)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.BoolValue(false)))
+	})
+	t.Run("Integer LessThan Sequence (False)", func(t *testing.T) {
+		lt := rule.LT(rule.Int64Value(70), rule.Int64Value(60), rule.Int64Value(50))
+		val, err := lt.Eval(nil)
+		require.NoError(t, err)
+		require.True(t, val.Same(rule.BoolValue(false)))
+	})
+
+}
