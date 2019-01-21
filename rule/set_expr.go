@@ -1,6 +1,8 @@
 package rule
 
-import "errors"
+import (
+	"errors"
+)
 
 func init() {
 	Operators["in"] = func() Operator { return newExprIn() }

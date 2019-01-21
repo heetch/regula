@@ -1,6 +1,8 @@
 package rule
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func init() {
 	Operators["intToFloat"] = func() Operator { return newExprIntToFloat() }

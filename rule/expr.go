@@ -20,6 +20,13 @@ type ComparableExpression interface {
 	GetKind() string
 }
 
+// Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
+type Param struct {
+	Kind string `json:"kind"`
+	Type string `json:"type"`
+	Name string `json:"name"`
+}
+
 // A Params is a set of parameters passed on rule evaluation.
 // It provides type safe methods to query params.
 type Params interface {
@@ -29,13 +36,6 @@ type Params interface {
 	GetFloat64(key string) (float64, error)
 	Keys() []string
 	EncodeValue(key string) (string, error)
-}
-
-// Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
-type Param struct {
-	Kind string `json:"kind"`
-	Type string `json:"type"`
-	Name string `json:"name"`
 }
 
 // Same compares the Param with a ComparableExpression to see if they
@@ -270,4 +270,46 @@ func walk(expr Expr, fn func(Expr) error) error {
 	}
 
 	return nil
+}
+
+// exprToInt64 returns the go-native int64 value of an expression
+// evaluated with params.
+func exprToInt64(e Expr, params Params) (int64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(v.Data, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return i, err
+}
+
+// exprToFloat64 returns the go-native float64 value of an expression
+// evaluated with params.
+func exprToFloat64(e Expr, params Params) (float64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0.0, err
+	}
+	f, err := strconv.ParseFloat(v.Data, 64)
+	if err != nil {
+		return 0.0, err
+	}
+	return f, nil
+}
+
+// exprToBool returns the go-native bool value of an expression
+// evaluated with params.
+func exprToBool(e Expr, params Params) (bool, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return false, err
+	}
+	b, err := strconv.ParseBool(v.Data)
+	if err != nil {
+		return false, err
+	}
+	return b, nil
 }

@@ -1,6 +1,8 @@
 package rule
 
-import "errors"
+import (
+	"errors"
+)
 
 func init() {
 	Operators["eq"] = func() Operator { return newExprEq() }
