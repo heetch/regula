@@ -18,3 +18,21 @@ func TestLet(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, result.Same(rule.Int64Value(10)))
 }
+
+func TestIf(t *testing.T) {
+	params := make(regula.Params)
+	i := rule.If(rule.BoolValue(true),
+		rule.BoolValue(true),
+		rule.BoolValue(false))
+	result, err := i.Eval(params)
+	require.NoError(t, err)
+	require.True(t, result.Same(rule.BoolValue(true)))
+
+	i = rule.If(rule.BoolValue(false),
+		rule.BoolValue(true),
+		rule.BoolValue(false))
+	result, err = i.Eval(params)
+	require.NoError(t, err)
+	require.True(t, result.Same(rule.BoolValue(false)))
+
+}
