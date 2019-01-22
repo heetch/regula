@@ -61,13 +61,13 @@
               slot="selection"
               slot-scope="{ item, index }"
             >
-              <span>{{ item.value }}</span>
+              <span>{{ item.value | capitalize}}</span>
             </template>
             <template
               slot="item"
               slot-scope="{ item, index }"
             >
-              <span>{{ item.value }} </span>
+              <span>{{ item.value | capitalize }} </span>
               <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
             </template>
           </v-select>
@@ -113,13 +113,13 @@
           slot="selection"
           slot-scope="{ item, index }"
         >
-          <span>{{ item.value }}</span>
+          <span>{{ item.value | capitalize }}</span>
         </template>
         <template
           slot="item"
           slot-scope="{ item, index }"
         >
-          <span>{{ item.value }} </span>
+          <span>{{ item.value | capitalize }} </span>
           <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
         </template>
       </v-select>
@@ -149,17 +149,17 @@ export default {
     ],
     // List of allowed parameter types
     paramTypes: [
-      { value: 'Int64', hint: '123' },
-      { value: 'Float64', hint: '123.45' },
-      { value: 'Bool', hint: 'true' },
-      { value: 'String', hint: 'foobar' },
+      { value: 'int64', hint: '123' },
+      { value: 'float64', hint: '123.45' },
+      { value: 'bool', hint: 'true' },
+      { value: 'string', hint: 'foobar' },
     ],
     // List of allowed return types
     returnTypes: [
-      { value: 'Int64', hint: '123' },
-      { value: 'Float64', hint: '123.45' },
-      { value: 'Bool', hint: 'true' },
-      { value: 'String', hint: 'foobar' },
+      { value: 'int64', hint: '123' },
+      { value: 'float64', hint: '123.45' },
+      { value: 'bool', hint: 'true' },
+      { value: 'string', hint: 'foobar' },
       { value: 'JSON', hint: '{"foo": "bar"}' },
     ],
   }),
