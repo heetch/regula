@@ -125,6 +125,28 @@ func (n *exprLT) integerLT(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+// perform a less-than comparison on a sequence of floats
+func (n *exprLT) floatLT(params Params) (*Value, error) {
+	var f0, f1 float64
+	var err error
+
+	f0, err = exprToFloat64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	for j := 1; j < len(n.operands); j++ {
+		f1, err = exprToFloat64(n.operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if f0 >= f1 {
+			return BoolValue(false), nil
+		}
+		f0 = f1
+	}
+	return BoolValue(true), nil
+}
+
 func (n *exprLT) Eval(params Params) (*Value, error) {
 	// Because of homogenisation during Parsing we know that all
 	// operands have the same type.
@@ -132,8 +154,8 @@ func (n *exprLT) Eval(params Params) (*Value, error) {
 	switch t {
 	case INTEGER:
 		return n.integerLT(params)
-		// case FLOAT:
-		// 	return n.floatLT(params)
+	case FLOAT:
+		return n.floatLT(params)
 		// case BOOL:
 		// 	return n.boolLT(params)
 		// case STRING:

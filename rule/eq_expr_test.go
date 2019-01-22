@@ -82,6 +82,41 @@ func TestLT(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Float",
+			Cases: []testCase{
+				{
+					Name:     "2 value, < ∴ True",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2)},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,< ∴ True",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2), rule.Float64Value(50.3)},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, > ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, > ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
+					Expected: false,
+				},
+			},
+		},
 	}
 
 	for _, s := range ts {
