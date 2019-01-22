@@ -313,3 +313,13 @@ func exprToBool(e Expr, params Params) (bool, error) {
 	}
 	return b, nil
 }
+
+// exprToString returns the string value of an expression
+// evaluated with params.
+func exprToString(e Expr, params Params) (string, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return "", err
+	}
+	return v.Data, nil
+}

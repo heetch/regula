@@ -117,6 +117,51 @@ func TestLT(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "String",
+			Cases: []testCase{
+				{
+					Name:     "Uppercase < Lowercase ∴ True",
+					Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("a")},
+					Expected: true,
+				},
+				{
+					Name:     "ASCIIbetical ∴ True",
+					Input:    []rule.Expr{rule.StringValue("0"), rule.StringValue("A")},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, < ∴ True",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees")},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,< ∴ True",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees"), rule.StringValue("Boney M")},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, > ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, > ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+					Expected: false,
+				},
+			},
+		},
 	}
 
 	for _, s := range ts {
