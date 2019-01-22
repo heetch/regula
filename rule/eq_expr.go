@@ -147,6 +147,36 @@ func (n *exprLT) floatLT(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+// perform a less-than comparison on a sequence of bools
+func (n *exprLT) boolLT(params Params) (*Value, error) {
+	var b0, b1 bool
+	var err error
+
+	if len(n.operands) > 2 {
+		// We can't have greater than 2 operands and maintain
+		// an inequality with a binary choice.
+		return BoolValue(false), nil
+	}
+
+	b0, err = exprToBool(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	if b0 {
+		// If b0 is True then it's not less than b1, and we can be done already.
+		return BoolValue(false), nil
+	}
+	b1, err = exprToBool(n.operands[1], params)
+	if err != nil {
+		return nil, err
+	}
+	if !b1 {
+		// If b1 is False then b0 can't be less than it..
+		return BoolValue(false), nil
+	}
+	return BoolValue(true), nil
+}
+
 // perform a less-than comparison on a sequence of strings
 func (n *exprLT) stringLT(params Params) (*Value, error) {
 	var s0, s1 string
@@ -178,8 +208,8 @@ func (n *exprLT) Eval(params Params) (*Value, error) {
 		return n.integerLT(params)
 	case FLOAT:
 		return n.floatLT(params)
-	// case BOOL:
-	// 	return n.boolLT(params)
+	case BOOLEAN:
+		return n.boolLT(params)
 	case STRING:
 		return n.stringLT(params)
 	}

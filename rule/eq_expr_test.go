@@ -162,6 +162,31 @@ func TestLT(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Boolean",
+			Cases: []testCase{
+				{
+					Name:     "True = True ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
+					Expected: false,
+				},
+				{
+					Name:     "False = False ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
+					Expected: false,
+				},
+				{
+					Name:     "False < True ∴ True",
+					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
+					Expected: true,
+				},
+				{
+					Name:     "True > False ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
+					Expected: false,
+				},
+			},
+		},
 	}
 
 	for _, s := range ts {
