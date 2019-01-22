@@ -57,3 +57,33 @@
 (assert= #true (if (= 2 (+ 1 1)) #true #false)) ; If tests can be nested expressions
 (assert= #true (if #true (= 2 (+ 1 1)) #false)) ; If true-parts can be nested expressions
 (assert= #false (if #false #true (= 3 (+ 1 1)))) ; If false-parts can be nested expressions
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Equality and compasion ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(assert= #true (= 1 1))			; Integer equaliyt
+(assert= #false (= 1 2))		; Integer inequality
+(assert= #true (= 1.1 1.1))		; Float equality
+(assert= #false (= 1.1 1.2))		; Float inequality
+(assert= #true (= "Foo" "Foo"))		; String equality
+(assert= #false (= "Foo" "foo"))	; String inequality (by case)
+(assert= #false (= "foo" "bar"))	; String inequality
+(assert= #true (= #true #true))		; Boolean equality
+(assert= #false (= #true #false))	; Boolean inequality
+(assert= #true (< 0 1))			; integer less than (true)
+(assert= #false (< 0 0))		; integer less than (false because equal)
+(assert= #false (< 0 -1))		; integer less than (false because greater than)
+(assert= #true (< 0.1 0.2))		; integer less than (true)
+(assert= #false (< 0.1 0.1))		; integer less than (false because equal)
+(assert= #false (< 0.1 0))		; integer less than (false because greater than)
+(assert= #true (< "Abba" "BeeGees"))	; String less than (ASCIIbetical)
+(assert= #true (< "Eagle" "Eagles"))	; String less than (Length)
+(assert= #true (< "A" "a"))		; String less than (Case)
+(assert= #true (< "A" "a" "b"))		; Multi-string less than
+(assert= #false (< "A" "A"))		; Identical strings, therefore no inequality
+(assert= #false (< "AB" "A"))		; Second string is less than the first, therefore false
+(assert= #false (< "A" "a" "A"))        ; Multi-string false case (last string is >)
+(assert= #true (< #false #true))        ; Boolean, False < True = True
+(assert= #false (< #false #false))      ; Boolean, False < False = False
+(assert= #false (< #true #true))        ; Boolean, True < True = False
+(assert= #false (< #true #false))       ; Boolean, True < False = False
