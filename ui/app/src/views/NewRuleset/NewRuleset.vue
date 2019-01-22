@@ -55,7 +55,7 @@ export default {
     submit() {
       if (this.$refs.form.validate()) {
         axios
-          .put('/ui/i/rulesets', this.ruleset)
+          .post('/ui/i/rulesets/', this.ruleset)
           // temporary error handling until we implement the backend endpoint
           .then(console.log)
           .catch(console.error);
