@@ -34,30 +34,66 @@ func TestEq(t *testing.T) {
 }
 
 func TestLT(t *testing.T) {
-	t.Run("Integer LessThan (True)", func(t *testing.T) {
-		lt := rule.LT(rule.Int64Value(50), rule.Int64Value(60))
-		val, err := lt.Eval(nil)
-		require.NoError(t, err)
-		require.True(t, val.Same(rule.BoolValue(true)))
-	})
-	t.Run("Integer LessThan Sequence(True)", func(t *testing.T) {
-		lt := rule.LT(rule.Int64Value(50), rule.Int64Value(60), rule.Int64Value(61))
-		val, err := lt.Eval(nil)
-		require.NoError(t, err)
-		require.True(t, val.Same(rule.BoolValue(true)))
-	})
 
-	t.Run("Integer LessThan (False)", func(t *testing.T) {
-		lt := rule.LT(rule.Int64Value(70), rule.Int64Value(60))
-		val, err := lt.Eval(nil)
-		require.NoError(t, err)
-		require.True(t, val.Same(rule.BoolValue(false)))
-	})
-	t.Run("Integer LessThan Sequence (False)", func(t *testing.T) {
-		lt := rule.LT(rule.Int64Value(70), rule.Int64Value(60), rule.Int64Value(50))
-		val, err := lt.Eval(nil)
-		require.NoError(t, err)
-		require.True(t, val.Same(rule.BoolValue(false)))
-	})
+	type testCase struct {
+		Name     string
+		Input    []rule.Expr
+		Expected bool
+	}
 
+	type typeSuite struct {
+		Name  string
+		Cases []testCase
+	}
+
+	ts := []typeSuite{
+		{
+			Name: "Integer",
+			Cases: []testCase{
+				{
+					Name:     "2 value, < ∴ True",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60)},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,< ∴ True",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60), rule.Int64Value(70)},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, > ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, > ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
+					Expected: false,
+				},
+			},
+		},
+	}
+
+	for _, s := range ts {
+		t.Run(s.Name, func(t *testing.T) {
+			for _, c := range s.Cases {
+				t.Run(c.Name, func(t *testing.T) {
+					lt := rule.LT(c.Input...)
+					val, err := lt.Eval(nil)
+					require.NoError(t, err)
+					require.True(t, val.Same(rule.BoolValue(c.Expected)))
+				})
+			}
+		})
+	}
 }
