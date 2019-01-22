@@ -7,6 +7,7 @@ import (
 
 func init() {
 	Operators["eq"] = func() Operator { return newExprEq() }
+	Operators["lt"] = func() Operator { return newExprLT() }
 
 }
 

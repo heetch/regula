@@ -53,3 +53,15 @@
 (assert= 10 (let x (+ 5 5) x))          ; Let identifier equal result of value form
 (assert= #true (let f #false (not f)))  ; Operate on bound value
 
+;;;;;;;;;;;;;;;;;
+;; Comparitors ;;
+;;;;;;;;;;;;;;;;;
+(assert= #true (= 1 1)) ; Integer equality
+(assert= #false (= 1 2)) ; Integer inequality
+(assert= #true (= 1.1 1.1)) ; Float equality
+(assert= #false (= 1.1 1.2)) ; Float inequality
+(assert= #true (= "Foo" "Foo")) ; String equality
+(assert= #false (= "Foo" "foo")) ; String inequality (by case)
+(assert= #false (= "foo" "bar")) ; String inequality
+(assert= #true (= #true #true)) ; Boolean equality
+(assert= #false (= #true #false)) ; Boolean inequality
