@@ -140,6 +140,12 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	// set the slice to an empty slice to
+	// prevent sending null if the list is empty.
+	if resp.Rulesets == nil {
+		resp.Rulesets = []ruleset{}
+	}
+
 	reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 }
 

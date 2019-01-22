@@ -122,6 +122,19 @@ func TestInternalHandler(t *testing.T) {
 		require.JSONEq(t, `{"rulesets": [{"path": "Path0"},{"path": "Path1"},{"path": "Path2"}]}`, rec.Body.String())
 	})
 
+	t.Run("Empty result", func(t *testing.T) {
+		s := new(mock.RulesetService)
+
+		// simulate a two page result
+		s.ListFn = func(ctx context.Context, _ string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+			return new(store.RulesetEntries), nil
+		}
+
+		rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, `{"rulesets": []}`, rec.Body.String())
+	})
+
 	// this test checks if the handler returns a 500 if a random error occurs in the ruleset service.
 	t.Run("Error", func(t *testing.T) {
 		s := new(mock.RulesetService)
