@@ -32,7 +32,8 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
     "signature": {
         "params": [
             {
-                "foo": "string"
+                "name": "foo",
+                "type": "string"
             }
         ],
         "returnType": "string"
@@ -72,7 +73,8 @@ func TestPOSTNewRuleset(t *testing.T) {
     "signature": {
         "params": [
             {
-                "foo": "string"
+                "name": "foo",
+                "type": "string"
             }
         ],
         "returnType": "string"
