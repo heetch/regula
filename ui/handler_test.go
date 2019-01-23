@@ -192,6 +192,16 @@ func TestConvertParams(t *testing.T) {
 				"p2": regrule.FLOAT,
 			},
 		},
+		{
+			name:    "no name error",
+			input:   []param{{"type": "int64"}},
+			errText: "parameter 0 has no name",
+		},
+		{
+			name:    "no type error",
+			input:   []param{{"name": "foo"}},
+			errText: "parameter 0 (foo) has no type",
+		},
 	}
 
 	for _, c := range cases {
