@@ -181,6 +181,17 @@ func TestConvertParams(t *testing.T) {
 				"my-param": regrule.STRING,
 			},
 		},
+		{
+			name: "multiple parameters",
+			input: []param{
+				{"name": "p1", "type": "int64"},
+				{"name": "p2", "type": "float64"},
+			},
+			output: sexpr.Parameters{
+				"p1": regrule.INTEGER,
+				"p2": regrule.FLOAT,
+			},
+		},
 	}
 
 	for _, c := range cases {
