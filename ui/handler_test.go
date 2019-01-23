@@ -167,6 +167,13 @@ func TestConvertParams(t *testing.T) {
 				"my-param": regrule.FLOAT,
 			},
 		},
+		{
+			name:  "single bool",
+			input: []param{{"name": "my-param", "type": "bool"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.BOOLEAN,
+			},
+		},
 	}
 
 	for _, c := range cases {
