@@ -174,6 +174,13 @@ func TestConvertParams(t *testing.T) {
 				"my-param": regrule.BOOLEAN,
 			},
 		},
+		{
+			name:  "single string",
+			input: []param{{"name": "my-param", "type": "string"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.STRING,
+			},
+		},
 	}
 
 	for _, c := range cases {
