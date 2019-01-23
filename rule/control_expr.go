@@ -2,7 +2,12 @@ package rule
 
 func init() {
 	Operators["let"] = func() Operator { return newExprLet() }
+	Operators["if"] = func() Operator { return newExprIf() }
 }
+
+//////////////////
+// Let operator //
+//////////////////
 
 type exprLet struct {
 	operator
@@ -91,4 +96,69 @@ func (n *exprLet) Eval(params Params) (*Value, error) {
 
 	// Evaluate the body form within the new scope
 	return n.operands[2].Eval(scopedParams)
+}
+
+/////////////////
+// If operator //
+/////////////////
+
+type exprIf struct {
+	operator
+}
+
+// Note that if's contract has two Body expressions, both of these *must* have the same type.
+func newExprIf() *exprIf {
+	return &exprIf{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "if",
+				ReturnType: ANY,
+				Terms: []Term{
+					{
+						Type:        BOOLEAN,
+						Cardinality: ONE,
+					},
+					{
+						Type:        ANY,
+						Cardinality: ONE,
+						IsBody:      true,
+					},
+					{
+						Type:        ANY,
+						Cardinality: ONE,
+						IsBody:      true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// If creates an expression that will cause evaluation to choose one
+// of two body blocks based on a boolean expression. The boolean
+// expression is provided as the "test" parameter.  If the "test"
+// evaluates to true, then the expression passed as the "truePart"
+// will be evaluated, otherwise the expression passed at the
+// "falsePart" will be evaluated.  Note that the return type of the
+// "truePart" and "falsePart" must be the same.
+func If(test Expr, truePart Expr, falsePart Expr) Expr {
+	e := newExprIf()
+	e.pushExprOrPanic(test)
+	e.pushExprOrPanic(truePart)
+	e.pushExprOrPanic(falsePart)
+	e.finaliseOrPanic()
+	return e
+}
+
+// Eval makes exprIf comply with the Expr interface.
+func (n *exprIf) Eval(params Params) (*Value, error) {
+	cond, err := exprToBool(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+
+	if cond {
+		return n.operands[1].Eval(params)
+	}
+	return n.operands[2].Eval(params)
 }

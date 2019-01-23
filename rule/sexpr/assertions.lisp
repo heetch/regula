@@ -52,6 +52,11 @@
 (assert= 10 (let x 10 x))               ; Return bound value from let
 (assert= 10 (let x (+ 5 5) x))          ; Let identifier equal result of value form
 (assert= #true (let f #false (not f)))  ; Operate on bound value
+(assert= #true (if #true #true #false)) ; If returns the true-part when the condition is true
+(assert= #false (if #false #true #false)) ; If returns the false-part when the condition is false
+(assert= #true (if (= 2 (+ 1 1)) #true #false)) ; If tests can be nested expressions
+(assert= #true (if #true (= 2 (+ 1 1)) #false)) ; If true-parts can be nested expressions
+(assert= #false (if #false #true (= 3 (+ 1 1)))) ; If false-parts can be nested expressions
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Equality and compasion ;;
@@ -82,7 +87,3 @@
 (assert= #false (< #false #false))      ; Boolean, False < False = False
 (assert= #false (< #true #true))        ; Boolean, True < True = False
 (assert= #false (< #true #false))       ; Boolean, True < False = False
-
-
-
-
