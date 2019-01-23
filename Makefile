@@ -18,6 +18,9 @@ testrace:
 run: build
 	regula -log-level debug -etcd-namespace regula-local -server-dist-path ./ui/app/dist
 
+debug:
+	dlv debug cmd/regula/main.go -- -log-level debug -etcd-namespace regula-local -server-dist-path ./ui/app/dist
+
 run-ui:
 	cd ./ui/app && yarn serve
 
