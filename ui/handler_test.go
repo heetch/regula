@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/heetch/regula/mock"
+	regrule "github.com/heetch/regula/rule"
+	"github.com/heetch/regula/rule/sexpr"
 	"github.com/heetch/regula/store"
 	"github.com/stretchr/testify/require"
 )
@@ -142,4 +144,34 @@ func TestInternalHandler(t *testing.T) {
 			return nil, errors.New("some error")
 		}
 	})
+}
+
+func TestConvertParams(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   []param
+		output  sexpr.Parameters
+		errText string
+	}{
+		{
+			name:  "single int64",
+			input: []param{{"name": "my-param", "type": "int64"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.INTEGER,
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			result, err := convertParams(c.input)
+			if c.errText != "" {
+				require.EqualError(t, err, c.errText)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.output, result)
+
+		})
+	}
 }

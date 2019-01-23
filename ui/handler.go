@@ -184,14 +184,20 @@ type newRulesetRequest struct {
 // newRulesetRequest, and returns an equivalent sexpr.Parameters map.
 func convertParams(input []param) (sexpr.Parameters, error) {
 	parm := make(sexpr.Parameters)
-	for _, p := range input {
-		for k, v := range p {
-			t, err := regrule.TypeFromName(v)
-			if err != nil {
-				return nil, err
-			}
-			parm[k] = t
+	for i, p := range input {
+		name, found := p["name"]
+		if !found {
+			return nil, fmt.Errorf("parameter %d has no name", i)
 		}
+		v, found := p["type"]
+		if !found {
+			return nil, fmt.Errorf("parameter %d (%s) has no type", i, name)
+		}
+		t, err := regrule.TypeFromName(v)
+		if err != nil {
+			return nil, err
+		}
+		parm[name] = t
 	}
 	return parm, nil
 }
