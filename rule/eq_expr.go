@@ -217,3 +217,152 @@ func (n *exprLT) Eval(params Params) (*Value, error) {
 	// This case should be unreachable if the parser is working correctly!
 	panic(fmt.Sprintf("subexpression evaluated to impossible type %q", t))
 }
+
+/////////////////
+// GT operator //
+/////////////////
+
+type exprGT struct {
+	operator
+}
+
+func newExprGT() *exprGT {
+	return &exprGT{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "gt",
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GT creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a higher value than
+// the next.
+func GT(vN ...Expr) Expr {
+	e := newExprGT()
+	e.consumeOperands(vN...)
+	return e
+}
+
+// perform a greater-than comparison on a sequence of integers
+func (n *exprGT) integerGT(params Params) (*Value, error) {
+	var i0, i1 int64
+	var err error
+
+	i0, err = exprToInt64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	for j := 1; j < len(n.operands); j++ {
+		i1, err = exprToInt64(n.operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if i0 <= i1 {
+			return BoolValue(false), nil
+		}
+		i0 = i1
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of floats
+func (n *exprGT) floatGT(params Params) (*Value, error) {
+	var f0, f1 float64
+	var err error
+
+	f0, err = exprToFloat64(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	for j := 1; j < len(n.operands); j++ {
+		f1, err = exprToFloat64(n.operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if f0 <= f1 {
+			return BoolValue(false), nil
+		}
+		f0 = f1
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of bools
+func (n *exprGT) boolGT(params Params) (*Value, error) {
+	var b0, b1 bool
+	var err error
+
+	if len(n.operands) > 2 {
+		// We can't have greater than 2 operands and maintain
+		// an inequality with a binary choice.
+		return BoolValue(false), nil
+	}
+
+	b0, err = exprToBool(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	if !b0 {
+		// If b0 is False then it's not greater than b1, and we can be done already.
+		return BoolValue(false), nil
+	}
+	b1, err = exprToBool(n.operands[1], params)
+	if err != nil {
+		return nil, err
+	}
+	if b1 {
+		// If b1 is True then b0 can't be greater than it..
+		return BoolValue(false), nil
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of strings
+func (n *exprGT) stringGT(params Params) (*Value, error) {
+	var s0, s1 string
+	var err error
+
+	s0, err = exprToString(n.operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	for j := 1; j < len(n.operands); j++ {
+		s1, err = exprToString(n.operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if s0 <= s1 {
+			return BoolValue(false), nil
+		}
+		s0 = s1
+	}
+	return BoolValue(true), nil
+}
+
+func (n *exprGT) Eval(params Params) (*Value, error) {
+	// Because of homogenisation during Parsing we know that all
+	// operands have the same type.
+	t := n.operands[0].Contract().ReturnType
+	switch t {
+	case INTEGER:
+		return n.integerGT(params)
+	case FLOAT:
+		return n.floatGT(params)
+	case BOOLEAN:
+		return n.boolGT(params)
+	case STRING:
+		return n.stringGT(params)
+	}
+	// This case should be unreachable if the parser is working correctly!
+	panic(fmt.Sprintf("subexpression evaluated to impossible type %q", t))
+}
