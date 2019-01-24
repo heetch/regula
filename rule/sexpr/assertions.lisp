@@ -87,3 +87,20 @@
 (assert= #false (< #false #false))      ; Boolean, False < False = False
 (assert= #false (< #true #true))        ; Boolean, True < True = False
 (assert= #false (< #true #false))       ; Boolean, True < False = False
+(assert= #true (> 1 0))			; integer less than (true)
+(assert= #false (> 0 0))		; integer less than (false because equal)
+(assert= #false (> -1 0))		; integer less than (false because greater than)
+(assert= #true (> 0.2 0.1))		; integer less than (true)
+(assert= #false (> 0.1 0.1))		; integer less than (false because equal)
+(assert= #false (> 0 0.1))		; integer less than (false because greater than)
+(assert= #true (> "ZZ Top" "BeeGees"))	; String less than (ASCIIbetical)
+(assert= #true (> "Eagles" "Eagle"))	; String less than (Length)
+(assert= #true (> "a" "A"))		; String less than (Case)
+(assert= #true (> "b" "a" "A"))		; Multi-string less than
+(assert= #false (> "A" "A"))		; Identical strings, therefore no inequality
+(assert= #false (> "A" "AB"))		; Second string is less than the first, therefore false
+(assert= #false (> "A" "a" "A"))        ; Multi-string false case (last string is >)
+(assert= #true (> #true #false))        ; Boolean, False > True = True
+(assert= #false (> #false #false))      ; Boolean, False > False = False
+(assert= #false (> #true #true))        ; Boolean, True > True = False
+(assert= #false (> #false #true))       ; Boolean, True > False = False
