@@ -202,3 +202,173 @@ func TestLT(t *testing.T) {
 		})
 	}
 }
+
+func TestGT(t *testing.T) {
+
+	type testCase struct {
+		Name     string
+		Input    []rule.Expr
+		Expected bool
+	}
+
+	type typeSuite struct {
+		Name  string
+		Cases []testCase
+	}
+
+	ts := []typeSuite{
+		{
+			Name: "Integer",
+			Cases: []testCase{
+				{
+					Name:     "2 value, > ∴ True",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60)},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,> ∴ True",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60), rule.Int64Value(40)},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, < ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, < ∴ False",
+					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
+					Expected: false,
+				},
+			},
+		},
+		{
+			Name: "Float",
+			Cases: []testCase{
+				{
+					Name:     "2 value, > ∴ True",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2)},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,> ∴ True",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2), rule.Float64Value(80.1)},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, < ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, < ∴ False",
+					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
+					Expected: false,
+				},
+			},
+		},
+		{
+			Name: "String",
+			Cases: []testCase{
+				{
+					Name:     "Lowercase > Uppercase ∴ True",
+					Input:    []rule.Expr{rule.StringValue("a"), rule.StringValue("A")},
+					Expected: true,
+				},
+				{
+					Name:     "ASCIIbetical ∴ True",
+					Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("0")},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, > ∴ True",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("T-Rex")},
+					Expected: true,
+				},
+				{
+					Name:     "3 value,> ∴ True",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("Uriah Heap"), rule.StringValue("T-Rex")},
+					Expected: true,
+				},
+				{
+					Name:     "2 value, = ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, = ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
+					Expected: false,
+				},
+				{
+					Name:     "2 value, < ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
+					Expected: false,
+				},
+				{
+					Name:     "3 value, < ∴ False",
+					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
+					Expected: false,
+				},
+			},
+		},
+		{
+			Name: "Boolean",
+			Cases: []testCase{
+				{
+					Name:     "True = True ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
+					Expected: false,
+				},
+				{
+					Name:     "False = False ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
+					Expected: false,
+				},
+				{
+					Name:     "False < True ∴ False",
+					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
+					Expected: false,
+				},
+				{
+					Name:     "#True > False ∴ True",
+					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
+					Expected: true,
+				},
+			},
+		},
+	}
+
+	for _, s := range ts {
+		t.Run(s.Name, func(t *testing.T) {
+			for _, c := range s.Cases {
+				t.Run(c.Name, func(t *testing.T) {
+					gt := rule.GT(c.Input...)
+					val, err := gt.Eval(nil)
+					require.NoError(t, err)
+					require.True(t, val.Same(rule.BoolValue(c.Expected)))
+				})
+			}
+		})
+	}
+}
