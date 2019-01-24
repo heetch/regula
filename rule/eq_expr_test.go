@@ -33,342 +33,337 @@ func TestEq(t *testing.T) {
 	})
 }
 
-func TestLT(t *testing.T) {
+type testCase struct {
+	Name     string
+	Input    []rule.Expr
+	Expected bool
+}
 
-	type testCase struct {
-		Name     string
-		Input    []rule.Expr
-		Expected bool
-	}
+type typeSuite struct {
+	Name  string
+	Cases []testCase
+}
 
-	type typeSuite struct {
-		Name  string
-		Cases []testCase
-	}
+// Test each case in the typeSuite.
+func (ts typeSuite) Run(expr func(...rule.Expr) rule.Expr, t *testing.T) {
+	t.Run(ts.Name, func(t *testing.T) {
+		for _, c := range ts.Cases {
+			t.Run(c.Name, func(t *testing.T) {
+				ex := expr(c.Input...)
+				val, err := ex.Eval(nil)
+				require.NoError(t, err)
+				require.True(t, val.Same(rule.BoolValue(c.Expected)))
+			})
+		}
+	})
+}
 
-	ts := []typeSuite{
-		{
-			Name: "Integer",
-			Cases: []testCase{
-				{
-					Name:     "2 value, < ∴ True",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60)},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,< ∴ True",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60), rule.Int64Value(70)},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, > ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, > ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
-					Expected: false,
-				},
-			},
-		},
-		{
-			Name: "Float",
-			Cases: []testCase{
-				{
-					Name:     "2 value, < ∴ True",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2)},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,< ∴ True",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2), rule.Float64Value(50.3)},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, > ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, > ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
-					Expected: false,
-				},
-			},
-		},
-		{
-			Name: "String",
-			Cases: []testCase{
-				{
-					Name:     "Uppercase < Lowercase ∴ True",
-					Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("a")},
-					Expected: true,
-				},
-				{
-					Name:     "ASCIIbetical ∴ True",
-					Input:    []rule.Expr{rule.StringValue("0"), rule.StringValue("A")},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, < ∴ True",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees")},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,< ∴ True",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees"), rule.StringValue("Boney M")},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, > ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, > ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
-					Expected: false,
-				},
-			},
-		},
-		{
-			Name: "Boolean",
-			Cases: []testCase{
-				{
-					Name:     "True = True ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
-					Expected: false,
-				},
-				{
-					Name:     "False = False ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
-					Expected: false,
-				},
-				{
-					Name:     "False < True ∴ True",
-					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
-					Expected: true,
-				},
-				{
-					Name:     "True > False ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
-					Expected: false,
-				},
-			},
-		},
-	}
+type comparitorTest struct {
+	Expr   func(...rule.Expr) rule.Expr
+	Suites []typeSuite
+}
 
-	for _, s := range ts {
-		t.Run(s.Name, func(t *testing.T) {
-			for _, c := range s.Cases {
-				t.Run(c.Name, func(t *testing.T) {
-					lt := rule.LT(c.Input...)
-					val, err := lt.Eval(nil)
-					require.NoError(t, err)
-					require.True(t, val.Same(rule.BoolValue(c.Expected)))
-				})
-			}
-		})
+//
+func (ct comparitorTest) Run(t *testing.T) {
+	for _, s := range ct.Suites {
+		s.Run(ct.Expr, t)
 	}
 }
 
+func TestLT(t *testing.T) {
+	ct := comparitorTest{
+		Expr: rule.LT,
+		Suites: []typeSuite{
+			{
+				Name: "Integer",
+				Cases: []testCase{
+					{
+						Name:     "2 value, < ∴ True",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60)},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,< ∴ True",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(60), rule.Int64Value(70)},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, > ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, > ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(50), rule.Int64Value(50), rule.Int64Value(50)},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "Float",
+				Cases: []testCase{
+					{
+						Name:     "2 value, < ∴ True",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2)},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,< ∴ True",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.2), rule.Float64Value(50.3)},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, > ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, > ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(50.1), rule.Float64Value(50.1), rule.Float64Value(50.1)},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "String",
+				Cases: []testCase{
+					{
+						Name:     "Uppercase < Lowercase ∴ True",
+						Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("a")},
+						Expected: true,
+					},
+					{
+						Name:     "ASCIIbetical ∴ True",
+						Input:    []rule.Expr{rule.StringValue("0"), rule.StringValue("A")},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, < ∴ True",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees")},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,< ∴ True",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("Beegees"), rule.StringValue("Boney M")},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, > ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, > ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ABBA"), rule.StringValue("ABBA"), rule.StringValue("ABBA")},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "Boolean",
+				Cases: []testCase{
+					{
+						Name:     "True = True ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
+						Expected: false,
+					},
+					{
+						Name:     "False = False ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
+						Expected: false,
+					},
+					{
+						Name:     "False < True ∴ True",
+						Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
+						Expected: true,
+					},
+					{
+						Name:     "True > False ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
+						Expected: false,
+					},
+				},
+			},
+		},
+	}
+	ct.Run(t)
+}
+
 func TestGT(t *testing.T) {
-
-	type testCase struct {
-		Name     string
-		Input    []rule.Expr
-		Expected bool
-	}
-
-	type typeSuite struct {
-		Name  string
-		Cases []testCase
-	}
-
-	ts := []typeSuite{
-		{
-			Name: "Integer",
-			Cases: []testCase{
-				{
-					Name:     "2 value, > ∴ True",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60)},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,> ∴ True",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60), rule.Int64Value(40)},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, < ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, < ∴ False",
-					Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
-					Expected: false,
+	ct := comparitorTest{
+		Expr: rule.GT,
+		Suites: []typeSuite{
+			{
+				Name: "Integer",
+				Cases: []testCase{
+					{
+						Name:     "2 value, > ∴ True",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60)},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,> ∴ True",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(60), rule.Int64Value(40)},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, < ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, < ∴ False",
+						Input:    []rule.Expr{rule.Int64Value(80), rule.Int64Value(80), rule.Int64Value(80)},
+						Expected: false,
+					},
 				},
 			},
-		},
-		{
-			Name: "Float",
-			Cases: []testCase{
-				{
-					Name:     "2 value, > ∴ True",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2)},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,> ∴ True",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2), rule.Float64Value(80.1)},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, < ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, < ∴ False",
-					Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
-					Expected: false,
-				},
-			},
-		},
-		{
-			Name: "String",
-			Cases: []testCase{
-				{
-					Name:     "Lowercase > Uppercase ∴ True",
-					Input:    []rule.Expr{rule.StringValue("a"), rule.StringValue("A")},
-					Expected: true,
-				},
-				{
-					Name:     "ASCIIbetical ∴ True",
-					Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("0")},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, > ∴ True",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("T-Rex")},
-					Expected: true,
-				},
-				{
-					Name:     "3 value,> ∴ True",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("Uriah Heap"), rule.StringValue("T-Rex")},
-					Expected: true,
-				},
-				{
-					Name:     "2 value, = ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, = ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
-					Expected: false,
-				},
-				{
-					Name:     "2 value, < ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
-					Expected: false,
-				},
-				{
-					Name:     "3 value, < ∴ False",
-					Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
-					Expected: false,
+			{
+				Name: "Float",
+				Cases: []testCase{
+					{
+						Name:     "2 value, > ∴ True",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2)},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,> ∴ True",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.2), rule.Float64Value(80.1)},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, < ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7)},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, < ∴ False",
+						Input:    []rule.Expr{rule.Float64Value(80.7), rule.Float64Value(80.7), rule.Float64Value(80.7)},
+						Expected: false,
+					},
 				},
 			},
-		},
-		{
-			Name: "Boolean",
-			Cases: []testCase{
-				{
-					Name:     "True = True ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
-					Expected: false,
+			{
+				Name: "String",
+				Cases: []testCase{
+					{
+						Name:     "Lowercase > Uppercase ∴ True",
+						Input:    []rule.Expr{rule.StringValue("a"), rule.StringValue("A")},
+						Expected: true,
+					},
+					{
+						Name:     "ASCIIbetical ∴ True",
+						Input:    []rule.Expr{rule.StringValue("A"), rule.StringValue("0")},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, > ∴ True",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("T-Rex")},
+						Expected: true,
+					},
+					{
+						Name:     "3 value,> ∴ True",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("Uriah Heap"), rule.StringValue("T-Rex")},
+						Expected: true,
+					},
+					{
+						Name:     "2 value, = ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, = ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top")},
+						Expected: false,
+					},
+					{
+						Name:     "2 value, < ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
+						Expected: false,
+					},
+					{
+						Name:     "3 value, < ∴ False",
+						Input:    []rule.Expr{rule.StringValue("ZZ Top"), rule.StringValue("ZZ Top"), rule.StringValue("zz Top")},
+						Expected: false,
+					},
 				},
-				{
-					Name:     "False = False ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
-					Expected: false,
-				},
-				{
-					Name:     "False < True ∴ False",
-					Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
-					Expected: false,
-				},
-				{
-					Name:     "#True > False ∴ True",
-					Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
-					Expected: true,
+			},
+			{
+				Name: "Boolean",
+				Cases: []testCase{
+					{
+						Name:     "True = True ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(true)},
+						Expected: false,
+					},
+					{
+						Name:     "False = False ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(false)},
+						Expected: false,
+					},
+					{
+						Name:     "False < True ∴ False",
+						Input:    []rule.Expr{rule.BoolValue(false), rule.BoolValue(true)},
+						Expected: false,
+					},
+					{
+						Name:     "#True > False ∴ True",
+						Input:    []rule.Expr{rule.BoolValue(true), rule.BoolValue(false)},
+						Expected: true,
+					},
 				},
 			},
 		},
 	}
-
-	for _, s := range ts {
-		t.Run(s.Name, func(t *testing.T) {
-			for _, c := range s.Cases {
-				t.Run(c.Name, func(t *testing.T) {
-					gt := rule.GT(c.Input...)
-					val, err := gt.Eval(nil)
-					require.NoError(t, err)
-					require.True(t, val.Same(rule.BoolValue(c.Expected)))
-				})
-			}
-		})
-	}
+	ct.Run(t)
 }
