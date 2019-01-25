@@ -7,6 +7,14 @@
       item-key="name"
       open-on-click
     >
+      <template
+        slot="label"
+        slot-scope="{ item }"
+      >
+        <router-link :to="{name: 'latest-ruleset', params: {path: item.path}}">
+          <div class="v-treeview-node__label">{{ item.name }}</div>
+        </router-link>
+      </template>
     </v-treeview>
     <div class="new-ruleset mt-5">
       <router-link to="/rulesets/new">
@@ -24,38 +32,7 @@
 
 <script>
 import axios from 'axios';
-
-// turns a list of rulesets to a tree compatible with the TreeView component
-export const rulesetsToTree = (rulesets = []) => {
-  const tree = {};
-
-  // turns all ruleset paths into a single tree.
-  // ex: two rulesets a/b/c and a/b/d will produce the following tree
-  // {a: {b: {c: [], d: []}}}
-  rulesets.forEach(({ path }) => {
-    let node = tree;
-
-    path.split('/').forEach((chunk, idx, list) => {
-      // check if the chunk already exists in the tree
-      // to avoid overriding an existing node
-      if (!Object.prototype.hasOwnProperty.call(node, chunk)) {
-        node[chunk] = idx + 1 < list.length ? {} : [];
-      }
-
-      node = node[chunk];
-    });
-  });
-
-  // walk is a private function that walks through a given object and returns
-  // a tree compatible with the TreeView component
-  const walk = (o = {}) =>
-    Object.keys(o).map(k => ({
-      name: k,
-      ...(!Array.isArray(o[k]) && { children: walk(o[k]) }),
-    }));
-
-  return walk(tree);
-};
+import { rulesetsToTree } from './tree';
 
 export default {
   name: 'Sidebar',
@@ -88,6 +65,11 @@ export default {
   padding: 1em;
   overflow: auto;
   height: 100%;
+
+  a {
+    text-decoration: none;
+    color: rgba(0, 0, 0, 0.87);
+  }
 
   .new-ruleset a {
     text-decoration: none;
