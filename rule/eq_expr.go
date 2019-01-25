@@ -165,6 +165,45 @@ func (n *exprGT) Eval(params Params) (*Value, error) {
 	return gt(n.operands, params)
 }
 
+/////////////////
+// GTE operator //
+/////////////////
+
+type exprGTE struct {
+	operator
+}
+
+func newExprGTE() *exprGTE {
+	return &exprGTE{
+		operator: operator{
+			contract: Contract{
+				OpCode:     "gte",
+				ReturnType: BOOLEAN,
+				Terms: []Term{
+					{
+						Type:        ANY,
+						Cardinality: MANY,
+						Min:         2,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GTE creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a greater or equal
+// value compared to the next.
+func GTE(vN ...Expr) Expr {
+	e := newExprGTE()
+	e.consumeOperands(vN...)
+	return e
+}
+
+func (n *exprGTE) Eval(params Params) (*Value, error) {
+	return gte(n.operands, params)
+}
+
 /////////////////////////////////
 // Underlying type comparators //
 /////////////////////////////////
@@ -442,24 +481,6 @@ func lte(operands []Expr, params Params) (*Value, error) {
 	}
 	// This case should be unreachable if the parser is working correctly!
 	panic(fmt.Sprintf("subexpression evaluated to impossible type %q", t))
-
-	// res1, err := lt(operands, params)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// res2, err := eq(operands, params)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// b1, err := exprToBool(res1, params)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// b2, err := exprToBool(res2, params)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return BoolValue(b1 || b2), nil
 }
 
 // perform a less-than comparison on a sequence of integers
@@ -543,6 +564,112 @@ func stringLTE(operands []Expr, params Params) (*Value, error) {
 			return nil, err
 		}
 		if !(s0 <= s1) {
+			return BoolValue(false), nil
+		}
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than-or-equal comparison on a sequence of Exprs
+func gte(operands []Expr, params Params) (*Value, error) {
+	// Because of homogenisation during Parsing we know that all
+	// operands have the same type.
+	t := operands[0].Contract().ReturnType
+	switch t {
+	case INTEGER:
+		return integerGTE(operands, params)
+	case FLOAT:
+		return floatGTE(operands, params)
+	case BOOLEAN:
+		return boolGTE(operands, params)
+	case STRING:
+		return stringGTE(operands, params)
+	}
+	// This case should be unreachable if the parser is working correctly!
+	panic(fmt.Sprintf("subexpression evaluated to impossible type %q", t))
+}
+
+// perform a greater-than comparison on a sequence of integers
+func integerGTE(operands []Expr, params Params) (*Value, error) {
+	var i0, i1 int64
+	var err error
+
+	i0, err = exprToInt64(operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+
+	for j := 1; j < len(operands); j++ {
+		i1, err = exprToInt64(operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if !(i0 >= i1) {
+			return BoolValue(false), nil
+		}
+		i0 = i1
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of floats
+func floatGTE(operands []Expr, params Params) (*Value, error) {
+	var f0, f1 float64
+	var err error
+
+	f0, err = exprToFloat64(operands[0], params)
+	if err != nil {
+		return nil, err
+	}
+	for j := 1; j < len(operands); j++ {
+		f1, err = exprToFloat64(operands[j], params)
+		if err != nil {
+			return nil, err
+		}
+		if !(f0 >= f1) {
+			return BoolValue(false), nil
+		}
+		f0 = f1
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of bools
+func boolGTE(operands []Expr, params Params) (*Value, error) {
+	var b0, b1 bool
+	var err error
+
+	for i := 1; i < len(operands); i++ {
+		b0, err = exprToBool(operands[i-1], params)
+		if err != nil {
+			return nil, err
+		}
+		b1, err = exprToBool(operands[i], params)
+		if err != nil {
+			return nil, err
+		}
+		if !b0 && b1 {
+			return BoolValue(false), nil
+		}
+	}
+	return BoolValue(true), nil
+}
+
+// perform a greater-than comparison on a sequence of strings
+func stringGTE(operands []Expr, params Params) (*Value, error) {
+	var s0, s1 string
+	var err error
+
+	for i := 1; i < len(operands); i++ {
+		s0, err = exprToString(operands[i-1], params)
+		if err != nil {
+			return nil, err
+		}
+		s1, err = exprToString(operands[i], params)
+		if err != nil {
+			return nil, err
+		}
+		if !(s0 >= s1) {
 			return BoolValue(false), nil
 		}
 	}

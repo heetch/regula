@@ -632,3 +632,268 @@ func TestLTE(t *testing.T) {
 	}
 	ct.Run(t)
 }
+
+func TestGTE(t *testing.T) {
+	ct := comparitorTest{
+		Expr: rule.GTE,
+		Suites: []typeSuite{
+			{
+				Name: "Integer",
+				Cases: []testCase{
+					{
+						Name:     "2 params, a > b ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(100), rule.Int64Value(20)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a > b > c ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(100), rule.Int64Value(20), rule.Int64Value(10)},
+						Expected: true,
+					},
+					{
+						Name:     "2 params, a = b ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(100), rule.Int64Value(10)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a = b = c ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(100), rule.Int64Value(100), rule.Int64Value(100)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a > b = c ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(500), rule.Int64Value(100), rule.Int64Value(100)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a = b > c ∴ true",
+						Input:    []rule.Expr{rule.Int64Value(500), rule.Int64Value(500), rule.Int64Value(100)},
+						Expected: true,
+					},
+					{
+						Name:     "2 params, a < b ∴ false",
+						Input:    []rule.Expr{rule.Int64Value(10), rule.Int64Value(20)},
+						Expected: false,
+					},
+					{
+						Name:     "3 params, a = b < c ∴ false",
+						Input:    []rule.Expr{rule.Int64Value(100), rule.Int64Value(20), rule.Int64Value(100)},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "Float",
+				Cases: []testCase{
+					{
+						Name:     "2 params, a > b ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(100.9), rule.Float64Value(100.2)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a > b > c ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(100.9), rule.Float64Value(100.3), rule.Float64Value(100.1)},
+						Expected: true,
+					},
+					{
+						Name:     "2 params, a = b ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(100.9), rule.Float64Value(100.9)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a = b = c ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(100.9), rule.Float64Value(100.9), rule.Float64Value(100.9)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a > b = c ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(900.9), rule.Float64Value(100.9), rule.Float64Value(100.9)},
+						Expected: true,
+					},
+					{
+						Name:     "3 params, a = b > c ∴ true",
+						Input:    []rule.Expr{rule.Float64Value(900.9), rule.Float64Value(900.9), rule.Float64Value(100.9)},
+						Expected: true,
+					},
+					{
+						Name:     "2 params, a < b ∴ false",
+						Input:    []rule.Expr{rule.Float64Value(100.3), rule.Float64Value(100.5)},
+						Expected: false,
+					},
+					{
+						Name:     "3 params, a = b < c ∴ false",
+						Input:    []rule.Expr{rule.Float64Value(100.9), rule.Float64Value(100.2), rule.Float64Value(100.9)},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "String",
+				Cases: []testCase{
+					{
+						Name: "2 params, a > b ∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("Uriah Heap"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a > b > c∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("T-Rex"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a = b ∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b = c ∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a > b = c ∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("Uriah Heap"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b > c ∴ true",
+						Input: []rule.Expr{
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("Uriah Heap"),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a < b ∴ false",
+						Input: []rule.Expr{
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a = b < c ∴ false",
+						Input: []rule.Expr{
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a < b = c ∴ false",
+						Input: []rule.Expr{
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("ZZ-Top"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a < b < c ∴ false",
+						Input: []rule.Expr{
+							rule.StringValue("T-Rex"),
+							rule.StringValue("Uriah Heap"),
+							rule.StringValue("ZZ-Top"),
+						},
+						Expected: false,
+					},
+				},
+			},
+			{
+				Name: "Boolean",
+				Cases: []testCase{
+					{
+						Name: "2 params, a > b ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a = b ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b = c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a > b = c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b > c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a < b ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a = b < c ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a < b = c ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+						},
+						Expected: false,
+					},
+				},
+			},
+		},
+	}
+	ct.Run(t)
+}
