@@ -9,6 +9,8 @@ func init() {
 	Operators["eq"] = func() Operator { return newExprEq() }
 	Operators["lt"] = func() Operator { return newExprLT() }
 	Operators["gt"] = func() Operator { return newExprGT() }
+	Operators["lte"] = func() Operator { return newExprLTE() }
+	Operators["gte"] = func() Operator { return newExprGTE() }
 }
 
 /////////////////
