@@ -59,13 +59,13 @@
           >
             <template
               slot="selection"
-              slot-scope="{ item, index }"
+              slot-scope="{ item }"
             >
               <span>{{ item.value | capitalize}}</span>
             </template>
             <template
               slot="item"
-              slot-scope="{ item, index }"
+              slot-scope="{ item }"
             >
               <span>{{ item.value | capitalize }} </span>
               <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
@@ -111,13 +111,13 @@
       >
         <template
           slot="selection"
-          slot-scope="{ item, index }"
+          slot-scope="{ item }"
         >
           <span>{{ item.value | capitalize }}</span>
         </template>
         <template
           slot="item"
-          slot-scope="{ item, index }"
+          slot-scope="{ item }"
         >
           <span>{{ item.value | capitalize }} </span>
           <span class="grey--text caption">&nbsp;&nbsp;(e.g. {{ item.hint }})</span>
