@@ -22,5 +22,14 @@ export default new Router({
       component: () =>
         import(/* webpackChunkName: "newRuleset" */ './views/NewRuleset/NewRuleset.vue'),
     },
+    {
+      path: '/rulesets/:path/latest',
+      name: 'latest-ruleset',
+      // route level code-splitting
+      // this generates a separate chunk (latestRuleset.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () =>
+        import(/* webpackChunkName: "latestRuleset" */ './views/LatestRuleset/LatestRuleset.vue'),
+    },
   ],
 });
