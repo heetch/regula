@@ -554,6 +554,80 @@ func TestLTE(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "Boolean",
+				Cases: []testCase{
+					{
+						Name: "2 params, a < b ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a = b ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b = c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a < b = c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+						},
+						Expected: true,
+					},
+					{
+						Name: "3 params, a = b < c ∴ true",
+						Input: []rule.Expr{
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+							rule.BoolValue(true),
+						},
+						Expected: true,
+					},
+					{
+						Name: "2 params, a > b ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a = b > c ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+						},
+						Expected: false,
+					},
+					{
+						Name: "3 params, a > b = c ∴ false",
+						Input: []rule.Expr{
+							rule.BoolValue(true),
+							rule.BoolValue(false),
+							rule.BoolValue(false),
+						},
+						Expected: false,
+					},
+				},
+			},
 		},
 	}
 	ct.Run(t)
