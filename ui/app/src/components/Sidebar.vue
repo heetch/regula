@@ -5,15 +5,15 @@
       :items="items"
       activatable
       item-key="name"
-      open-on-click
     >
       <template
         slot="label"
         slot-scope="{ item }"
       >
-        <router-link :to="{name: 'latest-ruleset', params: {path: item.path}}">
-          <div class="v-treeview-node__label">{{ item.name }}</div>
-        </router-link>
+        <div
+          class="v-treeview-node__label"
+          @click="navigateToLatestRulesetPage(item)"
+        >{{ item.name }}</div>
       </template>
     </v-treeview>
     <div class="new-ruleset mt-5">
@@ -55,6 +55,10 @@ export default {
           this.items = rulesetsToTree(rulesets);
         })
         .catch(console.error);
+    },
+
+    navigateToLatestRulesetPage(item) {
+      this.$router.push(`/rulesets/${item.path}/latest`);
     },
   },
 };
