@@ -12,7 +12,7 @@
       >
         <div
           class="v-treeview-node__label"
-          @click="navigateToLatestRulesetPage(item)"
+          @click="item.path && navigateToLatestRulesetPage(item)"
         >{{ item.name }}</div>
       </template>
     </v-treeview>
