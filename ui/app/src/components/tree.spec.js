@@ -15,11 +15,9 @@ describe('tree.js buildTree', () => {
 
     expect(buildTree('b', ['a'], ['c', 'd'])).to.eql({
       name: 'b',
-      path: 'a/b',
       children: [
         {
           name: 'c',
-          path: 'a/b/c',
           children: [{ name: 'd', path: 'a/b/c/d' }],
         },
       ],
@@ -37,6 +35,9 @@ describe('tree.js rulesetsToTree', () => {
         path: 'a/c',
       },
       {
+        path: 'a/c/z',
+      },
+      {
         path: 'a/d/e',
       },
       {
@@ -46,7 +47,6 @@ describe('tree.js rulesetsToTree', () => {
     expect(items).to.eql([
       {
         name: 'a',
-        path: 'a',
         children: [
           {
             name: 'b',
@@ -55,10 +55,15 @@ describe('tree.js rulesetsToTree', () => {
           {
             name: 'c',
             path: 'a/c',
+            children: [
+              {
+                name: 'z',
+                path: 'a/c/z',
+              },
+            ],
           },
           {
             name: 'd',
-            path: 'a/d',
             children: [
               {
                 name: 'e',
