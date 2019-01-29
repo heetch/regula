@@ -3,8 +3,8 @@
     <v-treeview
       v-model="tree"
       :items="items"
-      activatable
       item-key="name"
+      open-on-click
     >
       <template
         slot="label"
