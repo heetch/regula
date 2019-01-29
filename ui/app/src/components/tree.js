@@ -1,6 +1,6 @@
 export const buildTree = (name = '', parents = [], rest = []) => ({
   name,
-  path: [...parents, name].join('/'),
+  ...(rest.length === 0 && { path: [...parents, name].join('/') }),
   ...(rest.length > 0 && {
     children: [buildTree(rest[0], [...parents, name], rest.slice(1))],
   }),
@@ -14,7 +14,10 @@ const mergeDupNodes = (trees = []) => {
 
   while (i < sorted.length) {
     if (prev && sorted[i].name === prev.name) {
-      prev.path = sorted[i].path || prev.path;
+      const path = sorted[i].path || prev.path;
+      if (path) {
+        prev.path = path;
+      }
       prev.children = mergeDupNodes([...(prev.children || []), ...(sorted[i].children || [])]);
     } else {
       prev = sorted[i];
