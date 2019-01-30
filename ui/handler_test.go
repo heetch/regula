@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/heetch/regula/mock"
+	regrule "github.com/heetch/regula/rule"
+	"github.com/heetch/regula/rule/sexpr"
 	"github.com/heetch/regula/store"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +32,8 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
     "signature": {
         "params": [
             {
-                "foo": "string"
+                "name": "foo",
+                "type": "string"
             }
         ],
         "returnType": "string"
@@ -70,7 +73,8 @@ func TestPOSTNewRuleset(t *testing.T) {
     "signature": {
         "params": [
             {
-                "foo": "string"
+                "name": "foo",
+                "type": "string"
             }
         ],
         "returnType": "string"
@@ -142,4 +146,76 @@ func TestInternalHandler(t *testing.T) {
 			return nil, errors.New("some error")
 		}
 	})
+}
+
+func TestConvertParams(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   []param
+		output  sexpr.Parameters
+		errText string
+	}{
+		{
+			name:  "single int64",
+			input: []param{{"name": "my-param", "type": "int64"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.INTEGER,
+			},
+		},
+		{
+			name:  "single float64",
+			input: []param{{"name": "my-param", "type": "float64"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.FLOAT,
+			},
+		},
+		{
+			name:  "single bool",
+			input: []param{{"name": "my-param", "type": "bool"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.BOOLEAN,
+			},
+		},
+		{
+			name:  "single string",
+			input: []param{{"name": "my-param", "type": "string"}},
+			output: sexpr.Parameters{
+				"my-param": regrule.STRING,
+			},
+		},
+		{
+			name: "multiple parameters",
+			input: []param{
+				{"name": "p1", "type": "int64"},
+				{"name": "p2", "type": "float64"},
+			},
+			output: sexpr.Parameters{
+				"p1": regrule.INTEGER,
+				"p2": regrule.FLOAT,
+			},
+		},
+		{
+			name:    "no name error",
+			input:   []param{{"type": "int64"}},
+			errText: "parameter 0 has no name",
+		},
+		{
+			name:    "no type error",
+			input:   []param{{"name": "foo"}},
+			errText: "parameter 0 (foo) has no type",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			result, err := convertParams(c.input)
+			if c.errText != "" {
+				require.EqualError(t, err, c.errText)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.output, result)
+
+		})
+	}
 }
