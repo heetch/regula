@@ -3,7 +3,6 @@ package rule
 import (
 	"errors"
 	"fmt"
-	"go/token"
 	"strconv"
 )
 
@@ -229,17 +228,9 @@ func (v *Value) Eval(Params) (*Value, error) {
 	return v, nil
 }
 
-func (v *Value) compare(op token.Token, other *Value) bool {
-	if op != token.EQL {
-		return false
-	}
-
-	return *v == *other
-}
-
 // Equal reports whether v and other represent the same value.
 func (v *Value) Equal(other *Value) bool {
-	return v.compare(token.EQL, other)
+	return *v == *other
 }
 
 // Operander is an interface for managing the operands of an
