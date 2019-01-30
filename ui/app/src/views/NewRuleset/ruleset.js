@@ -1,4 +1,4 @@
-const defaultRule = '(#true)';
+const defaultRule = '#true';
 
 // Describes rule S-Expression and return value.
 class Rule {
@@ -34,4 +34,3 @@ class Ruleset {
 }
 
 export { Signature, Param, Ruleset, Rule };
-
