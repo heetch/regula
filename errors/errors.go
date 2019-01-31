@@ -15,6 +15,9 @@ var (
 	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
 	ErrParamTypeMismatch = errors.New("parameter type mismatches")
 
+	// ErrSignatureMismatch is returned when a rule doesn't respect a given signature.
+	ErrSignatureMismatch = errors.New("signature mismatch")
+
 	// ErrParamNotFound is returned when a parameter is not defined.
 	ErrParamNotFound = errors.New("parameter not found")
 

@@ -71,22 +71,16 @@ func (r *Ruleset) Params() []rule.Param {
 }
 
 func (r *Ruleset) validate() error {
-	paramTypes := make(map[string]string)
-
 	for _, rl := range r.Rules {
-		if rl.Result.Type != r.Type {
-			return rerrors.ErrRulesetIncoherentType
+		if rl.Result.Type != r.Signature.ReturnType {
+			return rerrors.ErrSignatureMismatch
 		}
 
 		ps := rl.Params()
 		for _, p := range ps {
-			tp, ok := paramTypes[p.Name]
-			if ok {
-				if p.Type != tp {
-					return rerrors.ErrRulesetIncoherentType
-				}
-			} else {
-				paramTypes[p.Name] = p.Type
+			tp, ok := r.Signature.ParamTypes[p.Name]
+			if !ok || p.Type != tp {
+				return rerrors.ErrSignatureMismatch
 			}
 		}
 	}
