@@ -2,10 +2,10 @@ package regula
 
 import (
 	"encoding/json"
-	"errors"
 
 	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
+	"github.com/pkg/errors"
 )
 
 // A Ruleset is list of rules that must return the same type.
@@ -45,10 +45,6 @@ func (r *Ruleset) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if r.Type != "string" && r.Type != "bool" && r.Type != "int64" && r.Type != "float64" {
-		return errors.New("unsupported ruleset type")
-	}
-
 	return r.validate()
 }
 
@@ -71,6 +67,14 @@ func (r *Ruleset) Params() []rule.Param {
 }
 
 func (r *Ruleset) validate() error {
+	if r.Signature == nil {
+		return errors.New("missing signature")
+	}
+
+	if err := r.Signature.validate(); err != nil {
+		return err
+	}
+
 	for _, rl := range r.Rules {
 		if rl.Result.Type != r.Signature.ReturnType {
 			return rerrors.ErrSignatureMismatch
@@ -92,4 +96,23 @@ func (r *Ruleset) validate() error {
 type Signature struct {
 	ReturnType string
 	ParamTypes map[string]string
+}
+
+// validate return type and parameters types.
+func (s *Signature) validate() error {
+	switch s.ReturnType {
+	case "string", "bool", "int64", "float64":
+	default:
+		return errors.New("unsupported ruleset type")
+	}
+
+	for name, tp := range s.ParamTypes {
+		switch tp {
+		case "string", "bool", "int64", "float64":
+		default:
+			return errors.Errorf("unsupported param type '%s' for param '%s'", tp, name)
+		}
+	}
+
+	return nil
 }
