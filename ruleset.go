@@ -71,7 +71,7 @@ func (r *Ruleset) validate() error {
 		return errors.New("missing signature")
 	}
 
-	if err := r.Signature.validate(); err != nil {
+	if err := r.Signature.Validate(); err != nil {
 		return err
 	}
 
@@ -98,8 +98,21 @@ type Signature struct {
 	ParamTypes map[string]string
 }
 
-// validate return type and parameters types.
-func (s *Signature) validate() error {
+// NewSignature create
+func NewSignature(returnType string, paramTypes map[string]string) *Signature {
+	s := Signature{
+		ReturnType: returnType,
+		ParamTypes: paramTypes,
+	}
+	if s.ParamTypes == nil {
+		s.ParamTypes = make(map[string]string)
+	}
+
+	return &s
+}
+
+// Validate return type and parameters types.
+func (s *Signature) Validate() error {
 	switch s.ReturnType {
 	case "string", "bool", "int64", "float64":
 	default:
