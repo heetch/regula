@@ -10,46 +10,19 @@ import (
 
 // A Ruleset is list of rules that must return the same type.
 type Ruleset struct {
-	Rules []*rule.Rule `json:"rules"`
-	Type  string       `json:"type"`
+	Signature *Signature   `json:"signature"`
+	Rules     []*rule.Rule `json:"rules"`
 }
 
-// NewStringRuleset creates a ruleset which rules all return a string otherwise
-// ErrRulesetIncoherentType is returned.
-func NewStringRuleset(rules ...*rule.Rule) (*Ruleset, error) {
-	return newRuleset("string", rules...)
-}
-
-// NewBoolRuleset creates a ruleset which rules all return a bool otherwise
-// ErrRulesetIncoherentType is returned.
-func NewBoolRuleset(rules ...*rule.Rule) (*Ruleset, error) {
-	return newRuleset("bool", rules...)
-}
-
-// NewInt64Ruleset creates a ruleset which rules all return an int64 otherwise
-// ErrRulesetIncoherentType is returned.
-func NewInt64Ruleset(rules ...*rule.Rule) (*Ruleset, error) {
-	return newRuleset("int64", rules...)
-}
-
-// NewFloat64Ruleset creates a ruleset which rules all return an float64 otherwise
-// ErrRulesetIncoherentType is returned.
-func NewFloat64Ruleset(rules ...*rule.Rule) (*Ruleset, error) {
-	return newRuleset("float64", rules...)
-}
-
-func newRuleset(typ string, rules ...*rule.Rule) (*Ruleset, error) {
+// NewRuleset creates a ruleset after having made sure that all the rules
+// satisfy the given signature.
+func NewRuleset(sig *Signature, rules ...*rule.Rule) (*Ruleset, error) {
 	rs := Ruleset{
-		Rules: rules,
-		Type:  typ,
+		Signature: sig,
+		Rules:     rules,
 	}
 
-	err := rs.validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &rs, nil
+	return &rs, rs.validate()
 }
 
 // Eval evaluates every rule of the ruleset until one matches.
@@ -125,17 +98,4 @@ func (r *Ruleset) validate() error {
 type Signature struct {
 	ReturnType string
 	ParamTypes map[string]string
-}
-
-// NewSignature returns the Signature of the given ruleset.
-func NewSignature(rs *Ruleset) *Signature {
-	pt := make(map[string]string)
-	for _, p := range rs.Params() {
-		pt[p.Name] = p.Type
-	}
-
-	return &Signature{
-		ParamTypes: pt,
-		ReturnType: rs.Type,
-	}
 }
