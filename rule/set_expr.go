@@ -21,12 +21,8 @@ func newExprIn() *exprIn {
 				Terms: []Term{
 					{
 						Type:        ANY,
-						Cardinality: ONE,
-					},
-					{
-						Type:        ANY,
 						Cardinality: MANY,
-						Min:         1,
+						Min:         2,
 					},
 				},
 			},
