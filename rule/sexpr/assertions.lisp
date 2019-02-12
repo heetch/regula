@@ -188,3 +188,9 @@
 (assert= 3053630529 (fnv #true))		;  FNV Hash of a boolean (true)
 (assert= 2452206122 (fnv #false))		;  FNV Hash of a boolean (false)
 
+
+;;;;;;;;;;;;;;
+;; Grouping ;;
+;;;;;;;;;;;;;;
+(assert= #true (percentile "Bob Dylan" 96)) ; Check that "Bob Dylan" is in the the 96th percentile.
+(assert= #false (percentile "Joni Mitchell" 96)) ; Check that "Joni Mitchell" is not in the the 96th percentile.

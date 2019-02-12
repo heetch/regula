@@ -1,5 +1,9 @@
 package rule
 
+func init() {
+	Operators["percentile"] = func() Operator { return newExprPercentile() }
+}
+
 /////////////////////////
 // Percentile Operator //
 /////////////////////////
