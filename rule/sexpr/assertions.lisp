@@ -182,9 +182,9 @@
 ;;;;;;;;;;;;;
 ;; Hashing ;;
 ;;;;;;;;;;;;;
-(assert= 2179869525 (hash 1234))			;  Hash of an integer
-(assert= 566939793 (hash 1234.1234))			;  Hash of a Float64
-(assert= 536463009 (hash "travelling in style"))	;  Hash of a string
-(assert= 3053630529 (hash #true))			;  Hash of a boolean (true)
-(assert= 2452206122 (hash #false))			;  Hash of a boolean (false)
+(assert= 2179869525 (fnv 1234))			;  FNV Hash of an integer
+(assert= 566939793 (fnv 1234.1234))		;  FNV Hash of a Float64
+(assert= 536463009 (fnv "travelling in style"))	;  FNV Hash of a string
+(assert= 3053630529 (fnv #true))		;  FNV Hash of a boolean (true)
+(assert= 2452206122 (fnv #false))		;  FNV Hash of a boolean (false)
 
