@@ -49,135 +49,142 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Control operations ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
-(assert= 10 (let x 10 x))               ; Return bound value from let
-(assert= 10 (let x (+ 5 5) x))          ; Let identifier equal result of value form
-(assert= #true (let f #false (not f)))  ; Operate on bound value
-(assert= #true (if #true #true #false)) ; If returns the true-part when the condition is true
-(assert= #false (if #false #true #false)) ; If returns the false-part when the condition is false
-(assert= #true (if (= 2 (+ 1 1)) #true #false)) ; If tests can be nested expressions
-(assert= #true (if #true (= 2 (+ 1 1)) #false)) ; If true-parts can be nested expressions
-(assert= #false (if #false #true (= 3 (+ 1 1)))) ; If false-parts can be nested expressions
+(assert= 10 (let x 10 x))				; Return bound value from let
+(assert= 10 (let x (+ 5 5) x))				; Let identifier equal result of value form
+(assert= #true (let f #false (not f)))			; Operate on bound value
+(assert= #true (if #true #true #false))			; If returns the true-part when the condition is true
+(assert= #false (if #false #true #false))		; If returns the false-part when the condition is false
+(assert= #true (if (= 2 (+ 1 1)) #true #false))		; If tests can be nested expressions
+(assert= #true (if #true (= 2 (+ 1 1)) #false))		; If true-parts can be nested expressions
+(assert= #false (if #false #true (= 3 (+ 1 1))))	; If false-parts can be nested expressions
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Equality and compasion ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(assert= #true (= 1 1))			; Integer equaliyt
-(assert= #false (= 1 2))		; Integer inequality
-(assert= #true (= 1.1 1.1))		; Float equality
-(assert= #false (= 1.1 1.2))		; Float inequality
-(assert= #true (= "Foo" "Foo"))		; String equality
-(assert= #false (= "Foo" "foo"))	; String inequality (by case)
-(assert= #false (= "foo" "bar"))	; String inequality
-(assert= #true (= #true #true))		; Boolean equality
-(assert= #false (= #true #false))	; Boolean inequality
-(assert= #true (< 0 1))			; integer less than (true)
-(assert= #false (< 0 0))		; integer less than (false because equal)
-(assert= #false (< 0 -1))		; integer less than (false because greater than)
-(assert= #true (< 0.1 0.2))		; integer less than (true)
-(assert= #false (< 0.1 0.1))		; integer less than (false because equal)
-(assert= #false (< 0.1 0))		; integer less than (false because greater than)
-(assert= #true (< "Abba" "BeeGees"))	; String less than (ASCIIbetical)
-(assert= #true (< "Eagle" "Eagles"))	; String less than (Length)
-(assert= #true (< "A" "a"))		; String less than (Case)
-(assert= #true (< "A" "a" "b"))		; Multi-string less than
-(assert= #false (< "A" "A"))		; Identical strings, therefore no inequality
-(assert= #false (< "AB" "A"))		; Second string is less than the first, therefore false
-(assert= #false (< "A" "a" "A"))        ; Multi-string false case (last string is >)
-(assert= #true (< #false #true))        ; Boolean, False < True = True
-(assert= #false (< #false #false))      ; Boolean, False < False = False
-(assert= #false (< #true #true))        ; Boolean, True < True = False
-(assert= #false (< #true #false))       ; Boolean, True < False = False
-(assert= #true (> 1 0))			; integer greater than (true)
-(assert= #false (> 0 0))		; integer greater than (false because equal)
-(assert= #false (> -1 0))		; integer greater than (false because greater than)
-(assert= #true (> 0.2 0.1))		; integer greater than (true)
-(assert= #false (> 0.1 0.1))		; integer greater than (false because equal)
-(assert= #false (> 0 0.1))		; integer greater than (false because greater than)
-(assert= #true (> "ZZ Top" "BeeGees"))	; String greater than (ASCIIbetical)
-(assert= #true (> "Eagles" "Eagle"))	; String greater than (Length)
-(assert= #true (> "a" "A"))		; String greater than (Case)
-(assert= #true (> "b" "a" "A"))		; Multi-string greater than
-(assert= #false (> "A" "A"))		; Identical strings, therefore no inequality
-(assert= #false (> "A" "AB"))		; Second string is greater than the first, therefore false
-(assert= #false (> "A" "a" "A"))        ; Multi-string false case (last string is >)
-(assert= #true (> #true #false))        ; Boolean, False > True = True
-(assert= #false (> #false #false))      ; Boolean, False > False = False
-(assert= #false (> #true #true))        ; Boolean, True > True = False
-(assert= #false (> #false #true))	; Boolean, True > False = False
-(assert= #true (<= 2 3))		; Integer <= (true because less than)
-(assert= #true (<= 3 3))		; Integer <= (true because equal)
-(assert= #true (<= 2 3 3))		; Integer <= (true because a < b = c)
-(assert= #true (<= 3 3 4))		; Integer <= (true because a = b < c)
-(assert= #true (<= 2 3 4))		; Integer <= (true because a < b < c)
-(assert= #true (<= 2 2 2))		; Interger <= (true because a = b = c)
-(assert= #false (<= 3 2 2))		; Interger <= (false because a > b = c)
-(assert= #false (<= 2 3 2))		; Interger <= (false because a < b > c)
-(assert= #false (<= 3 3 2))		; Interger <= (false because a = b > c)
-(assert= #true (>= 1.3 1.2))		; Float >= (true because greater than)
-(assert= #true (>= 1.3 1.3))		; Float >= (true because equal)
-(assert= #true (>= 1.3 1.3 1.2))		; Float >= (true because a = b > c)
-(assert= #true (>= 1.3 1.2 1.2))		; Float >= (true because a > b = c)
-(assert= #true (>= 1.3 1.3 1.3))		; Float >= (true because a = b = c)
-(assert= #false (>= 1.2 1.3))		; Float >= (false because a < b)
-(assert= #false (>= 1.2 1.2 1.3))		; Float >= (false because a = b < c)
-(assert= #false (>= 1.1 1.2 1.3))		; Float >= (false because a < b < c)
-(assert= #false (>= 1.3 1.2 1.3))		; Float >= (false because a > b < c)
-(assert= #false (>= 1.1 1.2 1.2))		; Float >= (false because a < b = c)
-(assert= #false (>= 1.2 1.3 1.2))		; Float >= (false because a < b > c) 
-(assert= #true (<= 1.2 1.3))		; Float <= (true because less than)
-(assert= #true (<= 1.3 1.3))		; Float <= (true because equal)
-(assert= #true (<= 1.2 1.3 1.3))		; Float <= (true because a < b = c)
-(assert= #true (<= 1.3 1.3 4))		; Float <= (true because a = b < c)
-(assert= #true (<= 1.2 1.3 4))		; Float <= (true because a < b < c)
-(assert= #true (<= 1.2 1.2 1.2))		; Interger <= (true because a = b = c)
-(assert= #false (<= 1.3 1.2 1.2))		; Interger <= (false because a > b = c)
-(assert= #false (<= 1.2 1.3 1.2))		; Interger <= (false because a < b > c)
-(assert= #false (<= 1.3 1.3 1.2))		; Interger <= (false because a = b > c)
-(assert= #true (<= "ABBA" "Beegees"))           ; String <= (true because a < b)
-(assert= #true (<= "ABBA" "ABBA"))              ; String <= (true because a = b)
-(assert= #true (<= "ABBA" "Beegees" "Chumbawumba")) ; String <= (true because a < b < c)
-(assert= #true (<= "ABBA" "Beegees" "Beegees")) ; String <= (true because a < b = c)
-(assert= #true (<= "Beegees" "Beegees" "Beegees")) ; String <= (true because a = b = c)
-(assert= #false (<= "Beegees" "ABBA")) ; String <= (false because a > b)
-(assert= #false (<= "Beegees" "ABBA" "ABBA")) ; String <= (false because a > b = c)
-(assert= #false (<= "ABBA" "Beegees" "ABBA")) ; String <= (false because a < b > c)
-(assert= #false (<= "Beegees" "Beegees" "ABBA")) ; String <= (false because a = b > c)
-(assert= #true (<= #false #true)) ; Boolean <= (true because a < b)
-(assert= #true (<= #true #true)) ; Boolean <= (true because a = b)
-(assert= #true (<= #false #false #false)) ; Boolean <= (true because a = b = c)
-(assert= #true (<= #false #true #true)) ; Boolean <= (true because a < b = c)
-(assert= #true (<= #false #false #true)) ; Boolean <= (true because a = b < c)
-(assert= #false (<= #true #false)) ; Boolean <= (false because a > b)
-(assert= #false (<= #true #true #false)) ; Boolean <= (false because a = b > c)
-(assert= #false (<= #true #false #false)) ; Boolean <= (false because a > b = c)
-(assert= #true (>= 1.3 1.2))		; Float >= (true because greater than)
-(assert= #true (>= 1.3 1.3))		; Float >= (true because equal)
-(assert= #true (>= 1.3 1.3 1.2))		; Float >= (true because a = b > c)
-(assert= #true (>= 1.3 1.2 1.2))		; Float >= (true because a > b = c)
-(assert= #true (>= 1.3 1.3 1.3))		; Float >= (true because a = b = c)
-(assert= #false (>= 1.2 1.3))		; Float >= (false because a < b)
-(assert= #false (>= 1.2 1.2 1.3))		; Float >= (false because a = b < c)
-(assert= #false (>= 1.1 1.2 1.3))		; Float >= (false because a < b < c)
-(assert= #false (>= 1.3 1.2 1.3))		; Float >= (false because a > b < c)
-(assert= #false (>= 1.1 1.2 1.2))		; Float >= (false because a < b = c)
-(assert= #false (>= 1.2 1.3 1.2))		; Float >= (false because a < b > c) 
-(assert= #true (>= "ZZ-Top" "Uriah Heap"))           ; String >= (true because a > b)
-(assert= #true (>= "ZZ-Top" "ZZ-Top"))              ; String >= (true because a = b)
-(assert= #true (>= "ZZ-Top" "Uriah Heap" "T-Rex")) ; String >= (true because a > b > c)
-(assert= #true (>= "ZZ-Top" "Uriah Heap" "Uriah Heap")) ; String >= (true because a > b = c)
-(assert= #true (>= "Uriah Heap" "Uriah Heap" "Uriah Heap")) ; String >= (true because a = b = c)
-(assert= #false (>= "Uriah Heap" "ZZ-Top")) ; String >= (false because a > b)
-(assert= #false (>= "Uriah Heap" "ZZ-Top" "ZZ-Top")) ; String >= (false because a > b = c)
-(assert= #false (>= "ZZ-Top" "Uriah Heap" "ZZ-Top")) ; String >= (false because a > b > c)
-(assert= #false (>= "Uriah Heap" "Uriah Heap" "ZZ-Top")) ; String >= (false because a = b > c)
-(assert= #true (>= #true #false)) ; Boolean >= (true because a > b)
-(assert= #true (>= #false #false)) ; Boolean >= (true because a = b)
-(assert= #true (>= #true #true #true)) ; Boolean >= (true because a = b = c)
-(assert= #true (>= #true #false #false)) ; Boolean >= (true because a > b = c)
-(assert= #true (>= #true #true #false)) ; Boolean >= (true because a = b > c)
-(assert= #false (>= #false #true)) ; Boolean >= (false because a < b)
-(assert= #false (>= #false #false #true)) ; Boolean >= (false because a = b < c)
-(assert= #false (>= #false #true #true)) ; Boolean >= (false because a < b = c)
+(assert= #true (= 1 1))						; Integer equaliyt
+(assert= #false (= 1 2))					; Integer inequality
+(assert= #true (= 1.1 1.1))					; Float equality
+(assert= #false (= 1.1 1.2))					; Float inequality
+(assert= #true (= "Foo" "Foo"))					; String equality
+(assert= #false (= "Foo" "foo"))				; String inequality (by case)
+(assert= #false (= "foo" "bar"))				; String inequality
+(assert= #true (= #true #true))					; Boolean equality
+(assert= #false (= #true #false))				; Boolean inequality
+(assert= #true (< 0 1))						; integer less than (true)
+(assert= #false (< 0 0))					; integer less than (false because equal)
+(assert= #false (< 0 -1))					; integer less than (false because greater than)
+(assert= #true (< 0.1 0.2))					; integer less than (true)
+(assert= #false (< 0.1 0.1))					; integer less than (false because equal)
+(assert= #false (< 0.1 0))					; integer less than (false because greater than)
+(assert= #true (< "Abba" "BeeGees"))				; String less than (ASCIIbetical)
+(assert= #true (< "Eagle" "Eagles"))				; String less than (Length)
+(assert= #true (< "A" "a"))					; String less than (Case)
+(assert= #true (< "A" "a" "b"))					; Multi-string less than
+(assert= #false (< "A" "A"))					; Identical strings, therefore no inequality
+(assert= #false (< "AB" "A"))					; Second string is less than the first, therefore false
+(assert= #false (< "A" "a" "A"))				; Multi-string false case (last string is >)
+(assert= #true (< #false #true))				; Boolean, False < True = True
+(assert= #false (< #false #false))				; Boolean, False < False = False
+(assert= #false (< #true #true))				; Boolean, True < True = False
+(assert= #false (< #true #false))				; Boolean, True < False = False
+(assert= #true (> 1 0))						; integer greater than (true)
+(assert= #false (> 0 0))					; integer greater than (false because equal)
+(assert= #false (> -1 0))					; integer greater than (false because greater than)
+(assert= #true (> 0.2 0.1))					; integer greater than (true)
+(assert= #false (> 0.1 0.1))					; integer greater than (false because equal)
+(assert= #false (> 0 0.1))					; integer greater than (false because greater than)
+(assert= #true (> "ZZ Top" "BeeGees"))				; String greater than (ASCIIbetical)
+(assert= #true (> "Eagles" "Eagle"))				; String greater than (Length)
+(assert= #true (> "a" "A"))					; String greater than (Case)
+(assert= #true (> "b" "a" "A"))					; Multi-string greater than
+(assert= #false (> "A" "A"))					; Identical strings, therefore no inequality
+(assert= #false (> "A" "AB"))					; Second string is greater than the first, therefore false
+(assert= #false (> "A" "a" "A"))				; Multi-string false case (last string is >)
+(assert= #true (> #true #false))				; Boolean, False > True = True
+(assert= #false (> #false #false))				; Boolean, False > False = False
+(assert= #false (> #true #true))				; Boolean, True > True = False
+(assert= #false (> #false #true))				; Boolean, True > False = False
+(assert= #true (<= 2 3))					; Integer <= (true because less than)
+(assert= #true (<= 3 3))					; Integer <= (true because equal)
+(assert= #true (<= 2 3 3))					; Integer <= (true because a < b = c)
+(assert= #true (<= 3 3 4))					; Integer <= (true because a = b < c)
+(assert= #true (<= 2 3 4))					; Integer <= (true because a < b < c)
+(assert= #true (<= 2 2 2))					; Interger <= (true because a = b = c)
+(assert= #false (<= 3 2 2))					; Interger <= (false because a > b = c)
+(assert= #false (<= 2 3 2))					; Interger <= (false because a < b > c)
+(assert= #false (<= 3 3 2))					; Interger <= (false because a = b > c)
+(assert= #true (>= 1.3 1.2))					; Float >= (true because greater than)
+(assert= #true (>= 1.3 1.3))					; Float >= (true because equal)
+(assert= #true (>= 1.3 1.3 1.2))				; Float >= (true because a = b > c)
+(assert= #true (>= 1.3 1.2 1.2))				; Float >= (true because a > b = c)
+(assert= #true (>= 1.3 1.3 1.3))				; Float >= (true because a = b = c)
+(assert= #false (>= 1.2 1.3))					; Float >= (false because a < b)
+(assert= #false (>= 1.2 1.2 1.3))				; Float >= (false because a = b < c)
+(assert= #false (>= 1.1 1.2 1.3))				; Float >= (false because a < b < c)
+(assert= #false (>= 1.3 1.2 1.3))				; Float >= (false because a > b < c)
+(assert= #false (>= 1.1 1.2 1.2))				; Float >= (false because a < b = c)
+(assert= #false (>= 1.2 1.3 1.2))				; Float >= (false because a < b > c) 
+(assert= #true (<= 1.2 1.3))					; Float <= (true because less than)
+(assert= #true (<= 1.3 1.3))					; Float <= (true because equal)
+(assert= #true (<= 1.2 1.3 1.3))				; Float <= (true because a < b = c)
+(assert= #true (<= 1.3 1.3 4))					; Float <= (true because a = b < c)
+(assert= #true (<= 1.2 1.3 4))					; Float <= (true because a < b < c)
+(assert= #true (<= 1.2 1.2 1.2))				; Interger <= (true because a = b = c)
+(assert= #false (<= 1.3 1.2 1.2))				; Interger <= (false because a > b = c)
+(assert= #false (<= 1.2 1.3 1.2))				; Interger <= (false because a < b > c)
+(assert= #false (<= 1.3 1.3 1.2))				; Interger <= (false because a = b > c)
+(assert= #true (<= "ABBA" "Beegees"))				; String <= (true because a < b)
+(assert= #true (<= "ABBA" "ABBA"))				; String <= (true because a = b)
+(assert= #true (<= "ABBA" "Beegees" "Chumbawumba"))		; String <= (true because a < b < c)
+(assert= #true (<= "ABBA" "Beegees" "Beegees"))			; String <= (true because a < b = c)
+(assert= #true (<= "Beegees" "Beegees" "Beegees"))		; String <= (true because a = b = c)
+(assert= #false (<= "Beegees" "ABBA"))				; String <= (false because a > b)
+(assert= #false (<= "Beegees" "ABBA" "ABBA"))			; String <= (false because a > b = c)
+(assert= #false (<= "ABBA" "Beegees" "ABBA"))			; String <= (false because a < b > c)
+(assert= #false (<= "Beegees" "Beegees" "ABBA"))		; String <= (false because a = b > c)
+(assert= #true (<= #false #true))				; Boolean <= (true because a < b)
+(assert= #true (<= #true #true))				; Boolean <= (true because a = b)
+(assert= #true (<= #false #false #false))			; Boolean <= (true because a = b = c)
+(assert= #true (<= #false #true #true))				; Boolean <= (true because a < b = c)
+(assert= #true (<= #false #false #true))			; Boolean <= (true because a = b < c)
+(assert= #false (<= #true #false))				; Boolean <= (false because a > b)
+(assert= #false (<= #true #true #false))			; Boolean <= (false because a = b > c)
+(assert= #false (<= #true #false #false))			; Boolean <= (false because a > b = c)
+(assert= #true (>= 1.3 1.2))					; Float >= (true because greater than)
+(assert= #true (>= 1.3 1.3))					; Float >= (true because equal)
+(assert= #true (>= 1.3 1.3 1.2))				; Float >= (true because a = b > c)
+(assert= #true (>= 1.3 1.2 1.2))				; Float >= (true because a > b = c)
+(assert= #true (>= 1.3 1.3 1.3))				; Float >= (true because a = b = c)
+(assert= #false (>= 1.2 1.3))					; Float >= (false because a < b)
+(assert= #false (>= 1.2 1.2 1.3))				; Float >= (false because a = b < c)
+(assert= #false (>= 1.1 1.2 1.3))				; Float >= (false because a < b < c)
+(assert= #false (>= 1.3 1.2 1.3))				; Float >= (false because a > b < c)
+(assert= #false (>= 1.1 1.2 1.2))				; Float >= (false because a < b = c)
+(assert= #false (>= 1.2 1.3 1.2))				; Float >= (false because a < b > c) 
+(assert= #true (>= "ZZ-Top" "Uriah Heap"))			; String >= (true because a > b)
+(assert= #true (>= "ZZ-Top" "ZZ-Top"))				; String >= (true because a = b)
+(assert= #true (>= "ZZ-Top" "Uriah Heap" "T-Rex"))		; String >= (true because a > b > c)
+(assert= #true (>= "ZZ-Top" "Uriah Heap" "Uriah Heap"))		; String >= (true because a > b = c)
+(assert= #true (>= "Uriah Heap" "Uriah Heap" "Uriah Heap"))	; String >= (true because a = b = c)
+(assert= #false (>= "Uriah Heap" "ZZ-Top"))			; String >= (false because a > b)
+(assert= #false (>= "Uriah Heap" "ZZ-Top" "ZZ-Top"))		; String >= (false because a > b = c)
+(assert= #false (>= "ZZ-Top" "Uriah Heap" "ZZ-Top"))		; String >= (false because a > b > c)
+(assert= #false (>= "Uriah Heap" "Uriah Heap" "ZZ-Top"))	; String >= (false because a = b > c)
+(assert= #true (>= #true #false))				; Boolean >= (true because a > b)
+(assert= #true (>= #false #false))				; Boolean >= (true because a = b)
+(assert= #true (>= #true #true #true))				; Boolean >= (true because a = b = c)
+(assert= #true (>= #true #false #false))			; Boolean >= (true because a > b = c)
+(assert= #true (>= #true #true #false))				; Boolean >= (true because a = b > c)
+(assert= #false (>= #false #true))				; Boolean >= (false because a < b)
+(assert= #false (>= #false #false #true))			; Boolean >= (false because a = b < c)
+(assert= #false (>= #false #true #true))			; Boolean >= (false because a < b = c)
 
-
+;;;;;;;;;;;;;
+;; Hashing ;;
+;;;;;;;;;;;;;
+(assert= 2179869525 (hash 1234))			;  Hash of an integer
+(assert= 566939793 (hash 1234.1234))			;  Hash of a Float64
+(assert= 536463009 (hash "travelling in style"))	;  Hash of a string
+(assert= 3053630529 (hash #true))			;  Hash of a boolean (true)
+(assert= 2452206122 (hash #false))			;  Hash of a boolean (false)
 

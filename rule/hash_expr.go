@@ -3,7 +3,7 @@ package rule
 import "hash/fnv"
 
 func init() {
-
+	Operators["fnv"] = func() Operator { return newExprFNV() }
 }
 
 //////////////////
