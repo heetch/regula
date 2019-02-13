@@ -84,7 +84,7 @@ func newExprFloatToInt() *exprFloatToInt {
 	}
 }
 
-// FloatToInt is an operator that converts as Float64 into an Int64 type.
+// FloatToInt is an operator that converts a Float64 into an Int64 type.
 func FloatToInt(vN ...Expr) Expr {
 	e := newExprFloatToInt()
 	e.consumeOperands(vN...)
