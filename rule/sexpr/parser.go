@@ -31,6 +31,7 @@ func makeSymbolMap() *opCodeMap {
 	sm.mapSymbol("hash", "hash")
 	sm.mapSymbol("percentile", "percentile")
 	sm.mapSymbol("int->float", "intToFloat")
+	sm.mapSymbol("float->int", "floatToInt")
 	sm.mapSymbol("let", "let")
 	sm.mapSymbol("if", "if")
 	return sm
