@@ -37,9 +37,9 @@ func newExprIntToFloat() *exprIntToFloat {
 }
 
 // IntToFloat is an operator that converts as Float64 into an Int64 type.
-func IntToFloat(vN ...Expr) Expr {
+func IntToFloat(v Expr) Expr {
 	e := newExprIntToFloat()
-	e.consumeOperands(vN...)
+	e.consumeOperands(v)
 	return e
 }
 
@@ -85,9 +85,9 @@ func newExprFloatToInt() *exprFloatToInt {
 }
 
 // FloatToInt is an operator that converts a Float64 into an Int64 type.
-func FloatToInt(vN ...Expr) Expr {
+func FloatToInt(v Expr) Expr {
 	e := newExprFloatToInt()
-	e.consumeOperands(vN...)
+	e.consumeOperands(v)
 	return e
 }
 
