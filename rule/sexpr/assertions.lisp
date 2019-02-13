@@ -44,6 +44,8 @@
 ;;;;;;;;;;;;;;;;;;;;;
 (assert= 1.0 (int->float 1))		; Cast positive integer to float
 (assert= -12.0 (int->float -12))	; Cast negative integer to float
+(assert= 1 (float->int 1.5))		; Cast a positive float to an integer
+(assert= -13 (float->int -13.3939))	; Cast a negative float to an integer
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
