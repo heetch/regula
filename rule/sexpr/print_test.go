@@ -34,6 +34,16 @@ func TestPrint(t *testing.T) {
 			input:    rule.Float64Value(-72.8987),
 			expected: "-72.8987",
 		},
+		{
+			name:     "Boolean (true)",
+			input:    rule.BoolValue(true),
+			expected: "#true",
+		},
+		{
+			name:     "Boolean (false)",
+			input:    rule.BoolValue(false),
+			expected: "#false",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

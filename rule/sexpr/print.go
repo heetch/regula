@@ -22,6 +22,8 @@ func Print(e rule.Expr) (string, error) {
 				return "", err
 			}
 			return strconv.FormatFloat(f, 'f', -1, 64), nil
+		case "bool":
+			return "#" + v.Data, nil
 		}
 	}
 	return "", nil
