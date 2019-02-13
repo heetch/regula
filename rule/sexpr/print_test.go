@@ -29,6 +29,11 @@ func TestPrint(t *testing.T) {
 			input:    rule.Float64Value(72.8987),
 			expected: "72.8987",
 		},
+		{
+			name:     "Negative Float64Value",
+			input:    rule.Float64Value(-72.8987),
+			expected: "-72.8987",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
