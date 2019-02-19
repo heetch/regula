@@ -402,3 +402,51 @@ func TestToProtobufRuleset(t *testing.T) {
 		})
 	}
 }
+
+func TestToProtobufSignature(t *testing.T) {
+	sig := &regula.Signature{
+		ReturnType: "bool",
+		ParamTypes: map[string]string{
+			"1st": "bool",
+			"2nd": "string",
+			"3rd": "int64",
+		},
+	}
+
+	pbsig := toProtobufSignature(sig)
+
+	exp := &pb.Signature{
+		ReturnType: "bool",
+		ParamTypes: map[string]string{
+			"1st": "bool",
+			"2nd": "string",
+			"3rd": "int64",
+		},
+	}
+
+	require.Equal(t, exp, pbsig)
+}
+
+func TestFromProtobufSignature(t *testing.T) {
+	pbsig := &pb.Signature{
+		ReturnType: "bool",
+		ParamTypes: map[string]string{
+			"1st": "bool",
+			"2nd": "string",
+			"3rd": "int64",
+		},
+	}
+
+	sig := fromProtobufSignature(pbsig)
+
+	exp := &regula.Signature{
+		ReturnType: "bool",
+		ParamTypes: map[string]string{
+			"1st": "bool",
+			"2nd": "string",
+			"3rd": "int64",
+		},
+	}
+
+	require.Equal(t, exp, sig)
+}
