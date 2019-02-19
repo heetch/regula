@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
@@ -11,28 +10,27 @@ import (
 
 // toProtobufExpr creates a protobuf Expr from a rule.Expr.
 func toProtobufExpr(expr rule.Expr) *pb.Expr {
-	switch v := expr.(type) {
+	switch e := expr.(type) {
 	case *rule.Value:
-		fmt.Printf("op it's value of type %s and kind %s and value %s\n", v.Type, v.Kind, v.Data)
-		pv := &pb.Value{}
-		pv.Type = v.Type
-		pv.Kind = v.Kind
-		pv.Data = v.Data
+		v := &pb.Value{
+			Type: e.Type,
+			Kind: e.Kind,
+			Data: e.Data,
+		}
 
-		pe := &pb.Expr{}
-		pe.Expr = &pb.Expr_Value{Value: pv}
-		return pe
-
+		return &pb.Expr{
+			Expr: &pb.Expr_Value{Value: v},
+		}
 	case *rule.Param:
-		fmt.Printf("op it's param of type %s and kind %s and name %s\n", v.Type, v.Kind, v.Name)
-		pp := &pb.Param{}
-		pp.Kind = v.Kind
-		pp.Type = v.Type
-		pp.Name = v.Name
+		p := &pb.Param{
+			Kind: e.Kind,
+			Type: e.Type,
+			Name: e.Name,
+		}
 
-		pe := &pb.Expr{}
-		pe.Expr = &pb.Expr_Param{Param: pp}
-		return pe
+		return &pb.Expr{
+			Expr: &pb.Expr_Param{Param: p},
+		}
 	}
 
 	var (
@@ -40,19 +38,21 @@ func toProtobufExpr(expr rule.Expr) *pb.Expr {
 		ok  bool
 	)
 	if ope, ok = expr.(rule.Operander); !ok {
-		log.Fatal("wesh ?????")
+		// there is something very weird, a rule.Expr which is not a rule.Value nor a rule.Param nor a rule.Operander
+		// let's panic...
+		panic(fmt.Sprintf("cannot create a pb.Expr - unexpected type: %T", expr))
 	}
 
-	po := &pb.Operator{}
-	po.Kind = expr.Contract().OpCode
-
+	o := &pb.Operator{
+		Kind: expr.Contract().OpCode,
+	}
 	for _, op := range ope.Operands() {
-		po.Operands = append(po.Operands, toProtobufExpr(op))
+		o.Operands = append(o.Operands, toProtobufExpr(op))
 	}
 
-	peo := &pb.Expr_Operator{Operator: po}
-	pee := &pb.Expr{Expr: peo}
-	return pee
+	return &pb.Expr{
+		Expr: &pb.Expr_Operator{Operator: o},
+	}
 }
 
 // toProtobufValue creates a protobuf Value from a rule.Value.
@@ -66,19 +66,18 @@ func toProtobufValue(val *rule.Value) *pb.Value {
 
 // toProtobufRuleset creates a protobuf Ruleset from a regula.Ruleset.
 func toProtobufRuleset(rs *regula.Ruleset) *pb.Ruleset {
-	prs := &pb.Ruleset{
+	pbrs := &pb.Ruleset{
 		Type: rs.Type,
 	}
 
 	for _, r := range rs.Rules {
-		pr := &pb.Rule{}
-
-		pr.Expr = toProtobufExpr(r.Expr)
-		pr.Result = toProtobufValue(r.Result)
-
-		prs.Rules = append(prs.Rules, pr)
+		pbr := &pb.Rule{
+			Expr:   toProtobufExpr(r.Expr),
+			Result: toProtobufValue(r.Result),
+		}
+		pbrs.Rules = append(pbrs.Rules, pbr)
 	}
-	return prs
+	return pbrs
 }
 
 // fromProtobufValue creates a rule.Value from a protobuf Value.
@@ -91,42 +90,46 @@ func fromProtobufValue(v *pb.Value) *rule.Value {
 }
 
 // fromProtobufExpr creates a rule.Expr from a protobuf Expr.
-func fromProtobufExpr(e *pb.Expr) rule.Expr {
-	fmt.Println(e)
-	switch ee := e.Expr.(type) {
+func fromProtobufExpr(expr *pb.Expr) rule.Expr {
+	switch e := expr.Expr.(type) {
 	case *pb.Expr_Value:
-		fmt.Println("c'est une Value")
-		v := &rule.Value{
-			Kind: ee.Value.Kind,
-			Type: ee.Value.Type,
-			Data: ee.Value.Data,
+		return &rule.Value{
+			Kind: e.Value.Kind,
+			Type: e.Value.Type,
+			Data: e.Value.Data,
 		}
-		// operands = append(operands, v)
-		return v
 	case *pb.Expr_Param:
-		fmt.Println("c'est un param")
-		p := &rule.Param{
-			Kind: ee.Param.Kind,
-			Type: ee.Param.Type,
-			Name: ee.Param.Name,
+		return &rule.Param{
+			Kind: e.Param.Kind,
+			Type: e.Param.Type,
+			Name: e.Param.Name,
 		}
-		return p
 	}
 
-	// fmt.Printf("C'est le type %T, donc on recurse poto!", ee)
 	var (
 		pbop *pb.Expr_Operator
 		ok   bool
 	)
-	if pbop, ok = e.Expr.(*pb.Expr_Operator); !ok {
-		log.Fatal("keskispass?")
+	if pbop, ok = expr.Expr.(*pb.Expr_Operator); !ok {
+		// there is something very weird, a pb.Expr which is not a pb.Expr_Value nor a pb.Expr_Param nor a pb.Expr_Operator
+		// let's panic...
+		panic(fmt.Sprintf("cannot create a rule.Expr - unexpected type: %T", expr))
 	}
 
-	// var operands []rule.Expr
-	ope, _ := rule.GetOperator(pbop.Operator.Kind)
+	ope, err := rule.GetOperator(pbop.Operator.Kind)
+	if err != nil {
+		// every operator should be known at this place otherwise it's not a good sign
+		// let's panic...
+		panic(err.Error())
+	}
 
 	for _, o := range pbop.Operator.Operands {
-		_ = ope.PushExpr(fromProtobufExpr(o))
+		err := ope.PushExpr(fromProtobufExpr(o))
+		if err != nil {
+			// each operands should fulfil the appropriate Term of the Contract at this place otherwise it's not a good sign
+			// let's panic
+			panic(err.Error())
+		}
 	}
 
 	return ope
@@ -134,15 +137,15 @@ func fromProtobufExpr(e *pb.Expr) rule.Expr {
 
 // fromProtobufRuleset creates a regula.Ruleset from a protobuf Ruleset.
 func fromProtobufRuleset(pbrs *pb.Ruleset) *regula.Ruleset {
-	fmt.Println("#$######$#$#$#$#$#$#$#$#")
-
-	rs := &regula.Ruleset{}
-	rs.Type = pbrs.Type
+	rs := &regula.Ruleset{
+		Type: pbrs.Type,
+	}
 
 	for _, r := range pbrs.Rules {
-		rr := &rule.Rule{}
-		rr.Result = fromProtobufValue(r.Result)
-		rr.Expr = fromProtobufExpr(r.Expr)
+		rr := &rule.Rule{
+			Expr:   fromProtobufExpr(r.Expr),
+			Result: fromProtobufValue(r.Result),
+		}
 		rs.Rules = append(rs.Rules, rr)
 	}
 	return rs
