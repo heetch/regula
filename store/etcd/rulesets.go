@@ -14,10 +14,12 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
 	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
+	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
@@ -66,10 +68,13 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset versions list")
 		return nil, store.ErrNotFound
 	}
-	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Versions)
+
+	var v pb.Versions
+	err = proto.Unmarshal(resp.Kvs[0].Value, &v)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal versions")
 	}
+	entry.Versions = v.Versions
 
 	resp, err = s.Client.KV.Get(ctx, s.signaturesPath(path))
 	if err != nil {
@@ -79,10 +84,13 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 		s.Logger.Debug().Str("path", path).Msg("cannot find ruleset signature")
 		return nil, store.ErrNotFound
 	}
-	err = json.Unmarshal(resp.Kvs[0].Value, &entry.Signature)
+
+	var sig pb.Signature
+	err = proto.Unmarshal(resp.Kvs[0].Value, &sig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal signature")
 	}
+	entry.Signature = fromProtobufSignature(&sig)
 
 	return entry, nil
 }
@@ -191,13 +199,20 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 
 	// Responses handles responses for each OpGet calls in the transaction.
 	for i, resps := range txnresp.Responses {
+		var pbrse pb.RulesetEntry
 		rr := resps.GetResponseRange()
 
 		// Given that we are getting a leaf in the tree (a ruleset entry), we are sure that we will always have one value in the Kvs slice.
-		err = json.Unmarshal(rr.Kvs[0].Value, &entries.Entries[i])
+		err = proto.Unmarshal(rr.Kvs[0].Value, &pbrse)
 		if err != nil {
 			s.Logger.Debug().Err(err).Bytes("entry", rr.Kvs[0].Value).Msg("list: unmarshalling failed")
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
+		}
+
+		entries.Entries[i] = store.RulesetEntry{
+			Path:    pbrse.Path,
+			Version: pbrse.Version,
+			Ruleset: fromProtobufRuleset(pbrse.Ruleset),
 		}
 	}
 
@@ -230,10 +245,18 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
 	for i, pair := range resp.Kvs {
-		err = json.Unmarshal(pair.Value, &entries.Entries[i])
+		var pbrse pb.RulesetEntry
+
+		err = proto.Unmarshal(pair.Value, &pbrse)
 		if err != nil {
 			s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
+		}
+
+		entries.Entries[i] = store.RulesetEntry{
+			Path:    pbrse.Path,
+			Version: pbrse.Version,
+			Ruleset: fromProtobufRuleset(pbrse.Ruleset),
 		}
 	}
 
@@ -266,14 +289,18 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	var entry store.RulesetEntry
-	err = json.Unmarshal(resp.Kvs[0].Value, &entry)
+	var entry pb.RulesetEntry
+	err = proto.Unmarshal(resp.Kvs[0].Value, &entry)
 	if err != nil {
 		s.Logger.Debug().Err(err).Bytes("entry", resp.Kvs[0].Value).Msg("latest: unmarshalling failed")
 		return nil, errors.Wrap(err, "failed to unmarshal entry")
 	}
 
-	return &entry, nil
+	return &store.RulesetEntry{
+		Path:    entry.Path,
+		Version: entry.Version,
+		Ruleset: fromProtobufRuleset(entry.Ruleset),
+	}, nil
 }
 
 // OneByVersion returns the ruleset entry which corresponds to the given path at the given version.
@@ -293,35 +320,55 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 		return nil, store.ErrNotFound
 	}
 
-	var entry store.RulesetEntry
-	err = json.Unmarshal(resp.Kvs[0].Value, &entry)
+	var entry pb.RulesetEntry
+	err = proto.Unmarshal(resp.Kvs[0].Value, &entry)
 	if err != nil {
 		s.Logger.Debug().Err(err).Bytes("entry", resp.Kvs[0].Value).Msg("one-by-version: unmarshalling failed")
 		return nil, errors.Wrap(err, "failed to unmarshal entry")
 	}
 
-	return &entry, nil
+	return &store.RulesetEntry{
+		Path:    entry.Path,
+		Version: entry.Version,
+		Ruleset: fromProtobufRuleset(entry.Ruleset),
+	}, nil
 }
 
 // putVersions stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
 func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
-	var versions []string
+	var v pb.Versions
 
-	v := stm.Get(s.versionsPath(path))
-	if v != "" {
-		err := json.Unmarshal([]byte(v), &versions)
+	res := stm.Get(s.versionsPath(path))
+	if res != "" {
+		err := proto.Unmarshal([]byte(res), &v)
 		if err != nil {
 			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
 			return errors.Wrap(err, "failed to unmarshal versions")
 		}
 	}
 
-	versions = append(versions, version)
-	bvs, err := json.Marshal(versions)
+	v.Versions = append(v.Versions, version)
+	bvs, err := proto.Marshal(&v)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode versions")
 	}
 	stm.Put(s.versionsPath(path), string(bvs))
+
+	return nil
+}
+
+func (s *RulesetService) putEntry(stm concurrency.STM, rse *store.RulesetEntry) error {
+	pbrse := pb.RulesetEntry{
+		Path:    rse.Path,
+		Version: rse.Version,
+		Ruleset: toProtobufRuleset(rse.Ruleset),
+	}
+
+	b, err := proto.Marshal(&pbrse)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode entry")
+	}
+	stm.Put(s.entriesPath(rse.Path, rse.Version), string(b))
 
 	return nil
 }
@@ -348,7 +395,8 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		if stm.Get(s.checksumsPath(path)) == checksum {
 			v := stm.Get(stm.Get(s.latestRulesetPath(path)))
 
-			err = json.Unmarshal([]byte(v), &entry)
+			var pbrse pb.RulesetEntry
+			err = proto.Unmarshal([]byte(v), &pbrse)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("entry", v).Msg("put: entry unmarshalling failed")
 				return errors.Wrap(err, "failed to unmarshal entry")
@@ -356,20 +404,25 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 
 			s.Logger.Debug().Str("path", path).Msg("ruleset didn't change, returning without creating a new version")
 
+			entry.Path = pbrse.Path
+			entry.Version = pbrse.Version
+			entry.Ruleset = fromProtobufRuleset(pbrse.Ruleset)
+
 			return store.ErrNotModified
 		}
 
 		// make sure signature didn't change
 		rawSig := stm.Get(s.signaturesPath(path))
 		if rawSig != "" {
-			var curSig regula.Signature
-			err := json.Unmarshal([]byte(rawSig), &curSig)
+			var pbsig pb.Signature
+
+			err := proto.Unmarshal([]byte(rawSig), &pbsig)
 			if err != nil {
 				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = compareSignature(&curSig, sig)
+			err = compareSignature(fromProtobufSignature(&pbsig), sig)
 			if err != nil {
 				return err
 			}
@@ -377,12 +430,12 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 
 		// if no signature found, create one
 		if rawSig == "" {
-			v, err := json.Marshal(&sig)
+			b, err := proto.Marshal(toProtobufSignature(sig))
 			if err != nil {
 				return errors.Wrap(err, "failed to encode updated signature")
 			}
 
-			stm.Put(s.signaturesPath(path), string(v))
+			stm.Put(s.signaturesPath(path), string(b))
 		}
 
 		// update checksum
@@ -395,7 +448,10 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		}
 		version := k.String()
 
-		s.putVersions(stm, path, version)
+		err = s.putVersions(stm, path, version)
+		if err != nil {
+			return err
+		}
 
 		re := store.RulesetEntry{
 			Path:    path,
@@ -403,12 +459,10 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 			Ruleset: ruleset,
 		}
 
-		raw, err := json.Marshal(&re)
+		err = s.putEntry(stm, &re)
 		if err != nil {
-			return errors.Wrap(err, "failed to encode entry")
+			return err
 		}
-
-		stm.Put(s.entriesPath(path, version), string(raw))
 
 		// update the pointer to the latest ruleset
 		stm.Put(s.latestRulesetPath(path), s.entriesPath(path, version))
@@ -559,15 +613,15 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					continue
 				}
 
-				var e store.RulesetEntry
-				err := json.Unmarshal(ev.Kv.Value, &e)
+				var pbrse pb.RulesetEntry
+				err := proto.Unmarshal(ev.Kv.Value, &pbrse)
 				if err != nil {
 					s.Logger.Debug().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed")
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
-				events[i].Path = e.Path
-				events[i].Ruleset = e.Ruleset
-				events[i].Version = e.Version
+				events[i].Path = pbrse.Path
+				events[i].Ruleset = fromProtobufRuleset(pbrse.Ruleset)
+				events[i].Version = pbrse.Version
 			}
 
 			return &store.RulesetEvents{
