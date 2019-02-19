@@ -195,6 +195,99 @@ func TestFromProtobufRuleset(t *testing.T) {
 				return rs
 			},
 		},
+		{
+			name: "Two rules",
+			pb: &pb.Ruleset{
+				Type: "float64",
+				Rules: []*pb.Rule{
+					{
+						Result: &pb.Value{
+							Data: "42.420000",
+							Kind: "value",
+							Type: "float64",
+						},
+						Expr: &pb.Expr{
+							Expr: &pb.Expr_Operator{
+								Operator: &pb.Operator{
+									Kind: "and",
+									Operands: []*pb.Expr{
+										{
+											Expr: &pb.Expr_Operator{
+												Operator: &pb.Operator{
+													Kind: "not",
+													Operands: []*pb.Expr{
+														{
+															Expr: &pb.Expr_Value{
+																Value: &pb.Value{
+																	Data: "false",
+																	Kind: "value",
+																	Type: "bool",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Result: &pb.Value{
+							Data: "21.210000",
+							Kind: "value",
+							Type: "float64",
+						},
+						Expr: &pb.Expr{
+							Expr: &pb.Expr_Operator{
+								Operator: &pb.Operator{
+									Kind: "and",
+									Operands: []*pb.Expr{
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "1st-param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "2nd-param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			exp: func() *regula.Ruleset {
+				rs, err := regula.NewFloat64Ruleset(
+					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
+					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
+				)
+				require.NoError(t, err)
+				return rs
+			},
+		},
 	}
 
 	for _, c := range cases {
@@ -379,6 +472,99 @@ func TestToProtobufRuleset(t *testing.T) {
 											Expr: &pb.Expr_Param{
 												Param: &pb.Param{
 													Name: "param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Two rules",
+			rs: func() *regula.Ruleset {
+				rs, err := regula.NewFloat64Ruleset(
+					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
+					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
+				)
+				require.NoError(t, err)
+				return rs
+			},
+			exp: &pb.Ruleset{
+				Type: "float64",
+				Rules: []*pb.Rule{
+					{
+						Result: &pb.Value{
+							Data: "42.420000",
+							Kind: "value",
+							Type: "float64",
+						},
+						Expr: &pb.Expr{
+							Expr: &pb.Expr_Operator{
+								Operator: &pb.Operator{
+									Kind: "and",
+									Operands: []*pb.Expr{
+										{
+											Expr: &pb.Expr_Operator{
+												Operator: &pb.Operator{
+													Kind: "not",
+													Operands: []*pb.Expr{
+														{
+															Expr: &pb.Expr_Value{
+																Value: &pb.Value{
+																	Data: "false",
+																	Kind: "value",
+																	Type: "bool",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Result: &pb.Value{
+							Data: "21.210000",
+							Kind: "value",
+							Type: "float64",
+						},
+						Expr: &pb.Expr{
+							Expr: &pb.Expr_Operator{
+								Operator: &pb.Operator{
+									Kind: "and",
+									Operands: []*pb.Expr{
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "1st-param",
+													Kind: "param",
+													Type: "bool",
+												},
+											},
+										},
+										{
+											Expr: &pb.Expr_Param{
+												Param: &pb.Param{
+													Name: "2nd-param",
 													Kind: "param",
 													Type: "bool",
 												},
