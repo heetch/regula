@@ -1,21 +1,16 @@
 package etcd
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
-	"unsafe"
 
-	proto "github.com/golang/protobuf/proto"
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
 	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/stretchr/testify/require"
 )
 
-// TestFromProtobufTypes tests that the transformation from a protobuf ruleset to a regula ruleset works well.
-func TestFromProtobufTypes(t *testing.T) {
+// TestFromProtobufRuleset tests that the transformation from a protobuf ruleset to a regula ruleset works well.
+func TestFromProtobufRuleset(t *testing.T) {
 	cases := []struct {
 		name string
 		pb   *pb.Ruleset
@@ -204,40 +199,15 @@ func TestFromProtobufTypes(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			actRs := fromProtobufRuleset(c.pb)
-			// require.NoError(t, err)
-			require.Equal(t, c.exp(), actRs)
+			var rs *regula.Ruleset
+			require.NotPanics(t, func() { rs = fromProtobufRuleset(c.pb) })
+			require.Equal(t, c.exp(), rs)
 		})
 	}
 }
 
-func TestToProtobufTypes(t *testing.T) {
-	// rs, err := regula.NewBoolRuleset(rule.New(rule.And(rule.Eq(rule.StringParam("wesh-string-param"), rule.StringValue("wesh-string-value")), rule.Eq(rule.True(), rule.BoolParam("bool-param")), rule.BoolValue(true)), rule.BoolValue(true)))
-	rs, err := regula.NewBoolRuleset(rule.New(rule.And(rule.True(), rule.Eq(rule.True(), rule.BoolParam("wesh-param"))), rule.BoolValue(true)))
-	require.NoError(t, err)
-
-	prs := toProtobufRuleset(rs)
-	fmt.Println(prs)
-
-	pre := pb.RulesetEntry{
-		Path:    "a/b/c",
-		Version: "abc123",
-		Ruleset: prs,
-	}
-	b, err := proto.Marshal(&pre)
-	require.NoError(t, err)
-
-	fmt.Printf("proto: %T, %d\n", b, unsafe.Sizeof(string(b)))
-
-	re := store.RulesetEntry{
-		Path:    "a/b/c",
-		Version: "abc123",
-		Ruleset: rs,
-	}
-	raw, err := json.Marshal(&re)
-	require.NoError(t, err)
-	fmt.Printf("json: %T, %d\n", raw, unsafe.Sizeof(string(raw)))
-
+// TestToProtobufRuleset tests that the transformation from a regula ruleset to a protobuf ruleset works well.
+func TestToProtobufRuleset(t *testing.T) {
 	cases := []struct {
 		name string
 		rs   func() *regula.Ruleset
@@ -426,10 +396,9 @@ func TestToProtobufTypes(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			actRs := toProtobufRuleset(c.rs())
-			// require.NoError(t, err)
-			expRs := c.exp
-			require.Equal(t, expRs, actRs)
+			var rs *pb.Ruleset
+			require.NotPanics(t, func() { rs = toProtobufRuleset(c.rs()) })
+			require.Equal(t, c.exp, rs)
 		})
 	}
 }
