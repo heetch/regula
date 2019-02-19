@@ -6,7 +6,7 @@ message RulesetEntry {
     string version = 2;
     Ruleset ruleset = 3;
     Signature signature = 4;
-    repeated string versions = 5;
+    Versions versions = 5;
 }
 
 message Ruleset {
@@ -47,4 +47,8 @@ message Operator {
 message Signature {
     string returnType = 1;
     map<string, string> paramTypes = 2;
+}
+
+message Versions {
+    repeated string versions = 1;
 }
