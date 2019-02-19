@@ -12,6 +12,9 @@ $(NAME):
 test:
 	go test -v -cover -timeout=1m ./...
 
+testbench:
+	go test -bench=. -benchmem ./...
+
 testrace:
 	go test -v -race -cover -timeout=2m ./...
 

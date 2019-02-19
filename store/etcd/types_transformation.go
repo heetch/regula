@@ -21,6 +21,7 @@ func toProtobufRuleset(rs *regula.Ruleset) *pb.Ruleset {
 		}
 		pbrs.Rules = append(pbrs.Rules, pbr)
 	}
+
 	return pbrs
 }
 
@@ -107,6 +108,7 @@ func fromProtobufRuleset(pbrs *pb.Ruleset) *regula.Ruleset {
 		}
 		rs.Rules = append(rs.Rules, rr)
 	}
+
 	return rs
 }
 
