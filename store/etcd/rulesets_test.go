@@ -2,7 +2,6 @@ package etcd_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	ppath "path"
@@ -12,11 +11,13 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/heetch/regula/store/etcd"
+	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -595,11 +596,11 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
-		var versions []string
-		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		var v pb.Versions
+		err = proto.Unmarshal(resp.Kvs[0].Value, &v)
 		require.NoError(t, err)
-		require.Len(t, versions, 1)
-		require.EqualValues(t, entry.Version, versions[0])
+		require.Len(t, v.Versions, 1)
+		require.EqualValues(t, entry.Version, v.Versions[0])
 
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
@@ -622,11 +623,11 @@ func TestPut(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 
-		err = json.Unmarshal(resp.Kvs[0].Value, &versions)
+		err = proto.Unmarshal(resp.Kvs[0].Value, &v)
 		require.NoError(t, err)
-		require.Len(t, versions, 2)
-		require.EqualValues(t, entry.Version, versions[0])
-		require.EqualValues(t, entry2.Version, versions[1])
+		require.Len(t, v.Versions, 2)
+		require.EqualValues(t, entry.Version, v.Versions[0])
+		require.EqualValues(t, entry2.Version, v.Versions[1])
 	})
 
 	t.Run("Signatures", func(t *testing.T) {

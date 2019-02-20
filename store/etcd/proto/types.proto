@@ -1,0 +1,54 @@
+syntax = "proto3";
+package proto;
+
+message RulesetEntry {
+    string path = 1;
+    string version = 2;
+    Ruleset ruleset = 3;
+    Signature signature = 4;
+    Versions versions = 5;
+}
+
+message Ruleset {
+    repeated Rule rules = 1;
+    string type = 2;
+}
+
+message Rule {
+    Expr expr = 1;
+    Value result = 2;
+}
+
+message Expr {
+    oneof expr {
+        Value value = 1;
+        Param param = 2;
+        Operator operator = 3;
+    }
+}
+
+message Value {
+    string kind = 1;
+    string type = 2;
+    string data = 3;
+}
+
+message Param {
+    string kind = 1;
+    string type = 2;
+    string name = 3;
+}
+
+message Operator {
+    string kind = 1;
+    repeated Expr operands = 2;
+}
+
+message Signature {
+    string returnType = 1;
+    map<string, string> paramTypes = 2;
+}
+
+message Versions {
+    repeated string versions = 1;
+}

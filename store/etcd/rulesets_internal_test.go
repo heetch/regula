@@ -1,12 +1,15 @@
 package etcd
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
+	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -188,4 +191,68 @@ func TestCompareSignature(t *testing.T) {
 		require.EqualValues(t, exp, err)
 		require.Equal(t, fmt.Sprintf("invalid %s with value '%s': %s", exp.Field, exp.Value, exp.Reason), exp.Error())
 	})
+}
+
+func BenchmarkProtoMarshalling(b *testing.B) {
+	rs, err := regula.NewBoolRuleset(
+		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
+		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
+	)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := proto.Marshal(rulesetToProtobuf(rs))
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkJSONMarshalling(b *testing.B) {
+	rs, err := regula.NewBoolRuleset(
+		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
+		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
+	)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := json.Marshal(rs)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkProtoUnmarshalling(b *testing.B) {
+	rs, err := regula.NewBoolRuleset(
+		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
+		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
+	)
+	require.NoError(b, err)
+
+	bb, err := proto.Marshal(rulesetToProtobuf(rs))
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		var pbrs pb.Ruleset
+		err := proto.Unmarshal(bb, &pbrs)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkJSONUnmarshalling(b *testing.B) {
+	rs, err := regula.NewBoolRuleset(
+		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
+		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
+	)
+	require.NoError(b, err)
+
+	bb, err := json.Marshal(rs)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		var rrs regula.Ruleset
+		err := json.Unmarshal(bb, &rrs)
+		require.NoError(b, err)
+	}
 }

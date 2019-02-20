@@ -12,6 +12,9 @@ $(NAME):
 test:
 	go test -v -cover -timeout=1m ./...
 
+testbench:
+	go test -bench=. -benchmem ./...
+
 testrace:
 	go test -v -race -cover -timeout=2m ./...
 
@@ -26,3 +29,6 @@ run-ui:
 
 build-ui:
 	cd ./ui/app && yarn build
+
+gen:
+	go generate ./...
