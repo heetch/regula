@@ -51,11 +51,16 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 		return nil, errors.Wrap(err, "failed to evaluate ruleset")
 	}
 
-	if result.Value.Type != typ {
+	if typ != "" && result.Value.Type != typ {
 		return nil, rerrors.ErrTypeMismatch
 	}
 
 	return result, nil
+}
+
+// Get evaluates a ruleset and returns the result.
+func (e *Engine) Get(ctx context.Context, path string, params rule.Params, opts ...Option) (*EvalResult, error) {
+	return e.get(ctx, "", path, params, opts...)
 }
 
 // GetString evaluates a ruleset and returns the result as a string.
