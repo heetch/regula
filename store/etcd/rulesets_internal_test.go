@@ -200,9 +200,9 @@ func BenchmarkProtoMarshalling(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	pbrs := toProtobufRuleset(rs)
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := proto.Marshal(pbrs)
+		_, err := proto.Marshal(toProtobufRuleset(rs))
 		require.NoError(b, err)
 	}
 }
@@ -214,6 +214,7 @@ func BenchmarkJSONMarshalling(b *testing.B) {
 	)
 	require.NoError(b, err)
 
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		_, err := json.Marshal(rs)
 		require.NoError(b, err)
@@ -230,8 +231,9 @@ func BenchmarkProtoUnmarshalling(b *testing.B) {
 	bb, err := proto.Marshal(toProtobufRuleset(rs))
 	require.NoError(b, err)
 
-	var pbrs pb.Ruleset
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
+		var pbrs pb.Ruleset
 		err := proto.Unmarshal(bb, &pbrs)
 		require.NoError(b, err)
 	}
@@ -247,8 +249,9 @@ func BenchmarkJSONUnmarshalling(b *testing.B) {
 	bb, err := json.Marshal(rs)
 	require.NoError(b, err)
 
-	var rrs regula.Ruleset
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
+		var rrs regula.Ruleset
 		err := json.Unmarshal(bb, &rrs)
 		require.NoError(b, err)
 	}
