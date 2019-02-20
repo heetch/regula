@@ -29,3 +29,6 @@ run-ui:
 
 build-ui:
 	cd ./ui/app && yarn build
+
+gen:
+	go generate ./...
