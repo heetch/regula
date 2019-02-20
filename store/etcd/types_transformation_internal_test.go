@@ -293,7 +293,7 @@ func TestFromProtobufRuleset(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var rs *regula.Ruleset
-			require.NotPanics(t, func() { rs = fromProtobufRuleset(c.pb) })
+			require.NotPanics(t, func() { rs = rulesetFromProtobuf(c.pb) })
 			require.Equal(t, c.exp(), rs)
 		})
 	}
@@ -583,7 +583,7 @@ func TestToProtobufRuleset(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var rs *pb.Ruleset
-			require.NotPanics(t, func() { rs = toProtobufRuleset(c.rs()) })
+			require.NotPanics(t, func() { rs = rulesetToProtobuf(c.rs()) })
 			require.Equal(t, c.exp, rs)
 		})
 	}
@@ -599,7 +599,7 @@ func TestToProtobufSignature(t *testing.T) {
 		},
 	}
 
-	pbsig := toProtobufSignature(sig)
+	pbsig := signatureToProtobuf(sig)
 
 	exp := &pb.Signature{
 		ReturnType: "bool",
@@ -623,7 +623,7 @@ func TestFromProtobufSignature(t *testing.T) {
 		},
 	}
 
-	sig := fromProtobufSignature(pbsig)
+	sig := signatureFromProtobuf(pbsig)
 
 	exp := &regula.Signature{
 		ReturnType: "bool",

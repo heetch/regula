@@ -90,7 +90,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal signature")
 	}
-	entry.Signature = fromProtobufSignature(&sig)
+	entry.Signature = signatureFromProtobuf(&sig)
 
 	return entry, nil
 }
@@ -212,7 +212,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 		entries.Entries[i] = store.RulesetEntry{
 			Path:    pbrse.Path,
 			Version: pbrse.Version,
-			Ruleset: fromProtobufRuleset(pbrse.Ruleset),
+			Ruleset: rulesetFromProtobuf(pbrse.Ruleset),
 		}
 	}
 
@@ -256,7 +256,7 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 		entries.Entries[i] = store.RulesetEntry{
 			Path:    pbrse.Path,
 			Version: pbrse.Version,
-			Ruleset: fromProtobufRuleset(pbrse.Ruleset),
+			Ruleset: rulesetFromProtobuf(pbrse.Ruleset),
 		}
 	}
 
@@ -299,7 +299,7 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 	return &store.RulesetEntry{
 		Path:    entry.Path,
 		Version: entry.Version,
-		Ruleset: fromProtobufRuleset(entry.Ruleset),
+		Ruleset: rulesetFromProtobuf(entry.Ruleset),
 	}, nil
 }
 
@@ -330,7 +330,7 @@ func (s *RulesetService) OneByVersion(ctx context.Context, path, version string)
 	return &store.RulesetEntry{
 		Path:    entry.Path,
 		Version: entry.Version,
-		Ruleset: fromProtobufRuleset(entry.Ruleset),
+		Ruleset: rulesetFromProtobuf(entry.Ruleset),
 	}, nil
 }
 
@@ -361,7 +361,7 @@ func (s *RulesetService) putEntry(stm concurrency.STM, rse *store.RulesetEntry) 
 	pbrse := pb.RulesetEntry{
 		Path:    rse.Path,
 		Version: rse.Version,
-		Ruleset: toProtobufRuleset(rse.Ruleset),
+		Ruleset: rulesetToProtobuf(rse.Ruleset),
 	}
 
 	b, err := proto.Marshal(&pbrse)
@@ -406,7 +406,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 
 			entry.Path = pbrse.Path
 			entry.Version = pbrse.Version
-			entry.Ruleset = fromProtobufRuleset(pbrse.Ruleset)
+			entry.Ruleset = rulesetFromProtobuf(pbrse.Ruleset)
 
 			return store.ErrNotModified
 		}
@@ -422,7 +422,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 				return errors.Wrap(err, "failed to decode ruleset signature")
 			}
 
-			err = compareSignature(fromProtobufSignature(&pbsig), sig)
+			err = compareSignature(signatureFromProtobuf(&pbsig), sig)
 			if err != nil {
 				return err
 			}
@@ -430,7 +430,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 
 		// if no signature found, create one
 		if rawSig == "" {
-			b, err := proto.Marshal(toProtobufSignature(sig))
+			b, err := proto.Marshal(signatureToProtobuf(sig))
 			if err != nil {
 				return errors.Wrap(err, "failed to encode updated signature")
 			}
@@ -620,7 +620,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
 				events[i].Path = pbrse.Path
-				events[i].Ruleset = fromProtobufRuleset(pbrse.Ruleset)
+				events[i].Ruleset = rulesetFromProtobuf(pbrse.Ruleset)
 				events[i].Version = pbrse.Version
 			}
 

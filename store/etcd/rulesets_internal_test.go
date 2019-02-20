@@ -202,7 +202,7 @@ func BenchmarkProtoMarshalling(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := proto.Marshal(toProtobufRuleset(rs))
+		_, err := proto.Marshal(rulesetToProtobuf(rs))
 		require.NoError(b, err)
 	}
 }
@@ -228,7 +228,7 @@ func BenchmarkProtoUnmarshalling(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	bb, err := proto.Marshal(toProtobufRuleset(rs))
+	bb, err := proto.Marshal(rulesetToProtobuf(rs))
 	require.NoError(b, err)
 
 	b.ResetTimer()

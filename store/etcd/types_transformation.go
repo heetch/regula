@@ -8,16 +8,16 @@ import (
 	pb "github.com/heetch/regula/store/etcd/proto"
 )
 
-// toProtobufRuleset creates a protobuf Ruleset from a regula.Ruleset.
-func toProtobufRuleset(rs *regula.Ruleset) *pb.Ruleset {
+// rulesetToProtobuf creates a protobuf Ruleset from a regula.Ruleset.
+func rulesetToProtobuf(rs *regula.Ruleset) *pb.Ruleset {
 	pbrs := &pb.Ruleset{
 		Type: rs.Type,
 	}
 
 	for _, r := range rs.Rules {
 		pbr := &pb.Rule{
-			Expr:   toProtobufExpr(r.Expr),
-			Result: toProtobufValue(r.Result),
+			Expr:   exprToProtobuf(r.Expr),
+			Result: valueToProtobuf(r.Result),
 		}
 		pbrs.Rules = append(pbrs.Rules, pbr)
 	}
@@ -25,8 +25,8 @@ func toProtobufRuleset(rs *regula.Ruleset) *pb.Ruleset {
 	return pbrs
 }
 
-// toProtobufExpr creates a protobuf Expr from a rule.Expr.
-func toProtobufExpr(expr rule.Expr) *pb.Expr {
+// exprToProtobuf creates a protobuf Expr from a rule.Expr.
+func exprToProtobuf(expr rule.Expr) *pb.Expr {
 	switch e := expr.(type) {
 	case *rule.Value:
 		v := &pb.Value{
@@ -64,7 +64,7 @@ func toProtobufExpr(expr rule.Expr) *pb.Expr {
 		Kind: expr.Contract().OpCode,
 	}
 	for _, op := range ope.Operands() {
-		o.Operands = append(o.Operands, toProtobufExpr(op))
+		o.Operands = append(o.Operands, exprToProtobuf(op))
 	}
 
 	return &pb.Expr{
@@ -72,8 +72,8 @@ func toProtobufExpr(expr rule.Expr) *pb.Expr {
 	}
 }
 
-// toProtobufValue creates a protobuf Value from a rule.Value.
-func toProtobufValue(val *rule.Value) *pb.Value {
+// valueToProtobuf creates a protobuf Value from a rule.Value.
+func valueToProtobuf(val *rule.Value) *pb.Value {
 	return &pb.Value{
 		Kind: val.Kind,
 		Type: val.Type,
@@ -81,8 +81,8 @@ func toProtobufValue(val *rule.Value) *pb.Value {
 	}
 }
 
-// toProtobufSignature creates a protobuf Signature from a regula.Signature.
-func toProtobufSignature(sig *regula.Signature) *pb.Signature {
+// signatureToProtobuf creates a protobuf Signature from a regula.Signature.
+func signatureToProtobuf(sig *regula.Signature) *pb.Signature {
 	pbsig := &pb.Signature{
 		ReturnType: sig.ReturnType,
 		ParamTypes: make(map[string]string),
@@ -95,16 +95,16 @@ func toProtobufSignature(sig *regula.Signature) *pb.Signature {
 	return pbsig
 }
 
-// fromProtobufRuleset creates a regula.Ruleset from a protobuf Ruleset.
-func fromProtobufRuleset(pbrs *pb.Ruleset) *regula.Ruleset {
+// rulesetFromProtobuf creates a regula.Ruleset from a protobuf Ruleset.
+func rulesetFromProtobuf(pbrs *pb.Ruleset) *regula.Ruleset {
 	rs := &regula.Ruleset{
 		Type: pbrs.Type,
 	}
 
 	for _, r := range pbrs.Rules {
 		rr := &rule.Rule{
-			Expr:   fromProtobufExpr(r.Expr),
-			Result: fromProtobufValue(r.Result),
+			Expr:   exprFromProtobuf(r.Expr),
+			Result: valueFromProtobuf(r.Result),
 		}
 		rs.Rules = append(rs.Rules, rr)
 	}
@@ -112,8 +112,8 @@ func fromProtobufRuleset(pbrs *pb.Ruleset) *regula.Ruleset {
 	return rs
 }
 
-// fromProtobufExpr creates a rule.Expr from a protobuf Expr.
-func fromProtobufExpr(expr *pb.Expr) rule.Expr {
+// exprFromProtobuf creates a rule.Expr from a protobuf Expr.
+func exprFromProtobuf(expr *pb.Expr) rule.Expr {
 	switch e := expr.Expr.(type) {
 	case *pb.Expr_Value:
 		return &rule.Value{
@@ -147,7 +147,7 @@ func fromProtobufExpr(expr *pb.Expr) rule.Expr {
 	}
 
 	for _, o := range pbop.Operator.Operands {
-		err := ope.PushExpr(fromProtobufExpr(o))
+		err := ope.PushExpr(exprFromProtobuf(o))
 		if err != nil {
 			// each operands should fulfil the appropriate Term of the Contract at this place otherwise it's not a good sign
 			// let's panic
@@ -158,8 +158,8 @@ func fromProtobufExpr(expr *pb.Expr) rule.Expr {
 	return ope
 }
 
-// fromProtobufValue creates a rule.Value from a protobuf Value.
-func fromProtobufValue(v *pb.Value) *rule.Value {
+// valueFromProtobuf creates a rule.Value from a protobuf Value.
+func valueFromProtobuf(v *pb.Value) *rule.Value {
 	return &rule.Value{
 		Kind: v.Kind,
 		Type: v.Type,
@@ -167,8 +167,8 @@ func fromProtobufValue(v *pb.Value) *rule.Value {
 	}
 }
 
-// fromProtobufSignature creates a regula.Signature from a protobuf Signature.
-func fromProtobufSignature(s *pb.Signature) *regula.Signature {
+// signatureFromProtobuf creates a regula.Signature from a protobuf Signature.
+func signatureFromProtobuf(s *pb.Signature) *regula.Signature {
 	sig := &regula.Signature{
 		ReturnType: s.ReturnType,
 		ParamTypes: make(map[string]string),
