@@ -13,7 +13,7 @@ import (
 
 func ExampleRuleset() {
 	rs, err := regula.NewRuleset(
-		regula.NewSignature("string", nil),
+		regula.NewSignature().ReturnsString(),
 		rule.New(
 			rule.Eq(
 				rule.StringParam("group"),
@@ -59,42 +59,42 @@ func init() {
 	ev = buf
 
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("string", nil),
+		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("string", nil),
+		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("int64", nil),
+		Signature: regula.NewSignature().ReturnsInt64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Int64Value(10)),
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("float64", nil),
+		Signature: regula.NewSignature().ReturnsFloat64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Float64Value(3.14)),
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("bool", nil),
+		Signature: regula.NewSignature().ReturnsBool(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.BoolValue(true)),
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature("string", nil),
+		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("3s")),
 		},
