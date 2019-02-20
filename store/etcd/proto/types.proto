@@ -1,5 +1,5 @@
 syntax = "proto3";
-package etcd;
+package proto;
 
 message RulesetEntry {
     string path = 1;
