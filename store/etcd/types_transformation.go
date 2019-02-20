@@ -11,15 +11,15 @@ import (
 // rulesetToProtobuf creates a protobuf Ruleset from a regula.Ruleset.
 func rulesetToProtobuf(rs *regula.Ruleset) *pb.Ruleset {
 	pbrs := &pb.Ruleset{
-		Type: rs.Type,
+		Type:  rs.Type,
+		Rules: make([]*pb.Rule, len(rs.Rules)),
 	}
 
-	for _, r := range rs.Rules {
-		pbr := &pb.Rule{
+	for i, r := range rs.Rules {
+		pbrs.Rules[i] = &pb.Rule{
 			Expr:   exprToProtobuf(r.Expr),
 			Result: valueToProtobuf(r.Result),
 		}
-		pbrs.Rules = append(pbrs.Rules, pbr)
 	}
 
 	return pbrs
@@ -61,10 +61,11 @@ func exprToProtobuf(expr rule.Expr) *pb.Expr {
 	}
 
 	o := &pb.Operator{
-		Kind: expr.Contract().OpCode,
+		Kind:     expr.Contract().OpCode,
+		Operands: make([]*pb.Expr, len(ope.Operands())),
 	}
-	for _, op := range ope.Operands() {
-		o.Operands = append(o.Operands, exprToProtobuf(op))
+	for i, op := range ope.Operands() {
+		o.Operands[i] = exprToProtobuf(op)
 	}
 
 	return &pb.Expr{
@@ -98,15 +99,15 @@ func signatureToProtobuf(sig *regula.Signature) *pb.Signature {
 // rulesetFromProtobuf creates a regula.Ruleset from a protobuf Ruleset.
 func rulesetFromProtobuf(pbrs *pb.Ruleset) *regula.Ruleset {
 	rs := &regula.Ruleset{
-		Type: pbrs.Type,
+		Type:  pbrs.Type,
+		Rules: make([]*rule.Rule, len(pbrs.Rules)),
 	}
 
-	for _, r := range pbrs.Rules {
-		rr := &rule.Rule{
+	for i, r := range pbrs.Rules {
+		rs.Rules[i] = &rule.Rule{
 			Expr:   exprFromProtobuf(r.Expr),
 			Result: valueFromProtobuf(r.Result),
 		}
-		rs.Rules = append(rs.Rules, rr)
 	}
 
 	return rs
