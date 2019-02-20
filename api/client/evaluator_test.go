@@ -109,14 +109,13 @@ func ExampleEvaluator_withoutWatch() {
 	}
 
 	ng := regula.NewEngine(ev)
-	str, res, err := ng.GetString(context.Background(), "some/path", regula.Params{
+	str, err := ng.GetString(context.Background(), "some/path", regula.Params{
 		"id": "123",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(str)
-	fmt.Println(res.Version)
 }
 
 func ExampleEvaluator_withWatch() {
@@ -133,12 +132,11 @@ func ExampleEvaluator_withWatch() {
 	defer ev.Close()
 
 	ng := regula.NewEngine(ev)
-	str, res, err := ng.GetString(context.Background(), "some/path", regula.Params{
+	str, err := ng.GetString(context.Background(), "some/path", regula.Params{
 		"id": "123",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(str)
-	fmt.Println(res.Version)
 }
