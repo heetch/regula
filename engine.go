@@ -27,7 +27,7 @@ func NewEngine(evaluator Evaluator) *Engine {
 	}
 }
 
-// Get evaluates a ruleset and returns the result.
+// get evaluates a ruleset and returns the result.
 func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, opts ...Option) (*EvalResult, error) {
 	var cfg engineConfig
 	for _, opt := range opts {
@@ -59,46 +59,43 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 }
 
 // GetString evaluates a ruleset and returns the result as a string.
-func (e *Engine) GetString(ctx context.Context, path string, params rule.Params, opts ...Option) (string, *EvalResult, error) {
+func (e *Engine) GetString(ctx context.Context, path string, params rule.Params, opts ...Option) (string, error) {
 	res, err := e.get(ctx, "string", path, params, opts...)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	return res.Value.Data, res, nil
+	return res.ToString()
 }
 
 // GetBool evaluates a ruleset and returns the result as a bool.
-func (e *Engine) GetBool(ctx context.Context, path string, params rule.Params, opts ...Option) (bool, *EvalResult, error) {
+func (e *Engine) GetBool(ctx context.Context, path string, params rule.Params, opts ...Option) (bool, error) {
 	res, err := e.get(ctx, "bool", path, params, opts...)
 	if err != nil {
-		return false, nil, err
+		return false, err
 	}
 
-	b, err := strconv.ParseBool(res.Value.Data)
-	return b, res, err
+	return res.ToBool()
 }
 
 // GetInt64 evaluates a ruleset and returns the result as an int64.
-func (e *Engine) GetInt64(ctx context.Context, path string, params rule.Params, opts ...Option) (int64, *EvalResult, error) {
+func (e *Engine) GetInt64(ctx context.Context, path string, params rule.Params, opts ...Option) (int64, error) {
 	res, err := e.get(ctx, "int64", path, params, opts...)
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 
-	i, err := strconv.ParseInt(res.Value.Data, 10, 64)
-	return i, res, err
+	return res.ToInt64()
 }
 
 // GetFloat64 evaluates a ruleset and returns the result as a float64.
-func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params, opts ...Option) (float64, *EvalResult, error) {
+func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params, opts ...Option) (float64, error) {
 	res, err := e.get(ctx, "float64", path, params, opts...)
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 
-	f, err := strconv.ParseFloat(res.Value.Data, 64)
-	return f, res, err
+	return res.ToFloat64()
 }
 
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
@@ -154,6 +151,22 @@ type EvalResult struct {
 	Value *rule.Value
 	// Version of the ruleset that generated this value
 	Version string
+}
+
+func (e *EvalResult) ToString() (string, error) {
+	return e.Value.Data, nil
+}
+
+func (e *EvalResult) ToInt64() (int64, error) {
+	return strconv.ParseInt(e.Value.Data, 10, 64)
+}
+
+func (e *EvalResult) ToFloat64() (float64, error) {
+	return strconv.ParseFloat(e.Value.Data, 64)
+}
+
+func (e *EvalResult) ToBool() (bool, error) {
+	return strconv.ParseBool(e.Value.Data)
 }
 
 // RulesetBuffer can hold a group of rulesets in memory and can be used as an evaluator.
