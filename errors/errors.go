@@ -9,9 +9,6 @@ var (
 	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
 	ErrRulesetNotFound = errors.New("ruleset not found")
 
-	// ErrRulesetIncoherentType is returned when a ruleset contains rules of different types.
-	ErrRulesetIncoherentType = errors.New("types in ruleset are incoherent")
-
 	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
 	ErrParamTypeMismatch = errors.New("parameter type mismatches")
 
