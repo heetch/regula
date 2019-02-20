@@ -99,16 +99,58 @@ type Signature struct {
 }
 
 // NewSignature create
-func NewSignature(returnType string, paramTypes map[string]string) *Signature {
-	s := Signature{
-		ReturnType: returnType,
-		ParamTypes: paramTypes,
+func NewSignature() *Signature {
+	return &Signature{
+		ParamTypes: make(map[string]string),
 	}
-	if s.ParamTypes == nil {
-		s.ParamTypes = make(map[string]string)
-	}
+}
 
-	return &s
+// StringP adds a string param to the signature.
+func (s *Signature) StringP(name string) *Signature {
+	s.ParamTypes[name] = "string"
+	return s
+}
+
+// Int64P adds an int64 param to the signature.
+func (s *Signature) Int64P(name string) *Signature {
+	s.ParamTypes[name] = "int64"
+	return s
+}
+
+// Float64P adds a float64 param to the signature.
+func (s *Signature) Float64P(name string) *Signature {
+	s.ParamTypes[name] = "float64"
+	return s
+}
+
+// BoolP adds a bool param to the signature.
+func (s *Signature) BoolP(name string) *Signature {
+	s.ParamTypes[name] = "bool"
+	return s
+}
+
+// ReturnsString sets the return type to string.
+func (s *Signature) ReturnsString() *Signature {
+	s.ReturnType = "string"
+	return s
+}
+
+// ReturnsInt64 sets the return type to int64.
+func (s *Signature) ReturnsInt64() *Signature {
+	s.ReturnType = "int64"
+	return s
+}
+
+// ReturnsFloat64 sets the return type to float64.
+func (s *Signature) ReturnsFloat64() *Signature {
+	s.ReturnType = "float64"
+	return s
+}
+
+// ReturnsBool sets the return type to bool.
+func (s *Signature) ReturnsBool() *Signature {
+	s.ReturnType = "bool"
+	return s
 }
 
 // Validate return type and parameters types.
