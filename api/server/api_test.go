@@ -36,13 +36,13 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:      "a",
 			Version:   "version",
 			Ruleset:   r1,
 			Versions:  []string{"version"},
-			Signature: regula.NewSignature(r1),
+			Signature: r1.Signature,
 		}
 
 		e2 := store.RulesetEntry{
@@ -50,7 +50,7 @@ func TestAPI(t *testing.T) {
 			Version:   "version2",
 			Ruleset:   r1,
 			Versions:  []string{"version1", "version2"},
-			Signature: regula.NewSignature(r1),
+			Signature: r1.Signature,
 		}
 
 		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {
@@ -101,8 +101,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r2, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEntries{
 			Entries: []store.RulesetEntry{
 				{Path: "aa", Ruleset: r1},
@@ -309,8 +309,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		r2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r2, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEvents{
 			Events: []store.RulesetEvent{
 				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r1},
@@ -394,7 +394,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		r1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:    "a",
 			Version: "version",
