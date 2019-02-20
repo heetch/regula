@@ -158,18 +158,22 @@ type EvalResult struct {
 	Version string
 }
 
+// ToString decodes the value as a string.
 func (e *EvalResult) ToString() (string, error) {
 	return e.Value.Data, nil
 }
 
+// ToInt64 decodes the value as an int64.
 func (e *EvalResult) ToInt64() (int64, error) {
 	return strconv.ParseInt(e.Value.Data, 10, 64)
 }
 
+// ToFloat64 decodes the value as a float64.
 func (e *EvalResult) ToFloat64() (float64, error) {
 	return strconv.ParseFloat(e.Value.Data, 64)
 }
 
+// ToBool decodes the value as a bool.
 func (e *EvalResult) ToBool() (bool, error) {
 	return strconv.ParseBool(e.Value.Data)
 }
