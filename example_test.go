@@ -6,14 +6,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
-
-	"github.com/heetch/regula"
 )
 
 func ExampleRuleset() {
-	rs, err := regula.NewStringRuleset(
+	rs, err := regula.NewRuleset(
+		regula.NewSignature("string", nil),
 		rule.New(
 			rule.Eq(
 				rule.StringParam("group"),
@@ -59,42 +59,42 @@ func init() {
 	ev = buf
 
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "int64",
+		Signature: regula.NewSignature("int64", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Int64Value(10)),
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "float64",
+		Signature: regula.NewSignature("float64", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Float64Value(3.14)),
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "bool",
+		Signature: regula.NewSignature("bool", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.BoolValue(true)),
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("3s")),
 		},
@@ -104,7 +104,7 @@ func init() {
 func ExampleEngine() {
 	engine := regula.NewEngine(ev)
 
-	str, res, err := engine.GetString(context.Background(), "/a/b/c", regula.Params{
+	res, err := engine.Get(context.Background(), "/a/b/c", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -122,6 +122,11 @@ func ExampleEngine() {
 		}
 	}
 
+	str, err := res.ToString()
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println(str)
 	fmt.Println(res.Version)
 	// Output
@@ -132,7 +137,7 @@ func ExampleEngine() {
 func ExampleEngine_GetBool() {
 	engine := regula.NewEngine(ev)
 
-	b, res, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
+	b, err := engine.GetBool(context.Background(), "/path/to/bool/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -142,16 +147,14 @@ func ExampleEngine_GetBool() {
 	}
 
 	fmt.Println(b)
-	fmt.Println(res.Version)
 	// Output
 	// true
-	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetString() {
 	engine := regula.NewEngine(ev)
 
-	s, res, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
+	s, err := engine.GetString(context.Background(), "/path/to/string/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -161,16 +164,14 @@ func ExampleEngine_GetString() {
 	}
 
 	fmt.Println(s)
-	fmt.Println(res.Version)
 	// Output
 	// some-string
-	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetInt64() {
 	engine := regula.NewEngine(ev)
 
-	i, res, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
+	i, err := engine.GetInt64(context.Background(), "/path/to/int64/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -180,16 +181,14 @@ func ExampleEngine_GetInt64() {
 	}
 
 	fmt.Println(i)
-	fmt.Println(res.Version)
 	// Output
 	// 10
-	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_GetFloat64() {
 	engine := regula.NewEngine(ev)
 
-	f, res, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
+	f, err := engine.GetFloat64(context.Background(), "/path/to/float64/key", regula.Params{
 		"product-id": "1234",
 		"user-id":    "5678",
 	})
@@ -199,10 +198,8 @@ func ExampleEngine_GetFloat64() {
 	}
 
 	fmt.Println(f)
-	fmt.Println(res.Version)
 	// Output
 	// 3.14
-	// 5b4cbdf307bb5346a6c42ac3
 }
 
 func ExampleEngine_LoadStruct() {

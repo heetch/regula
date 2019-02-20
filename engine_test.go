@@ -17,55 +17,55 @@ func TestEngine(t *testing.T) {
 	buf := regula.NewRulesetBuffer()
 
 	buf.Add("match-string-a", "1", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v1")),
 		},
 	})
 	buf.Add("match-string-a", "2", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v2")),
 		},
 	})
 	buf.Add("match-string-b", "1", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("matched b")),
 		},
 	})
 	buf.Add("type-mismatch", "1", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 		},
 	})
 	buf.Add("no-match", "1", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("matched d")),
 		},
 	})
 	buf.Add("match-bool", "1", &regula.Ruleset{
-		Type: "bool",
+		Signature: regula.NewSignature("bool", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 		},
 	})
 	buf.Add("match-int64", "1", &regula.Ruleset{
-		Type: "int64",
+		Signature: regula.NewSignature("int64", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 		},
 	})
 	buf.Add("match-float64", "1", &regula.Ruleset{
-		Type: "float64",
+		Signature: regula.NewSignature("float64", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 		},
 	})
 	buf.Add("match-duration", "1", &regula.Ruleset{
-		Type: "string",
+		Signature: regula.NewSignature("string", nil),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("3s")),
 		},
@@ -74,46 +74,46 @@ func TestEngine(t *testing.T) {
 	e := regula.NewEngine(buf)
 
 	t.Run("LowLevel", func(t *testing.T) {
-		str, res, err := e.GetString(ctx, "match-string-a", regula.Params{
+		res, err := e.Get(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "matched a v2", str)
+		require.Equal(t, "matched a v2", res.Value.Data)
 		require.Equal(t, "2", res.Version)
 
-		str, res, err = e.GetString(ctx, "match-string-a", regula.Params{
+		res, err = e.Get(ctx, "match-string-a", regula.Params{
 			"foo": "bar",
 		}, regula.Version("1"))
 		require.NoError(t, err)
-		require.Equal(t, "matched a v1", str)
+		require.Equal(t, "matched a v1", res.Value.Data)
 		require.Equal(t, "1", res.Version)
 
-		str, _, err = e.GetString(ctx, "match-string-b", nil)
+		str, err := e.GetString(ctx, "match-string-b", nil)
 		require.NoError(t, err)
 		require.Equal(t, "matched b", str)
 
-		b, _, err := e.GetBool(ctx, "match-bool", nil)
+		b, err := e.GetBool(ctx, "match-bool", nil)
 		require.NoError(t, err)
 		require.True(t, b)
 
-		i, _, err := e.GetInt64(ctx, "match-int64", nil)
+		i, err := e.GetInt64(ctx, "match-int64", nil)
 		require.NoError(t, err)
 		require.Equal(t, int64(-10), i)
 
-		f, _, err := e.GetFloat64(ctx, "match-float64", nil)
+		f, err := e.GetFloat64(ctx, "match-float64", nil)
 		require.NoError(t, err)
 		require.Equal(t, -3.14, f)
 
-		_, _, err = e.GetString(ctx, "match-bool", nil)
+		_, err = e.GetString(ctx, "match-bool", nil)
 		require.Equal(t, errors.ErrTypeMismatch, err)
 
-		_, _, err = e.GetString(ctx, "type-mismatch", nil)
+		_, err = e.GetString(ctx, "type-mismatch", nil)
 		require.Equal(t, errors.ErrTypeMismatch, err)
 
-		_, _, err = e.GetString(ctx, "no-match", nil)
+		_, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, errors.ErrNoMatch, err)
 
-		_, _, err = e.GetString(ctx, "not-found", nil)
+		_, err = e.GetString(ctx, "not-found", nil)
 		require.Equal(t, errors.ErrRulesetNotFound, err)
 	})
 
