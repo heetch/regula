@@ -94,8 +94,8 @@ func (r *Ruleset) validate() error {
 
 // Signature represents the signature of a ruleset.
 type Signature struct {
-	ReturnType string
-	ParamTypes map[string]string
+	ReturnType string            `json:"returnType"`
+	ParamTypes map[string]string `json:"paramTypes"`
 }
 
 // NewSignature create
