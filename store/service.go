@@ -14,6 +14,7 @@ var (
 	ErrNotFound             = errors.New("not found")
 	ErrNotModified          = errors.New("not modified")
 	ErrInvalidContinueToken = errors.New("invalid continue token")
+	ErrAlreadyExists        = errors.New("already exists")
 )
 
 // RulesetService manages rulesets.
@@ -31,7 +32,6 @@ type RulesetService interface {
 	List(ctx context.Context, prefix string, opt *ListOptions) (*RulesetEntries, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
-
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
 	Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
