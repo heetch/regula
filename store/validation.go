@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
@@ -137,11 +138,54 @@ func ValidateRuleSignature(signature *regula.Signature, r *rule.Rule) error {
 		if p.Type != typ {
 			return &ValidationError{
 				Field:  "param.type",
-				Value:  p.Name,
-				Reason: fmt.Sprintf("param type must be '%s', got '%s'", typ, p.Type),
+				Value:  p.Type,
+				Reason: fmt.Sprintf("param type must be '%s'", typ),
 			}
 		}
 	}
 
-	return nil
+	if r.Result == nil {
+		return &ValidationError{
+			Field:  "result",
+			Value:  "(nil)",
+			Reason: "result is required",
+		}
+	}
+
+	if r.Result.Kind != "value" {
+		return &ValidationError{
+			Field:  "result.kind",
+			Value:  r.Result.Kind,
+			Reason: "result kind must be 'value'",
+		}
+	}
+
+	if r.Result.Type != signature.ReturnType {
+		return &ValidationError{
+			Field:  "result.type",
+			Value:  r.Result.Type,
+			Reason: fmt.Sprintf("result type must be '%s'", signature.ReturnType),
+		}
+	}
+
+	return ValidateValueData(r.Result)
+}
+
+// ValidateValueData verifies if the value data matches the value type.
+func ValidateValueData(v *rule.Value) error {
+	switch v.Type {
+	case "string":
+		return nil
+	case "int64":
+		_, err := strconv.ParseInt(v.Data, 10, 64)
+		return err
+	case "float64":
+		_, err := strconv.ParseFloat(v.Data, 64)
+		return err
+	case "bool":
+		_, err := strconv.ParseBool(v.Data)
+		return err
+	}
+
+	return errors.New("unsupported param type")
 }
