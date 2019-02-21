@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
@@ -108,6 +109,37 @@ func ValidatePath(path string) error {
 			Field:  "path",
 			Value:  path,
 			Reason: "invalid format",
+		}
+	}
+
+	return nil
+}
+
+// ValidateRuleSignature verifies that the given rule respect the signature.
+func ValidateRuleSignature(signature *regula.Signature, r *rule.Rule) error {
+	for _, p := range r.Params() {
+		if p.Kind != "param" {
+			return &ValidationError{
+				Field:  "param.kind",
+				Value:  p.Kind,
+				Reason: "param kind must be equal to 'param'",
+			}
+		}
+		typ, ok := signature.ParamTypes[p.Name]
+		if !ok {
+			return &ValidationError{
+				Field:  "param.name",
+				Value:  p.Name,
+				Reason: "unknown parameter",
+			}
+		}
+
+		if p.Type != typ {
+			return &ValidationError{
+				Field:  "param.type",
+				Value:  p.Name,
+				Reason: fmt.Sprintf("param type must be '%s', got '%s'", typ, p.Type),
+			}
 		}
 	}
 
