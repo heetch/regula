@@ -116,8 +116,8 @@ func ValidatePath(path string) error {
 	return nil
 }
 
-// ValidateRuleSignature verifies that the given rule respect the signature.
-func ValidateRuleSignature(signature *regula.Signature, r *rule.Rule) error {
+// ValidateRule verifies that the given rule respects the signature and contains valid data.
+func ValidateRule(signature *regula.Signature, r *rule.Rule) error {
 	for _, p := range r.Params() {
 		if p.Kind != "param" {
 			return &ValidationError{

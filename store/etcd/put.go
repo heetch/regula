@@ -18,15 +18,16 @@ import (
 )
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
-func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
-	sig, err := validateRuleset(path, ruleset)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule) (*store.RulesetEntry, error) {
 	var entry store.RulesetEntry
 
 	txfn := func(stm concurrency.STM) error {
+		// validate the rules
+		err := s.validateRules(stm, path, rules)
+		if err != nil {
+			return err
+		}
+
 		// generate a checksum from the ruleset for comparison purpose
 		h := md5.New()
 		err = json.NewEncoder(h).Encode(ruleset)
@@ -121,6 +122,29 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	}
 
 	return &entry, err
+}
+
+// validateRules fetches the signature from the store and validates all the rules against it.
+func (s *RulesetService) validateRules(stm concurrency.STM, path string, rules []rule.Rule) error {
+	raw := stm.Get(s.signaturesPath(path))
+	if raw == nil {
+		return store.ErrNotFound
+	}
+
+	var pbsig *pb.Signature
+	err := proto.Unmarshal([]byte(raw), &pbsig)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode signature")
+	}
+
+	sig := signatureFromProtobuf(pbsig)
+	for _, r := range rules {
+		if err := store.ValidateRule(sig, &r); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func compareSignature(base, other *regula.Signature) error {
