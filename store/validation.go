@@ -76,13 +76,37 @@ func ValidateSignature(sig *regula.Signature) error {
 	return nil
 }
 
-// ValidateParamName verifies if the given name matches the param name regex.
+// ValidateParamName verifies if the given name matches the param name regex or is
+// a reserved word.
 // If not it returns a ValidationError.
 func ValidateParamName(name string) error {
 	if !rgxParam.MatchString(name) {
 		return &ValidationError{
 			Field:  "param",
 			Value:  name,
+			Reason: "invalid format",
+		}
+	}
+
+	for _, w := range reservedWords {
+		if name == w {
+			return &ValidationError{
+				Field:  "param",
+				Value:  name,
+				Reason: "reserved word",
+			}
+		}
+	}
+
+	return nil
+}
+
+// ValidatePath verifies if the given path matches the path regex.
+func ValidatePath(path string) error {
+	if !rgxRuleset.MatchString(path) {
+		return &ValidationError{
+			Field:  "path",
+			Value:  path,
 			Reason: "invalid format",
 		}
 	}
