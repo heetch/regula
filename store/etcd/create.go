@@ -12,7 +12,11 @@ import (
 
 // Create stores a signature in the signature tree. A signature represents a ruleset.
 func (s *RulesetService) Create(ctx context.Context, path string, signature *regula.Signature) error {
-	if err := signature.Validate(); err != nil {
+	if err := store.ValidatePath(path); err != nil {
+		return err
+	}
+
+	if err := store.ValidateSignature(signature); err != nil {
 		return err
 	}
 
