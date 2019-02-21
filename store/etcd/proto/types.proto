@@ -1,17 +1,8 @@
 syntax = "proto3";
 package proto;
 
-message RulesetEntry {
-    string path = 1;
-    string version = 2;
-    Ruleset ruleset = 3;
-    Signature signature = 4;
-    Versions versions = 5;
-}
-
-message Ruleset {
+message Rules {
     repeated Rule rules = 1;
-    string type = 2;
 }
 
 message Rule {
