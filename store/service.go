@@ -18,6 +18,10 @@ var (
 
 // RulesetService manages rulesets.
 type RulesetService interface {
+	// Create a ruleset in the store using the given signature.
+	Create(ctx context.Context, path string, signature *regula.Signature) error
+	// Put is used to create a new ruleset version using the given rules.
+	Put(ctx context.Context, path string, rules []rule.Rule) (*RulesetEntry, error)
 	// Get returns the ruleset related to the given path. By default, it returns the latest one.
 	// It returns the related ruleset version if it's specified.
 	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
@@ -27,8 +31,7 @@ type RulesetService interface {
 	List(ctx context.Context, prefix string, opt *ListOptions) (*RulesetEntries, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
-	// Put is used to store a ruleset version.
-	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
+
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
 	Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
@@ -46,11 +49,10 @@ type ListOptions struct {
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Path      string
-	Version   string
-	Ruleset   *regula.Ruleset
-	Signature *regula.Signature
-	Versions  []string
+	Path     string
+	Version  string
+	Ruleset  *regula.Ruleset
+	Versions []string
 }
 
 // RulesetEntries holds a list of ruleset entries.
