@@ -17,7 +17,7 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
-// Put adds a version of the given ruleset using an uuid.
+// Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
 func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	sig, err := validateRuleset(path, ruleset)
 	if err != nil {

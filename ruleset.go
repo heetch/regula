@@ -95,7 +95,7 @@ func (r *Ruleset) validate() error {
 // Signature represents the signature of a ruleset.
 type Signature struct {
 	ReturnType string            `json:"returnType"`
-	ParamTypes map[string]string `json:"paramTypes"`
+	ParamTypes map[string]string `json:"paramTypes"` // TODO(asdine) rename to Params
 }
 
 // NewSignature create
@@ -158,7 +158,7 @@ func (s *Signature) Validate() error {
 	switch s.ReturnType {
 	case "string", "bool", "int64", "float64":
 	default:
-		return errors.New("unsupported ruleset type")
+		return errors.New("unsupported return type")
 	}
 
 	for name, tp := range s.ParamTypes {

@@ -1,6 +1,30 @@
 package store
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"regexp"
+
+	"github.com/heetch/regula"
+	"github.com/pkg/errors"
+)
+
+var (
+	// regex used to validate ruleset names.
+	rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
+
+	// regex used to validate parameters name.
+	rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
+
+	// list of reserved words that shouldn't be used as parameters.
+	reservedWords = []string{
+		"version",
+		"list",
+		"eval",
+		"watch",
+		"revision",
+	}
+)
 
 // ValidationError gives informations about the reason of failed validation.
 type ValidationError struct {
@@ -17,4 +41,51 @@ func (v *ValidationError) Error() string {
 func IsValidationError(err error) bool {
 	_, ok := err.(*ValidationError)
 	return ok
+}
+
+// ValidateSignature verifies if the return type and params names are valid.
+func ValidateSignature(sig *regula.Signature) error {
+	if err := sig.Validate(); err != nil {
+		if err.Error() == "unsupported return type" {
+			return &ValidationError{
+				Field:  "returnType",
+				Value:  sig.ReturnType,
+				Reason: err.Error(),
+			}
+		}
+
+		data, err := json.Marshal(sig.ParamTypes)
+		if err != nil {
+			return errors.Wrap(err, "failed to encode param types")
+		}
+
+		return &ValidationError{
+			Field:  "param",
+			Value:  string(data),
+			Reason: err.Error(),
+		}
+	}
+
+	for name := range sig.ParamTypes {
+		err := ValidateParamName(name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ValidateParamName verifies if the given name matches the param name regex.
+// If not it returns a ValidationError.
+func ValidateParamName(name string) error {
+	if !rgxParam.MatchString(name) {
+		return &ValidationError{
+			Field:  "param",
+			Value:  name,
+			Reason: "invalid format",
+		}
+	}
+
+	return nil
 }
