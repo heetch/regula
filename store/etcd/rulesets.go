@@ -37,8 +37,8 @@ func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
-// latestRulesetPath returns the path where the latest version of each ruleset is stored in etcd.
-func (s *RulesetService) latestRulesetPath(p string) string {
+// latestVersionPath returns the path where the latest version string of each ruleset is stored in etcd.
+func (s *RulesetService) latestVersionPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
 }
 

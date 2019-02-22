@@ -21,8 +21,11 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule
 	var entry store.RulesetEntry
 
 	txfn := func(stm concurrency.STM) error {
+		p := rulesPutter{s, stm}
+		return p.put(ctx, path, rules, &entry)
+
 		// validate the rules
-		err := s.validateRules(stm, path, rules)
+		err := p.validateRules(stm, path, rules)
 		if err != nil {
 			return err
 		}
@@ -34,13 +37,14 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule
 		}
 
 		// update checksum if rules have changed
-		changed, err := s.updateChecksum(stm, path, data)
+		changed, err := p.updateChecksum(stm, path, data)
 		if err != nil {
 			return nil, err
 		}
 
 		// if nothing changed return latest ruleset
 		if !changed {
+			p.latestRuleset()
 			v := stm.Get(stm.Get(s.latestRulesetPath(path)))
 
 			var pbrse pb.RulesetEntry
@@ -127,9 +131,38 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule
 	return &entry, err
 }
 
+// rulesPutter is responsible for validating and storing rules, updating checksums and other actions
+// that are require in order to add a new ruleset version correctly.
+type rulesPutter struct {
+	s   *RulesetService
+	stm concurrency.STM
+}
+
+func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule, entry *store.RulesetEntry) error {
+	// validate the rules
+	err := p.validateRules(stm, path, rules)
+	if err != nil {
+		return err
+	}
+
+	// encode rules
+	data, err := proto.Marshal(rulesToProtobuf(rules))
+	if err != nil {
+		return nil, err
+	}
+
+	// update checksum if rules have changed
+	changed, err := p.updateChecksum(stm, path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil
+}
+
 // validateRules fetches the signature from the store and validates all the rules against it.
-func (s *RulesetService) validateRules(stm concurrency.STM, path string, rules []rule.Rule) error {
-	raw := stm.Get(s.signaturesPath(path))
+func (p *rulesPutter) validateRules(stm concurrency.STM, path string, rules []rule.Rule) error {
+	raw := stm.Get(p.s.signaturesPath(path))
 	if raw == nil {
 		return store.ErrNotFound
 	}
@@ -152,7 +185,7 @@ func (s *RulesetService) validateRules(stm concurrency.STM, path string, rules [
 
 // updateChecksum generates a checksum from the given data and stores it if it has changed.
 // It returns a boolean that is true if the checksum has changed.
-func (s *RulesetService) updateChecksum(stm concurrency.STM, path string, data []byte) (bool, error) {
+func (p *rulesPutter) updateChecksum(stm concurrency.STM, path string, data []byte) (bool, error) {
 	// generate a checksum from the rules for comparison purpose
 	h := md5.New()
 	_, err := h.Write(data)
@@ -162,12 +195,12 @@ func (s *RulesetService) updateChecksum(stm concurrency.STM, path string, data [
 
 	checksum := string(h.Sum(nil))
 
-	if stm.Get(s.checksumsPath(path)) == checksum {
+	if stm.Get(p.s.checksumsPath(path)) == checksum {
 		return false, nil
 	}
 
 	// update checksum
-	return true, stm.Put(s.checksumsPath(path), checksum)
+	return true, stm.Put(p.s.checksumsPath(path), checksum)
 }
 
 func compareSignature(base, other *regula.Signature) error {
