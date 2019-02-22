@@ -18,13 +18,13 @@ type RulesetService struct {
 	Namespace string
 }
 
-// entriesPath returns the path where the rulesets are stored in etcd.
-func (s *RulesetService) entriesPath(p, v string) string {
+// entriesPath returns the path where the rules are stored in etcd.
+func (s *RulesetService) rulesPath(p, v string) string {
 	// If the version parameter is not empty, we concatenate to the path separated by the versionSeparator value.
 	if v != "" {
 		p += versionSeparator + v
 	}
-	return path.Join(s.Namespace, "rulesets", "entries", p)
+	return path.Join(s.Namespace, "rulesets", "rules", p)
 }
 
 // checksumsPath returns the path where the checksums are stored in etcd.

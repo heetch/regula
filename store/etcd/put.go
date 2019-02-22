@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -28,16 +27,20 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule
 			return err
 		}
 
-		// generate a checksum from the ruleset for comparison purpose
-		h := md5.New()
-		err = json.NewEncoder(h).Encode(ruleset)
+		// encode rules
+		data, err := proto.Marshal(rulesToProtobuf(rules))
 		if err != nil {
-			return errors.Wrap(err, "failed to generate checksum")
+			return nil, err
 		}
-		checksum := string(h.Sum(nil))
+
+		// update checksum if rules have changed
+		changed, err := s.updateChecksum(stm, path, data)
+		if err != nil {
+			return nil, err
+		}
 
 		// if nothing changed return latest ruleset
-		if stm.Get(s.checksumsPath(path)) == checksum {
+		if !changed {
 			v := stm.Get(stm.Get(s.latestRulesetPath(path)))
 
 			var pbrse pb.RulesetEntry
@@ -145,6 +148,26 @@ func (s *RulesetService) validateRules(stm concurrency.STM, path string, rules [
 	}
 
 	return nil
+}
+
+// updateChecksum generates a checksum from the given data and stores it if it has changed.
+// It returns a boolean that is true if the checksum has changed.
+func (s *RulesetService) updateChecksum(stm concurrency.STM, path string, data []byte) (bool, error) {
+	// generate a checksum from the rules for comparison purpose
+	h := md5.New()
+	_, err := h.Write(data)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to generate checksum")
+	}
+
+	checksum := string(h.Sum(nil))
+
+	if stm.Get(s.checksumsPath(path)) == checksum {
+		return false, nil
+	}
+
+	// update checksum
+	return true, stm.Put(s.checksumsPath(path), checksum)
 }
 
 func compareSignature(base, other *regula.Signature) error {
