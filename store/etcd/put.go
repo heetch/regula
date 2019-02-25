@@ -18,109 +18,13 @@ import (
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
 func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule) (*store.RulesetEntry, error) {
-	var entry store.RulesetEntry
+	var entry *store.RulesetEntry
+	var err error
 
 	txfn := func(stm concurrency.STM) error {
 		p := rulesPutter{s, stm}
-		return p.put(ctx, path, rules, &entry)
-
-		// validate the rules
-		err := p.validateRules(stm, path, rules)
-		if err != nil {
-			return err
-		}
-
-		// encode rules
-		data, err := proto.Marshal(rulesToProtobuf(rules))
-		if err != nil {
-			return nil, err
-		}
-
-		// update checksum if rules have changed
-		changed, err := p.updateChecksum(stm, path, data)
-		if err != nil {
-			return nil, err
-		}
-
-		// if nothing changed return latest ruleset
-		if !changed {
-			p.latestRuleset()
-			v := stm.Get(stm.Get(s.latestRulesetPath(path)))
-
-			var pbrse pb.RulesetEntry
-			err = proto.Unmarshal([]byte(v), &pbrse)
-			if err != nil {
-				s.Logger.Debug().Err(err).Str("entry", v).Msg("put: entry unmarshalling failed")
-				return errors.Wrap(err, "failed to unmarshal entry")
-			}
-
-			s.Logger.Debug().Str("path", path).Msg("ruleset didn't change, returning without creating a new version")
-
-			entry.Path = pbrse.Path
-			entry.Version = pbrse.Version
-			entry.Ruleset = rulesetFromProtobuf(pbrse.Ruleset)
-
-			return store.ErrNotModified
-		}
-
-		// make sure signature didn't change
-		rawSig := stm.Get(s.signaturesPath(path))
-		if rawSig != "" {
-			var pbsig pb.Signature
-
-			err := proto.Unmarshal([]byte(rawSig), &pbsig)
-			if err != nil {
-				s.Logger.Debug().Err(err).Str("signature", rawSig).Msg("put: signature unmarshalling failed")
-				return errors.Wrap(err, "failed to decode ruleset signature")
-			}
-
-			err = compareSignature(signatureFromProtobuf(&pbsig), sig)
-			if err != nil {
-				return err
-			}
-		}
-
-		// if no signature found, create one
-		if rawSig == "" {
-			b, err := proto.Marshal(signatureToProtobuf(sig))
-			if err != nil {
-				return errors.Wrap(err, "failed to encode updated signature")
-			}
-
-			stm.Put(s.signaturesPath(path), string(b))
-		}
-
-		// update checksum
-		stm.Put(s.checksumsPath(path), checksum)
-
-		// create a new ruleset version
-		k, err := ksuid.NewRandom()
-		if err != nil {
-			return errors.Wrap(err, "failed to generate ruleset version")
-		}
-		version := k.String()
-
-		err = s.putVersions(stm, path, version)
-		if err != nil {
-			return err
-		}
-
-		re := store.RulesetEntry{
-			Path:    path,
-			Version: version,
-			Ruleset: ruleset,
-		}
-
-		err = s.putEntry(stm, &re)
-		if err != nil {
-			return err
-		}
-
-		// update the pointer to the latest ruleset
-		stm.Put(s.latestRulesetPath(path), s.entriesPath(path, version))
-
-		entry = re
-		return nil
+		entry, err = p.put(ctx, path, rules)
+		return err
 	}
 
 	_, err = concurrency.NewSTM(s.Client, txfn, concurrency.WithAbortContext(ctx))
@@ -132,15 +36,24 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule
 }
 
 // rulesPutter is responsible for validating and storing rules, updating checksums and other actions
-// that are require in order to add a new ruleset version correctly.
+// that are required in order to add a new ruleset version correctly.
 type rulesPutter struct {
 	s   *RulesetService
 	stm concurrency.STM
 }
 
-func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule, entry *store.RulesetEntry) error {
+func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule) (*store.RulesetEntry, error) {
+	var err error
+
+	entry := store.RulesetEntry{
+		Path: path,
+		Ruleset: &regula.Ruleset{
+			Rules: rules,
+		},
+	}
+
 	// validate the rules
-	err := p.validateRules(stm, path, rules)
+	entry.Signature, err = p.validateRules(stm, path, rules)
 	if err != nil {
 		return err
 	}
@@ -157,30 +70,47 @@ func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule, e
 		return nil, err
 	}
 
-	return nil
+	if !changed {
+		// fetch latest version string
+		entry.Version = stm.Get(p.s.latestVersionPath(path))
+
+		return &entry, nil
+	}
+
+	// create a new version of the rules
+	entry.Version, err = p.createNewVersion(stm, path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// update the pointer to the latest rules version
+	stm.Put(s.latestRulesPath(path), s.rulesPath(path, version))
+
+	return p.updateVersionRegistry(stm, path, entry.Version)
 }
 
 // validateRules fetches the signature from the store and validates all the rules against it.
-func (p *rulesPutter) validateRules(stm concurrency.STM, path string, rules []rule.Rule) error {
+// if the rules are valid, it returns the signature.
+func (p *rulesPutter) validateRules(stm concurrency.STM, path string, rules []rule.Rule) (*regula.Signature, error) {
 	raw := stm.Get(p.s.signaturesPath(path))
 	if raw == nil {
-		return store.ErrNotFound
+		return nil, store.ErrNotFound
 	}
 
 	var pbsig *pb.Signature
 	err := proto.Unmarshal([]byte(raw), &pbsig)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode signature")
+		return nil, errors.Wrap(err, "failed to decode signature")
 	}
 
 	sig := signatureFromProtobuf(pbsig)
 	for _, r := range rules {
 		if err := store.ValidateRule(sig, &r); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return sig, nil
 }
 
 // updateChecksum generates a checksum from the given data and stores it if it has changed.
@@ -201,6 +131,43 @@ func (p *rulesPutter) updateChecksum(stm concurrency.STM, path string, data []by
 
 	// update checksum
 	return true, stm.Put(p.s.checksumsPath(path), checksum)
+}
+
+// createNewVersion adds a new entry under <namespace>/rulesets/rules/<path>/<version>.
+func (p *rulesPutter) createNewVersion(stm concurrency.STM, path string, data []byte) (string, error) {
+	// create a new ruleset version
+	k, err := ksuid.NewRandom()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate rules version")
+	}
+	version := k.String()
+
+	stm.Put(s.rulesPath(path, version), string(data))
+
+	return version, nil
+}
+
+// updateVersionRegistry stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
+func (p *rulesPutter) updateVersionRegistry(stm concurrency.STM, path, version string) error {
+	var v pb.Versions
+
+	res := stm.Get(s.versionsPath(path))
+	if res != "" {
+		err := proto.Unmarshal([]byte(res), &v)
+		if err != nil {
+			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
+			return errors.Wrap(err, "failed to unmarshal versions")
+		}
+	}
+
+	v.Versions = append(v.Versions, version)
+	bvs, err := proto.Marshal(&v)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode versions")
+	}
+	stm.Put(s.versionsPath(path), string(bvs))
+
+	return nil
 }
 
 func compareSignature(base, other *regula.Signature) error {
@@ -300,29 +267,6 @@ func validateParamNames(params []rule.Param) error {
 			}
 		}
 	}
-
-	return nil
-}
-
-// putVersions stores the new version or appends it to the existing ones under the key <namespace>/rulesets/versions/<path>.
-func (s *RulesetService) putVersions(stm concurrency.STM, path, version string) error {
-	var v pb.Versions
-
-	res := stm.Get(s.versionsPath(path))
-	if res != "" {
-		err := proto.Unmarshal([]byte(res), &v)
-		if err != nil {
-			s.Logger.Debug().Err(err).Str("path", path).Msg("put: versions unmarshalling failed")
-			return errors.Wrap(err, "failed to unmarshal versions")
-		}
-	}
-
-	v.Versions = append(v.Versions, version)
-	bvs, err := proto.Marshal(&v)
-	if err != nil {
-		return errors.Wrap(err, "failed to encode versions")
-	}
-	stm.Put(s.versionsPath(path), string(bvs))
 
 	return nil
 }
