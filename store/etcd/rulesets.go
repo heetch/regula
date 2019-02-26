@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"path"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/rs/zerolog"
@@ -55,4 +56,9 @@ func (s *RulesetService) latestVersionPath(p string) string {
 // Value: [version string, ]
 func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
+}
+
+func pathVersionFromKey(key string) (string, string) {
+	chunks := strings.Split(key, versionSeparator)
+	return chunks[0], chunks[1]
 }

@@ -1,7 +1,6 @@
 package etcd
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/coreos/etcd/clientv3"
@@ -48,8 +47,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}
 
 	if version == "" {
-		key := res.Kvs[0].Value
-		version = string(key[bytes.Index(key, []byte(versionSeparator))+1:])
+		_, version = pathVersionFromKey(string(res.Kvs[0].Value))
 	}
 
 	return &regula.EvalResult{

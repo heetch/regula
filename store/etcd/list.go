@@ -136,11 +136,10 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
-		key := string(rr.Kvs[0].Key)
-		sepIdx := strings.Index(key, versionSeparator)
+		path, version := pathVersionFromKey(string(rr.Kvs[0].Key))
 		entries.Entries[i] = store.RulesetEntry{
-			Path:    key[:sepIdx],
-			Version: key[sepIdx+1:],
+			Path:    path,
+			Version: version,
 			Ruleset: rulesetFromProtobuf(&pbr),
 		}
 	}
@@ -182,11 +181,10 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
-		key := string(pair.Key)
-		sepIdx := strings.Index(key, versionSeparator)
+		path, version := pathVersionFromKey(string(pair.Key))
 		entries.Entries[i] = store.RulesetEntry{
-			Path:    key[:sepIdx],
-			Version: key[sepIdx+1:],
+			Path:    path,
+			Version: version,
 			Ruleset: rulesetFromProtobuf(&pbr),
 		}
 	}
