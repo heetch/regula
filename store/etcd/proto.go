@@ -9,12 +9,12 @@ import (
 )
 
 // rulesetToProtobuf transforms rules into a pb.Ruleset.
-func rulesetToProtobuf(rs []*rule.Rule) *pb.Ruleset {
+func rulesetToProtobuf(rs *regula.Ruleset) *pb.Ruleset {
 	list := pb.Ruleset{
-		Rules: make([]*pb.Rule, len(rs)),
+		Rules: make([]*pb.Rule, len(rs.Rules)),
 	}
 
-	for i, r := range rs {
+	for i, r := range rs.Rules {
 		list.Rules[i] = ruleToProtobuf(r)
 	}
 
@@ -25,7 +25,7 @@ func rulesetToProtobuf(rs []*rule.Rule) *pb.Ruleset {
 func rulesetFromProtobuf(pbrs *pb.Ruleset) *regula.Ruleset {
 	rules := make([]*rule.Rule, len(pbrs.Rules))
 
-	for i, r := range pbrs.Ruleset {
+	for i, r := range pbrs.Rules {
 		rules[i] = &rule.Rule{
 			Expr:   exprFromProtobuf(r.Expr),
 			Result: valueFromProtobuf(r.Result),
