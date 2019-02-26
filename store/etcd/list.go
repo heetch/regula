@@ -40,9 +40,9 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 
 		var rangeEnd string
 		if opt.AllVersions {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.entriesPath(prefix, ""))
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
 		} else {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestRulesetPath(prefix))
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestVersionPath(prefix))
 		}
 		options = append(options, clientv3.WithRange(rangeEnd))
 	} else {
@@ -65,7 +65,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 // listPathsOnly returns only the path for each ruleset.
 func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	opts = append(opts, clientv3.WithKeysOnly())
-	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
@@ -79,7 +79,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 	var entries store.RulesetEntries
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	for _, pair := range resp.Kvs {
-		p := strings.TrimPrefix(string(pair.Key), s.latestRulesetPath("")+"/")
+		p := strings.TrimPrefix(string(pair.Key), s.latestVersionPath("")+"/")
 		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
 	}
 
@@ -97,7 +97,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 
 // listLastVersion returns only the latest version for each ruleset.
 func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(key), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch latests keys")
 	}
@@ -155,7 +155,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 
 // listAllVersions returns all available versions for each ruleset.
 func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.entriesPath(key, ""), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all entries")
 	}
