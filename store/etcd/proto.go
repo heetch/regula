@@ -8,9 +8,9 @@ import (
 	pb "github.com/heetch/regula/store/etcd/proto"
 )
 
-// rulesToProtobuf transforms rules into a pb.Rules.
-func rulesToProtobuf(rs []*rule.Rule) *pb.Rules {
-	list := pb.Rules{
+// rulesetToProtobuf transforms rules into a pb.Ruleset.
+func rulesetToProtobuf(rs []*rule.Rule) *pb.Ruleset {
+	list := pb.Ruleset{
 		Rules: make([]*pb.Rule, len(rs)),
 	}
 
@@ -21,18 +21,18 @@ func rulesToProtobuf(rs []*rule.Rule) *pb.Rules {
 	return &list
 }
 
-// rulesFromProtobuf creates a slice of rules from a pb.Rules.
-func rulesFromProtobuf(pbrs *pb.Rules) []*rule.Rule {
+// rulesetFromProtobuf creates a ruleset from a pb.Ruleset.
+func rulesetFromProtobuf(pbrs *pb.Ruleset) *regula.Ruleset {
 	rules := make([]*rule.Rule, len(pbrs.Rules))
 
-	for i, r := range pbrs.Rules {
+	for i, r := range pbrs.Ruleset {
 		rules[i] = &rule.Rule{
 			Expr:   exprFromProtobuf(r.Expr),
 			Result: valueFromProtobuf(r.Result),
 		}
 	}
 
-	return rules
+	return regula.NewRuleset(rules...)
 }
 
 // ruleToProtobuf transforms a rule into a pb.Rule.

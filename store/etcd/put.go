@@ -15,13 +15,13 @@ import (
 )
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
-func (s *RulesetService) Put(ctx context.Context, path string, rules []rule.Rule) (*store.RulesetEntry, error) {
+func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	var entry *store.RulesetEntry
 	var err error
 
 	txfn := func(stm concurrency.STM) error {
 		p := rulesPutter{s, stm}
-		entry, err = p.put(ctx, path, rules)
+		entry, err = p.put(ctx, path, ruleset)
 		return err
 	}
 
@@ -40,18 +40,16 @@ type rulesPutter struct {
 	stm concurrency.STM
 }
 
-func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule) (*store.RulesetEntry, error) {
+func (p *rulesPutter) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
 	var err error
 
 	entry := store.RulesetEntry{
-		Path: path,
-		Ruleset: &regula.Ruleset{
-			Rules: rules,
-		},
+		Path:    path,
+		Ruleset: ruleset,
 	}
 
-	// validate the rules
-	entry.Signature, err = p.validateRules(stm, path, rules)
+	// validate the ruleset
+	entry.Signature, err = p.validateRules(stm, path, ruleset)
 	if err != nil {
 		return err
 	}
@@ -75,14 +73,14 @@ func (p *rulesPutter) Put(ctx context.Context, path string, rules []rule.Rule) (
 		return &entry, nil
 	}
 
-	// create a new version of the rules
+	// create a new version of the ruleset
 	entry.Version, err = p.createNewVersion(stm, path, data)
 	if err != nil {
 		return nil, err
 	}
 
-	// update the pointer to the latest rules version
-	stm.Put(s.latestRulesPath(path), s.rulesPath(path, version))
+	// update the pointer to the latest ruleset version
+	stm.Put(s.latestVersionPath(path), s.rulesetsPath(path, version))
 
 	return p.updateVersionRegistry(stm, path, entry.Version)
 }
