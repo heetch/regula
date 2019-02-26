@@ -49,7 +49,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 
 	if version == "" {
 		key := res.Kvs[0].Value
-		version = string(key[:bytes.Index(key, []byte(versionSeparator))])
+		version = string(key[bytes.Index(key, []byte(versionSeparator))+1:])
 	}
 
 	return &regula.EvalResult{

@@ -55,7 +55,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 	var ruleset pb.Ruleset
 	err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &ruleset)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal rules")
+		return nil, errors.Wrap(err, "failed to unmarshal ruleset")
 	}
 
 	return &store.RulesetEntry{

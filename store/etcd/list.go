@@ -67,7 +67,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 	opts = append(opts, clientv3.WithKeysOnly())
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch all entries")
+		return nil, errors.Wrap(err, "failed to fetch versions")
 	}
 
 	// if a prefix is provided it must always return results
@@ -76,11 +76,13 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 		return nil, store.ErrNotFound
 	}
 
-	var entries store.RulesetEntries
+	entries := store.RulesetEntries{
+		Entries: make([]store.RulesetEntry, len(resp.Kvs)),
+	}
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
-	for _, pair := range resp.Kvs {
+	for i, pair := range resp.Kvs {
 		p := strings.TrimPrefix(string(pair.Key), s.latestVersionPath("")+"/")
-		entries.Entries = append(entries.Entries, store.RulesetEntry{Path: p})
+		entries.Entries[i].Path = p
 	}
 
 	if len(entries.Entries) < limit || !resp.More {
@@ -99,7 +101,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch latests keys")
+		return nil, errors.Wrap(err, "failed to fetch latest keys")
 	}
 
 	// if a prefix is provided it must always return results
@@ -115,7 +117,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 	}
 	txnresp, err := txn.Then(ops...).Commit()
 	if err != nil {
-		return nil, errors.Wrap(err, "transaction failed to fetch all entries")
+		return nil, errors.Wrap(err, "transaction failed to fetch selected rulesets")
 	}
 
 	var entries store.RulesetEntries
@@ -124,20 +126,22 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 
 	// Responses handles responses for each OpGet calls in the transaction.
 	for i, resps := range txnresp.Responses {
-		var pbrse pb.RulesetEntry
+		var pbr pb.Ruleset
 		rr := resps.GetResponseRange()
 
 		// Given that we are getting a leaf in the tree (a ruleset entry), we are sure that we will always have one value in the Kvs slice.
-		err = proto.Unmarshal(rr.Kvs[0].Value, &pbrse)
+		err = proto.Unmarshal(rr.Kvs[0].Value, &pbr)
 		if err != nil {
 			s.Logger.Debug().Err(err).Bytes("entry", rr.Kvs[0].Value).Msg("list: unmarshalling failed")
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
+		key := string(rr.Kvs[0].Key)
+		sepIdx := strings.Index(key, versionSeparator)
 		entries.Entries[i] = store.RulesetEntry{
-			Path:    pbrse.Path,
-			Version: pbrse.Version,
-			Ruleset: rulesetFromProtobuf(pbrse.Ruleset),
+			Path:    key[:sepIdx],
+			Version: key[sepIdx+1:],
+			Ruleset: rulesetFromProtobuf(&pbr),
 		}
 	}
 
@@ -170,18 +174,20 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
 	for i, pair := range resp.Kvs {
-		var pbrse pb.RulesetEntry
+		var pbr pb.Ruleset
 
-		err = proto.Unmarshal(pair.Value, &pbrse)
+		err = proto.Unmarshal(pair.Value, &pbr)
 		if err != nil {
 			s.Logger.Debug().Err(err).Bytes("entry", pair.Value).Msg("list: unmarshalling failed")
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
+		key := string(pair.Key)
+		sepIdx := strings.Index(key, versionSeparator)
 		entries.Entries[i] = store.RulesetEntry{
-			Path:    pbrse.Path,
-			Version: pbrse.Version,
-			Ruleset: rulesetFromProtobuf(pbrse.Ruleset),
+			Path:    key[:sepIdx],
+			Version: key[sepIdx+1:],
+			Ruleset: rulesetFromProtobuf(&pbr),
 		}
 	}
 
