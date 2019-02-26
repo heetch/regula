@@ -13,92 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidation(t *testing.T) {
-	t.Run("OK - ruleset name", func(t *testing.T) {
-		names := []string{
-			"path/to/my-ruleset",
-			"path/to/my-awesome-ruleset",
-			"path/to/my-123-ruleset",
-			"path/to/my-ruleset-123",
-		}
-
-		for _, n := range names {
-			err := validateRulesetName(n)
-			require.NoError(t, err)
-		}
-	})
-
-	t.Run("NOK - ruleset name", func(t *testing.T) {
-		names := []string{
-			"PATH/TO/MY-RULESET",
-			"/path/to/my-ruleset",
-			"path/to/my-ruleset/",
-			"path/to//my-ruleset",
-			"path/to/my_ruleset",
-			"1path/to/my-ruleset",
-			"path/to/my--ruleset",
-		}
-
-		for _, n := range names {
-			err := validateRulesetName(n)
-			require.True(t, store.IsValidationError(err))
-		}
-	})
-
-	t.Run("OK - param names", func(t *testing.T) {
-		names := []string{
-			"a",
-			"abc",
-			"abc-xyz",
-			"abc-123",
-			"abc-123-xyz",
-		}
-
-		for _, n := range names {
-			rs, _ := regula.NewBoolRuleset(
-				rule.New(
-					rule.BoolParam(n),
-					rule.BoolValue(true),
-				),
-			)
-
-			for _, r := range rs.Rules {
-				params := r.Params()
-				err := validateParamNames(params)
-				require.NoError(t, err)
-			}
-		}
-	})
-
-	t.Run("NOK - param names", func(t *testing.T) {
-		names := []string{
-			"ABC",
-			"abc-",
-			"abc_",
-			"abc--xyz",
-			"abc_xyz",
-			"0abc",
-		}
-
-		names = append(names, reservedWords...)
-
-		for _, n := range names {
-			rs, _ := regula.NewBoolRuleset(
-				rule.New(
-					rule.BoolParam(n),
-					rule.BoolValue(true),
-				),
-			)
-
-			for _, r := range rs.Rules {
-				params := r.Params()
-				err := validateParamNames(params)
-				require.True(t, store.IsValidationError(err))
-			}
-		}
-	})
-}
-
 // Limit should be set to 50 if the given one is <= 0 or > 100.
 func TestComputeLimit(t *testing.T) {
 	l := computeLimit(0)
@@ -117,11 +31,11 @@ func TestPathMethods(t *testing.T) {
 		Namespace: "test",
 	}
 
-	exp := "test/rulesets/entries/path" + versionSeparator + "version"
-	require.Equal(t, exp, s.entriesPath("path", "version"))
+	exp := "test/rulesets/rulesets/path" + versionSeparator + "version"
+	require.Equal(t, exp, s.rulesetsPath("path", "version"))
 
-	exp = "test/rulesets/entries/path"
-	require.Equal(t, exp, s.entriesPath("path", ""))
+	exp = "test/rulesets/rulesets/path"
+	require.Equal(t, exp, s.rulesetsPath("path", ""))
 
 	exp = "test/rulesets/checksums/path"
 	require.Equal(t, exp, s.checksumsPath("path"))
@@ -130,7 +44,7 @@ func TestPathMethods(t *testing.T) {
 	require.Equal(t, exp, s.signaturesPath("path"))
 
 	exp = "test/rulesets/latest/path"
-	require.Equal(t, exp, s.latestRulesetPath("path"))
+	require.Equal(t, exp, s.latestVersionPath("path"))
 
 	exp = "test/rulesets/versions/path"
 	require.Equal(t, exp, s.versionsPath("path"))
@@ -138,8 +52,7 @@ func TestPathMethods(t *testing.T) {
 
 // compareSignature should return a ValidationError if the signatures aren't the same.
 func TestCompareSignature(t *testing.T) {
-	rs, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
-	require.NoError(t, err)
+	rs := regula.NewRuleset(rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
 	baseSig := regula.NewSignature(rs)
 
 	t.Run("OK", func(t *testing.T) {
@@ -163,7 +76,7 @@ func TestCompareSignature(t *testing.T) {
 	})
 
 	t.Run("Bad param type", func(t *testing.T) {
-		rs1, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
+		rs1, err := regula.NewRuleset(rule.New(rule.Eq(rule.BoolParam("foo"), rule.StringValue("baz")), rule.BoolValue(true)))
 		require.NoError(t, err)
 		sig := regula.NewSignature(rs1)
 
@@ -178,7 +91,7 @@ func TestCompareSignature(t *testing.T) {
 	})
 
 	t.Run("Bad param", func(t *testing.T) {
-		rs1, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringParam("bar"), rule.StringValue("baz")), rule.BoolValue(true)))
+		rs1, err := regula.NewRuleset(rule.New(rule.Eq(rule.StringParam("bar"), rule.StringValue("baz")), rule.BoolValue(true)))
 		require.NoError(t, err)
 		sig := regula.NewSignature(rs1)
 
@@ -194,7 +107,7 @@ func TestCompareSignature(t *testing.T) {
 }
 
 func BenchmarkProtoMarshalling(b *testing.B) {
-	rs, err := regula.NewBoolRuleset(
+	rs := regula.NewRuleset(
 		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
 		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
 	)
@@ -208,7 +121,7 @@ func BenchmarkProtoMarshalling(b *testing.B) {
 }
 
 func BenchmarkJSONMarshalling(b *testing.B) {
-	rs, err := regula.NewBoolRuleset(
+	rs := regula.NewRuleset(
 		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
 		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
 	)
@@ -222,7 +135,7 @@ func BenchmarkJSONMarshalling(b *testing.B) {
 }
 
 func BenchmarkProtoUnmarshalling(b *testing.B) {
-	rs, err := regula.NewBoolRuleset(
+	rs := regula.NewRuleset(
 		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
 		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
 	)
@@ -240,7 +153,7 @@ func BenchmarkProtoUnmarshalling(b *testing.B) {
 }
 
 func BenchmarkJSONUnmarshalling(b *testing.B) {
-	rs, err := regula.NewBoolRuleset(
+	rs := regula.NewRuleset(
 		rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.BoolValue(true)),
 		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
 	)

@@ -19,7 +19,6 @@ func TestFromProtobufRuleset(t *testing.T) {
 		{
 			name: "Flat root",
 			pb: &pb.Ruleset{
-				Type: "int64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -40,15 +39,12 @@ func TestFromProtobufRuleset(t *testing.T) {
 				},
 			},
 			exp: func() *regula.Ruleset {
-				rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(42)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(42)))
 			},
 		},
 		{
 			name: "Eq returns a bool without parameters",
 			pb: &pb.Ruleset{
-				Type: "bool",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -87,15 +83,12 @@ func TestFromProtobufRuleset(t *testing.T) {
 				},
 			},
 			exp: func() *regula.Ruleset {
-				rs, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
 			},
 		},
 		{
 			name: "And returns a string with parameters",
 			pb: &pb.Ruleset{
-				Type: "string",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -134,15 +127,12 @@ func TestFromProtobufRuleset(t *testing.T) {
 				},
 			},
 			exp: func() *regula.Ruleset {
-				rs, err := regula.NewStringRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
 			},
 		},
 		{
 			name: "And with nested operator",
 			pb: &pb.Ruleset{
-				Type: "float64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -190,15 +180,12 @@ func TestFromProtobufRuleset(t *testing.T) {
 				},
 			},
 			exp: func() *regula.Ruleset {
-				rs, err := regula.NewFloat64Ruleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
 			},
 		},
 		{
 			name: "Two rules",
 			pb: &pb.Ruleset{
-				Type: "float64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -280,12 +267,10 @@ func TestFromProtobufRuleset(t *testing.T) {
 				},
 			},
 			exp: func() *regula.Ruleset {
-				rs, err := regula.NewFloat64Ruleset(
+				return regula.NewRuleset(
 					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
 					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
 				)
-				require.NoError(t, err)
-				return rs
 			},
 		},
 	}
@@ -309,12 +294,9 @@ func TestToProtobufRuleset(t *testing.T) {
 		{
 			name: "Flat root",
 			rs: func() *regula.Ruleset {
-				rs, err := regula.NewInt64Ruleset(rule.New(rule.True(), rule.Int64Value(42)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(42)))
 			},
 			exp: &pb.Ruleset{
-				Type: "int64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -338,12 +320,9 @@ func TestToProtobufRuleset(t *testing.T) {
 		{
 			name: "Eq returns a bool without parameters",
 			rs: func() *regula.Ruleset {
-				rs, err := regula.NewBoolRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
 			},
 			exp: &pb.Ruleset{
-				Type: "bool",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -385,12 +364,9 @@ func TestToProtobufRuleset(t *testing.T) {
 		{
 			name: "And returns a string with parameters",
 			rs: func() *regula.Ruleset {
-				rs, err := regula.NewStringRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
 			},
 			exp: &pb.Ruleset{
-				Type: "string",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -432,12 +408,9 @@ func TestToProtobufRuleset(t *testing.T) {
 		{
 			name: "And with nested operator",
 			rs: func() *regula.Ruleset {
-				rs, err := regula.NewFloat64Ruleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
-				require.NoError(t, err)
-				return rs
+				return regula.NewRuleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
 			},
 			exp: &pb.Ruleset{
-				Type: "float64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -488,15 +461,12 @@ func TestToProtobufRuleset(t *testing.T) {
 		{
 			name: "Two rules",
 			rs: func() *regula.Ruleset {
-				rs, err := regula.NewFloat64Ruleset(
+				return regula.NewRuleset(
 					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
 					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
 				)
-				require.NoError(t, err)
-				return rs
 			},
 			exp: &pb.Ruleset{
-				Type: "float64",
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
