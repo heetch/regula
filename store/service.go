@@ -18,16 +18,16 @@ var (
 
 // RulesetService manages rulesets.
 type RulesetService interface {
-	// Create a ruleset in the store using the given signature.
-	Create(ctx context.Context, path string, signature *regula.Signature) error
-	// Put is used to create a new ruleset version using the given rules.
-	Put(ctx context.Context, path string, rules []rule.Rule) (*RulesetEntry, error)
-	// Get returns the ruleset related to the given path. By default, it returns the latest one.
-	// It returns the related ruleset version if it's specified.
+	// Create a signature.
+	CreateSignature(ctx context.Context, path string, signature *regula.Signature) error
+	// Put is used to create a new version of the ruleset.
+	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
+	// Get returns a ruleset alongside its metadata. By default, it returns the latest version.
+	// If the version is not empty, the specified version is returned.
 	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
-	// List returns the latest version of each ruleset under the given prefix.
-	// If the prefix is empty, it returns entries from the beginning following the lexical order.
-	// The listing can be customised using the ListOptions type.
+	// List returns the latest version of each ruleset whose path starts by the given prefix.
+	// If the prefix is empty, it returns all the entries following the lexical order.
+	// The listing is paginated and can be customised using the ListOptions type.
 	List(ctx context.Context, prefix string, opt *ListOptions) (*RulesetEntries, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
@@ -48,10 +48,11 @@ type ListOptions struct {
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Path     string
-	Version  string
-	Ruleset  *regula.Ruleset
-	Versions []string
+	Path      string
+	Version   string
+	Ruleset   *regula.Ruleset
+	Signature *regula.Signature
+	Versions  []string
 }
 
 // RulesetEntries holds a list of ruleset entries.
@@ -63,7 +64,8 @@ type RulesetEntries struct {
 
 // List of possible events executed against a ruleset.
 const (
-	RulesetPutEvent = "PUT"
+	RulesetCreateEvent = "CREATE"
+	RulesetPutEvent    = "PUT"
 )
 
 // RulesetEvent describes an event that occured on a ruleset.
