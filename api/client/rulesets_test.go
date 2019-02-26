@@ -130,8 +130,7 @@ func TestRulesetService(t *testing.T) {
 	t.Run("Retries/Success", func(t *testing.T) {
 		i := 0
 
-		rs, err := regula.NewRuleset(regula.NewSignature().ReturnsInt64(), rule.New(rule.True(), rule.Int64Value(1)))
-		require.NoError(t, err)
+		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			i++
@@ -172,7 +171,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 		cli.RetryDelay = 10 * time.Millisecond
 
-		rs, err := regula.NewRuleset(regula.NewSignature().ReturnsInt64(), rule.New(rule.True(), rule.Int64Value(1)))
+		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
 		require.NoError(t, err)
 
 		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
@@ -192,7 +191,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 		cli.RetryDelay = 10 * time.Millisecond
 
-		rs, err := regula.NewRuleset(regula.NewSignature().ReturnsInt64(), rule.New(rule.True(), rule.Int64Value(1)))
+		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
 		require.NoError(t, err)
 
 		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
@@ -279,8 +278,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs, err := regula.NewRuleset(regula.NewSignature().ReturnsInt64(), rule.New(rule.True(), rule.Int64Value(1)))
-		require.NoError(t, err)
+		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
 
 		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)
 		require.NoError(t, err)

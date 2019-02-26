@@ -17,55 +17,46 @@ func TestEngine(t *testing.T) {
 	buf := regula.NewRulesetBuffer()
 
 	buf.Add("match-string-a", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v1")),
 		},
 	})
 	buf.Add("match-string-a", "2", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v2")),
 		},
 	})
 	buf.Add("match-string-b", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("matched b")),
 		},
 	})
 	buf.Add("type-mismatch", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
 		},
 	})
 	buf.Add("no-match", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("matched d")),
 		},
 	})
 	buf.Add("match-bool", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsBool(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
 		},
 	})
 	buf.Add("match-int64", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsInt64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
 		},
 	})
 	buf.Add("match-float64", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsFloat64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
 		},
 	})
 	buf.Add("match-duration", "1", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("3s")),
 		},

@@ -12,8 +12,7 @@ import (
 )
 
 func ExampleRuleset() {
-	rs, err := regula.NewRuleset(
-		regula.NewSignature().ReturnsString(),
+	rs := regula.NewRuleset(
 		rule.New(
 			rule.Eq(
 				rule.StringParam("group"),
@@ -35,9 +34,6 @@ func ExampleRuleset() {
 			rule.StringValue("default rule matched"),
 		),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	ret, err := rs.Eval(regula.Params{
 		"group": "staff",
@@ -59,42 +55,36 @@ func init() {
 	ev = buf
 
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsInt64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Int64Value(10)),
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsFloat64(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.Float64Value(3.14)),
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsBool(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.BoolValue(true)),
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Signature: regula.NewSignature().ReturnsString(),
 		Rules: []*rule.Rule{
 			rule.New(rule.True(), rule.StringValue("3s")),
 		},

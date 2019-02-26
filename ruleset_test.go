@@ -11,12 +11,10 @@ import (
 
 func TestRulesetEval(t *testing.T) {
 	t.Run("Match string", func(t *testing.T) {
-		r, err := NewRuleset(
-			NewSignature().StringP("foo").StringP("baz").ReturnsString(),
+		r := NewRuleset(
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("baz")), rule.StringValue("first")),
 			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("second")),
 		)
-		require.NoError(t, err)
 
 		res, err := r.Eval(Params{
 			"foo": "bar",
@@ -26,47 +24,32 @@ func TestRulesetEval(t *testing.T) {
 	})
 
 	t.Run("Match bool", func(t *testing.T) {
-		r, err := NewRuleset(
-			NewSignature().ReturnsBool(),
+		r := NewRuleset(
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.BoolValue(false)),
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)),
 		)
-		require.NoError(t, err)
 
 		res, err := r.Eval(nil)
 		require.NoError(t, err)
 		require.Equal(t, "true", res.Data)
 	})
 
-	t.Run("Signature mismatch", func(t *testing.T) {
-		_, err := NewRuleset(
-			NewSignature().ReturnsString(),
-			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
-			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)),
-		)
-		require.Equal(t, errors.ErrSignatureMismatch, err)
-	})
-
 	t.Run("No match", func(t *testing.T) {
-		r, err := NewRuleset(
-			NewSignature().ReturnsString(),
+		r := NewRuleset(
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
 			rule.New(rule.Eq(rule.StringValue("bar"), rule.StringValue("foo")), rule.StringValue("second")),
 		)
-		require.NoError(t, err)
 
-		_, err = r.Eval(nil)
+		_, err := r.Eval(nil)
 		require.Equal(t, errors.ErrNoMatch, err)
 	})
 
 	t.Run("Default", func(t *testing.T) {
-		r, err := NewRuleset(
-			NewSignature().ReturnsString(),
+		r := NewRuleset(
 			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
 			rule.New(rule.Eq(rule.StringValue("bar"), rule.StringValue("foo")), rule.StringValue("second")),
 			rule.New(rule.True(), rule.StringValue("default")),
 		)
-		require.NoError(t, err)
 
 		res, err := r.Eval(nil)
 		require.NoError(t, err)
@@ -75,13 +58,11 @@ func TestRulesetEval(t *testing.T) {
 }
 
 func TestRulesetEncDec(t *testing.T) {
-	r1, err := NewRuleset(
-		NewSignature().ReturnsString().StringP("foo").StringP("bar"),
+	r1 := NewRuleset(
 		rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
 		rule.New(rule.Eq(rule.StringValue("bar"), rule.StringParam("foo")), rule.StringValue("second")),
 		rule.New(rule.True(), rule.StringValue("default")),
 	)
-	require.NoError(t, err)
 
 	raw, err := json.Marshal(r1)
 	require.NoError(t, err)
@@ -94,13 +75,11 @@ func TestRulesetEncDec(t *testing.T) {
 }
 
 func TestRulesetParams(t *testing.T) {
-	r1, err := NewRuleset(
-		NewSignature().StringP("foo").Int64P("bar").Float64P("baz").ReturnsString(),
+	r1 := NewRuleset(
 		rule.New(rule.Eq(rule.StringParam("foo"), rule.Int64Param("bar")), rule.StringValue("first")),
 		rule.New(rule.Eq(rule.StringParam("foo"), rule.Float64Param("baz")), rule.StringValue("second")),
 		rule.New(rule.True(), rule.StringValue("default")),
 	)
-	require.NoError(t, err)
 	require.Equal(t, []rule.Param{
 		*rule.StringParam("foo"),
 		*rule.Int64Param("bar"),
