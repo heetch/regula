@@ -8,21 +8,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-// A Ruleset is list of rules that must return the same type.
+// A Ruleset is list of rules.
 type Ruleset struct {
-	Signature *Signature   `json:"signature"`
-	Rules     []*rule.Rule `json:"rules"`
+	Rules []*rule.Rule `json:"rules"`
 }
 
-// NewRuleset creates a ruleset after having made sure that all the rules
-// satisfy the given signature.
-func NewRuleset(sig *Signature, rules ...*rule.Rule) (*Ruleset, error) {
+// NewRuleset creates a ruleset.
+func NewRuleset(rules ...*rule.Rule) *Ruleset {
 	rs := Ruleset{
-		Signature: sig,
-		Rules:     rules,
+		Rules: rules,
 	}
 
-	return &rs, rs.validate()
+	return &rs
 }
 
 // Eval evaluates every rule of the ruleset until one matches.
@@ -45,7 +42,7 @@ func (r *Ruleset) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	return r.validate()
+	return nil
 }
 
 // Params returns a list of all the parameters used in all the underlying rules.
@@ -66,23 +63,20 @@ func (r *Ruleset) Params() []rule.Param {
 	return params
 }
 
-func (r *Ruleset) validate() error {
-	if r.Signature == nil {
-		return errors.New("missing signature")
-	}
-
-	if err := r.Signature.Validate(); err != nil {
+// ValidateSignature validates the ruleset against the given signature.
+func (r *Ruleset) ValidateSignature(signature *Signature) error {
+	if err := signature.Validate(); err != nil {
 		return err
 	}
 
 	for _, rl := range r.Rules {
-		if rl.Result.Type != r.Signature.ReturnType {
+		if rl.Result.Type != signature.ReturnType {
 			return rerrors.ErrSignatureMismatch
 		}
 
 		ps := rl.Params()
 		for _, p := range ps {
-			tp, ok := r.Signature.ParamTypes[p.Name]
+			tp, ok := signature.ParamTypes[p.Name]
 			if !ok || p.Type != tp {
 				return rerrors.ErrSignatureMismatch
 			}
