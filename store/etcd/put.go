@@ -3,8 +3,6 @@ package etcd
 import (
 	"context"
 	"crypto/md5"
-	"fmt"
-	"regexp"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/gogo/protobuf/proto"
@@ -166,123 +164,6 @@ func (p *rulesPutter) updateVersionRegistry(stm concurrency.STM, path, version s
 		return errors.Wrap(err, "failed to encode versions")
 	}
 	stm.Put(s.versionsPath(path), string(bvs))
-
-	return nil
-}
-
-func compareSignature(base, other *regula.Signature) error {
-	if base.ReturnType != other.ReturnType {
-		return &store.ValidationError{
-			Field:  "return type",
-			Value:  other.ReturnType,
-			Reason: fmt.Sprintf("signature mismatch: return type must be of type %s", base.ReturnType),
-		}
-	}
-
-	for name, tp := range other.ParamTypes {
-		stp, ok := base.ParamTypes[name]
-		if !ok {
-			return &store.ValidationError{
-				Field:  "param",
-				Value:  name,
-				Reason: "signature mismatch: unknown parameter",
-			}
-		}
-
-		if tp != stp {
-			return &store.ValidationError{
-				Field:  "param type",
-				Value:  tp,
-				Reason: fmt.Sprintf("signature mismatch: param must be of type %s", stp),
-			}
-		}
-	}
-
-	return nil
-}
-
-func validateRuleset(path string, rs *regula.Ruleset) (*regula.Signature, error) {
-	err := validateRulesetName(path)
-	if err != nil {
-		return nil, err
-	}
-
-	sig := regula.NewSignature(rs)
-
-	for _, r := range rs.Rules {
-		params := r.Params()
-		err = validateParamNames(params)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return sig, nil
-}
-
-// regex used to validate ruleset names.
-var rgxRuleset = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-\/]?[a-z0-9])*$`)
-
-func validateRulesetName(path string) error {
-	if !rgxRuleset.MatchString(path) {
-		return &store.ValidationError{
-			Field:  "path",
-			Value:  path,
-			Reason: "invalid format",
-		}
-	}
-
-	return nil
-}
-
-// regex used to validate parameters name.
-var rgxParam = regexp.MustCompile(`^[a-z]+(?:[a-z0-9-]?[a-z0-9])*$`)
-
-// list of reserved words that shouldn't be used as parameters.
-var reservedWords = []string{
-	"version",
-	"list",
-	"eval",
-	"watch",
-	"revision",
-}
-
-func validateParamNames(params []rule.Param) error {
-	for i := range params {
-		if !rgxParam.MatchString(params[i].Name) {
-			return &store.ValidationError{
-				Field:  "param",
-				Value:  params[i].Name,
-				Reason: "invalid format",
-			}
-		}
-
-		for _, w := range reservedWords {
-			if params[i].Name == w {
-				return &store.ValidationError{
-					Field:  "param",
-					Value:  params[i].Name,
-					Reason: "forbidden value",
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func (s *RulesetService) putEntry(stm concurrency.STM, rse *store.RulesetEntry) error {
-	pbrse := pb.RulesetEntry{
-		Path:    rse.Path,
-		Version: rse.Version,
-		Ruleset: rulesetToProtobuf(rse.Ruleset),
-	}
-
-	b, err := proto.Marshal(&pbrse)
-	if err != nil {
-		return errors.Wrap(err, "failed to encode entry")
-	}
-	stm.Put(s.entriesPath(rse.Path, rse.Version), string(b))
 
 	return nil
 }

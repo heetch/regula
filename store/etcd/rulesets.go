@@ -18,7 +18,9 @@ type RulesetService struct {
 	Namespace string
 }
 
-// entriesPath returns the path where the rules are stored in etcd.
+// rulesPath returns the path where the rules are stored in etcd.
+// Key: <namespace>/rulesets/rules/<path>/<version>
+// Value: rules
 func (s *RulesetService) rulesPath(p, v string) string {
 	// If the version parameter is not empty, we concatenate to the path separated by the versionSeparator value.
 	if v != "" {
@@ -28,21 +30,29 @@ func (s *RulesetService) rulesPath(p, v string) string {
 }
 
 // checksumsPath returns the path where the checksums are stored in etcd.
+// Key: <namespace>/rulesets/checksums/<path>
+// Value: checksum
 func (s *RulesetService) checksumsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "checksums", p)
 }
 
 // signaturesPath returns the path where the signatures are stored in etcd.
+// Key: <namespace>/rulesets/signatures/<path>
+// Value: signature
 func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
 // latestVersionPath returns the path where the latest version string of each ruleset is stored in etcd.
+// Key: <namespace>/rulesets/latest/<path>
+// Value: version string
 func (s *RulesetService) latestVersionPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "latest", p)
 }
 
 // versionsPath returns the path where the versions of each rulesets are stored in etcd.
+// Key: <namespace>/rulesets/versions/<path>
+// Value: [version string, ]
 func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
 }
