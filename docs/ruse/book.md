@@ -92,3 +92,18 @@ Blanche nodded sagely, then continued.
 > So what does it mean that you need to know the *type* of information
 > the rule set gives back?
 
+Heureux took a deep breath, and said: 
+
+> So, every piece of information we use in a computer program has a
+> type.  This includes every parameter our app gives to Regula and the
+> information Regula gives back to the original program. All of these
+> pieces of information must have a type.
+>
+> The parameters we pass to a ruleset must also have names, so that we
+> can refer to them within our rules.  The value the rule-set returns
+> doesn't need a name, but it will need a type as well.
+>
+>The combination of the rule-set name, the names and types of the
+>parameters, and the type of the returned value is called the
+>"signature" of the rule-set.
+
