@@ -49,6 +49,9 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		s.get(w, r, path)
 		return
+	case "POST":
+		s.create(w, r, path)
+		return
 	case "PUT":
 		if path != "" {
 			s.put(w, r, path)
@@ -57,6 +60,32 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNotFound)
+}
+
+func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string) {
+	var sig regula.Signature
+
+	err := json.NewDecoder(r.Body).Decode(&sig)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	err = s.rulesets.Create(r.Context(), path, &sig)
+	if err != nil {
+		if err == store.ErrAlreadyExists {
+			writeError(w, r, err, http.StatusConflict)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
+	reghttp.EncodeJSON(w, r, &api.Ruleset{
+		Path:      path,
+		Signature: &sig,
+	}, http.StatusCreated)
 }
 
 func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
