@@ -139,15 +139,13 @@ func Version(version string) Option {
 	}
 }
 
-// An Evaluator provides methods to evaluate rulesets from any location.
+// An Evaluator provides a method to evaluate rulesets from any location.
 // Long running implementations must listen to the given context for timeout and cancelation.
 type Evaluator interface {
-	// Eval evaluates a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
-	Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error)
-	// EvalVersion evaluates a specific version of a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
-	EvalVersion(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
+	// Eval evaluates a ruleset using the given params. If the version is not empty, the selected version
+	// will be used for evaluation. If it's empty, the latest version will be used.
+	// If no ruleset is found for a given path, the implementation must return errors.ErrRulesetNotFound.
+	Eval(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
 }
 
 // EvalResult is the product of an evaluation. It contains the value generated as long as some metadata.
