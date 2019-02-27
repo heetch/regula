@@ -78,6 +78,11 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 			return
 		}
 
+		if store.IsValidationError(err) {
+			writeError(w, r, err, http.StatusBadRequest)
+			return
+		}
+
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}

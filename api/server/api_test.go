@@ -451,6 +451,53 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
 		})
 	})
+
+	t.Run("Create", func(t *testing.T) {
+		sig := regula.NewSignature().BoolP("foo").ReturnsInt64()
+
+		e1 := store.RulesetEntry{
+			Path:      "a",
+			Signature: sig,
+		}
+
+		call := func(t *testing.T, url string, code int, e *store.RulesetEntry, createErr error) {
+			t.Helper()
+
+			s.CreateFn = func(context.Context, string, *regula.Signature) error {
+				return createErr
+			}
+			defer func() { s.CreateFn = nil }()
+
+			var buf bytes.Buffer
+			err := json.NewEncoder(&buf).Encode(sig)
+			require.NoError(t, err)
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", url, &buf)
+			h.ServeHTTP(w, r)
+
+			require.Equal(t, code, w.Code)
+
+			if code == http.StatusCreated {
+				var rs api.Ruleset
+				err := json.NewDecoder(w.Body).Decode(&rs)
+				require.NoError(t, err)
+				require.EqualValues(t, *e, rs)
+			}
+		}
+
+		t.Run("OK", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusCreated, &e1, nil)
+		})
+
+		t.Run("StoreError", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
+		})
+
+		t.Run("Validation error", func(t *testing.T) {
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
+		})
+	})
 }
 
 func resetStore(s *mock.RulesetService) {
