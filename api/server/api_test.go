@@ -36,13 +36,13 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:      "a",
 			Version:   "version",
 			Ruleset:   r1,
 			Versions:  []string{"version"},
-			Signature: r1.Signature,
+			Signature: regula.NewSignature().ReturnsBool(),
 		}
 
 		e2 := store.RulesetEntry{
@@ -50,7 +50,7 @@ func TestAPI(t *testing.T) {
 			Version:   "version2",
 			Ruleset:   r1,
 			Versions:  []string{"version1", "version2"},
-			Signature: r1.Signature,
+			Signature: regula.NewSignature().ReturnsBool(),
 		}
 
 		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {
@@ -88,7 +88,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/b", http.StatusNotFound, &e1, store.ErrNotFound)
+			call(t, "/rulesets/b", http.StatusNotFound, &e1, store.ErrRulesetNotFound)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
@@ -101,8 +101,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
-		r2, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r2 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEntries{
 			Entries: []store.RulesetEntry{
 				{Path: "aa", Ruleset: r1},
@@ -172,7 +172,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), &store.ListOptions{}, store.ErrNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), &store.ListOptions{}, store.ErrRulesetNotFound)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
@@ -309,8 +309,8 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
-		r2, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		r2 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEvents{
 			Events: []store.RulesetEvent{
 				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r1},
@@ -356,7 +356,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, store.ErrNotFound)
+			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, store.ErrRulesetNotFound)
 		})
 
 		t.Run("WithRevision", func(t *testing.T) {
@@ -394,7 +394,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		r1, _ := regula.NewRuleset(regula.NewSignature().ReturnsBool(), rule.New(rule.True(), rule.BoolValue(true)))
+		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		e1 := store.RulesetEntry{
 			Path:    "a",
 			Version: "version",
@@ -432,7 +432,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotModified", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, store.ErrNotModified)
+			call(t, "/rulesets/a", http.StatusOK, &e1, store.ErrRulesetNotModified)
 		})
 
 		t.Run("EmptyPath", func(t *testing.T) {
