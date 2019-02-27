@@ -276,24 +276,3 @@ func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 
 	return nil, rerrors.ErrRulesetNotFound
 }
-
-// EvalVersion evaluates the selected ruleset version or returns rerrors.ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
-	b.rw.RLock()
-	defer b.rw.RUnlock()
-
-	ri, err := b.getVersion(path, version)
-	if err != nil {
-		return nil, err
-	}
-
-	v, err := ri.r.Eval(params)
-	if err != nil {
-		return nil, err
-	}
-
-	return &EvalResult{
-		Value:   v,
-		Version: ri.version,
-	}, nil
-}
