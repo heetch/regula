@@ -64,7 +64,7 @@ func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 
 	entry, err := s.rulesets.Get(r.Context(), path, v)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return
 		}
@@ -101,9 +101,8 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 	}
 
 	entries, err := s.rulesets.List(r.Context(), prefix, &opt)
-
 	if err != nil {
-		if err == store.ErrNotFound {
+		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return
 		}
@@ -177,7 +176,7 @@ func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string
 			fallthrough
 		case context.DeadlineExceeded:
 			ae.Timeout = true
-		case store.ErrNotFound:
+		case store.ErrRulesetNotFound:
 			w.WriteHeader(http.StatusNotFound)
 			return
 		default:
@@ -209,7 +208,7 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 	}
 
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
-	if err != nil && err != store.ErrNotModified {
+	if err != nil && err != store.ErrRulesetNotModified {
 		if store.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
