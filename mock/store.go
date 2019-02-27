@@ -13,20 +13,18 @@ var _ store.RulesetService = new(RulesetService)
 
 // RulesetService mocks the store.RulesetService interface.
 type RulesetService struct {
-	CreateCount      int
-	CreateFn         func(ctx context.Context, path string, signature *regula.Signature) error
-	GetCount         int
-	GetFn            func(ctx context.Context, path, version string) (*store.RulesetEntry, error)
-	ListCount        int
-	ListFn           func(context.Context, string, *store.ListOptions) (*store.RulesetEntries, error)
-	WatchCount       int
-	WatchFn          func(context.Context, string, string) (*store.RulesetEvents, error)
-	PutCount         int
-	PutFn            func(context.Context, string) (*store.RulesetEntry, error)
-	EvalCount        int
-	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
-	EvalVersionCount int
-	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+	CreateCount int
+	CreateFn    func(ctx context.Context, path string, signature *regula.Signature) error
+	GetCount    int
+	GetFn       func(ctx context.Context, path, version string) (*store.RulesetEntry, error)
+	ListCount   int
+	ListFn      func(context.Context, string, *store.ListOptions) (*store.RulesetEntries, error)
+	WatchCount  int
+	WatchFn     func(context.Context, string, string) (*store.RulesetEvents, error)
+	PutCount    int
+	PutFn       func(context.Context, string) (*store.RulesetEntry, error)
+	EvalCount   int
+	EvalFn      func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
 // Create runs CreateFn if provided and increments CreateCount when invoked.
@@ -84,21 +82,11 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 }
 
 // Eval runs EvalFn if provided and increments EvalCount when invoked.
-func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	s.EvalCount++
 
 	if s.EvalFn != nil {
-		return s.EvalFn(ctx, path, params)
-	}
-	return nil, nil
-}
-
-// EvalVersion runs EvalVersionFn if provided and increments EvalVersionCount when invoked.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-	s.EvalVersionCount++
-
-	if s.EvalVersionFn != nil {
-		return s.EvalVersionFn(ctx, path, version, params)
+		return s.EvalFn(ctx, path, version, params)
 	}
 	return nil, nil
 }
