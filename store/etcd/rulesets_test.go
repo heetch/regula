@@ -64,7 +64,7 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.
 }
 
 func createBoolRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.Ruleset) *store.RulesetEntry {
-	err := s.CreateSignature(context.Background(), path, regula.NewSignature().ReturnsBool())
+	err := s.Create(context.Background(), path, regula.NewSignature().ReturnsBool())
 	require.False(t, err != nil && err != store.ErrAlreadyExists)
 	return createRuleset(t, s, path, r)
 }
@@ -442,7 +442,7 @@ func TestPut(t *testing.T) {
 
 	path := "a"
 	sig := regula.NewSignature().ReturnsBool()
-	require.NoError(t, s.CreateSignature(context.Background(), path, sig))
+	require.NoError(t, s.Create(context.Background(), path, sig))
 
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
@@ -517,7 +517,7 @@ func TestPut(t *testing.T) {
 
 	t.Run("Signatures", func(t *testing.T) {
 		path := "b"
-		require.NoError(t, s.CreateSignature(context.Background(), path, regula.NewSignature().ReturnsBool().StringP("a").BoolP("b").Int64P("c")))
+		require.NoError(t, s.Create(context.Background(), path, regula.NewSignature().ReturnsBool().StringP("a").BoolP("b").Int64P("c")))
 
 		rs1 := regula.NewRuleset(
 			rule.New(
@@ -678,7 +678,7 @@ func TestEval(t *testing.T) {
 	defer cleanup()
 
 	sig := regula.NewSignature().ReturnsBool().StringP("id")
-	require.NoError(t, s.CreateSignature(context.Background(), "a", sig))
+	require.NoError(t, s.Create(context.Background(), "a", sig))
 
 	rs := regula.NewRuleset(
 		rule.New(
@@ -716,7 +716,7 @@ func TestEvalVersion(t *testing.T) {
 	defer cleanup()
 
 	sig := regula.NewSignature().ReturnsBool().StringP("id")
-	require.NoError(t, s.CreateSignature(context.Background(), "a", sig))
+	require.NoError(t, s.Create(context.Background(), "a", sig))
 
 	rs := regula.NewRuleset(
 		rule.New(

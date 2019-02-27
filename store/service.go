@@ -19,8 +19,8 @@ var (
 
 // RulesetService manages rulesets.
 type RulesetService interface {
-	// Create a signature.
-	CreateSignature(ctx context.Context, path string, signature *regula.Signature) error
+	// Create a ruleset entry using a signature.
+	Create(ctx context.Context, path string, signature *regula.Signature) error
 	// Put is used to create a new version of the ruleset.
 	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
 	// Get returns a ruleset alongside its metadata. By default, it returns the latest version.
