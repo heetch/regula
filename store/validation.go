@@ -147,8 +147,16 @@ func ValidateRule(signature *regula.Signature, r *rule.Rule) error {
 	if r.Result == nil {
 		return &ValidationError{
 			Field:  "result",
-			Value:  "(nil)",
+			Value:  "null",
 			Reason: "result is required",
+		}
+	}
+
+	if r.Expr == nil {
+		return &ValidationError{
+			Field:  "expr",
+			Value:  "null",
+			Reason: "expr is required",
 		}
 	}
 

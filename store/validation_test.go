@@ -95,3 +95,29 @@ func TestValidation(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateRule(t *testing.T) {
+	sig := regula.NewSignature().ReturnsBool().Int64P("foo")
+
+	tests := []struct {
+		name  string
+		rule  *rule.Rule
+		fails bool
+	}{
+		{"empty rule", rule.New(nil, nil), true},
+		{"no expr", rule.New(nil, rule.BoolValue(true)), true},
+		{"no value", rule.New(rule.True(), nil), true},
+		{"wrong return type", rule.New(rule.True(), rule.Int64Value(10)), true},
+		{"wrong param type", rule.New(rule.Float64Param("foo"), rule.BoolValue(true)), true},
+		{"unknown param", rule.New(rule.Int64Param("bar"), rule.BoolValue(true)), true},
+		{"no params", rule.New(rule.True(), rule.BoolValue(true)), false},
+		{"right param", rule.New(rule.Int64Param("foo"), rule.BoolValue(true)), false},
+		{"bad return value", rule.New(rule.True(), &rule.Value{Type: "bool", Kind: "value", Data: "100"}), true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.fails, ValidateRule(sig, test.rule) != nil)
+		})
+	}
+}
