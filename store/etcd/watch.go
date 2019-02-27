@@ -51,7 +51,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					s.Logger.Debug().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed")
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
-				path, version := pathVersionFromKey(string(ev.Kv.Key))
+				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
 				events[i].Path = path
 				events[i].Ruleset = rulesetFromProtobuf(&pbrs)
 				events[i].Version = version

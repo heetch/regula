@@ -173,14 +173,14 @@ func signatureToProtobuf(sig *regula.Signature) *pb.Signature {
 
 // signatureFromProtobuf creates a regula.Signature from a protobuf Signature.
 func signatureFromProtobuf(s *pb.Signature) *regula.Signature {
-	sig := &regula.Signature{
+	sig := regula.Signature{
 		ReturnType: s.ReturnType,
 		ParamTypes: s.ParamTypes,
 	}
 
-	for k, v := range s.ParamTypes {
-		sig.ParamTypes[k] = v
+	if sig.ParamTypes == nil {
+		sig.ParamTypes = make(map[string]string)
 	}
 
-	return sig
+	return &sig
 }

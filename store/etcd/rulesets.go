@@ -58,7 +58,8 @@ func (s *RulesetService) versionsPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "versions", p)
 }
 
-func pathVersionFromKey(key string) (string, string) {
+func (s *RulesetService) pathVersionFromKey(key string) (string, string) {
+	key = strings.TrimPrefix(key, path.Join(s.Namespace, "rulesets", "rulesets")+"/")
 	chunks := strings.Split(key, versionSeparator)
 	return chunks[0], chunks[1]
 }

@@ -10,8 +10,9 @@ import (
 
 // Common errors.
 var (
-	ErrNotFound             = errors.New("not found")
-	ErrNotModified          = errors.New("not modified")
+	ErrRulesetNotFound      = errors.New("ruleset not found")
+	ErrRulesetNotModified   = errors.New("not modified")
+	ErrSignatureNotFound    = errors.New("signature not found")
 	ErrInvalidContinueToken = errors.New("invalid continue token")
 	ErrAlreadyExists        = errors.New("already exists")
 )

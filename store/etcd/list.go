@@ -73,7 +73,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrNotFound
+		return nil, store.ErrRulesetNotFound
 	}
 
 	entries := store.RulesetEntries{
@@ -107,7 +107,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrNotFound
+		return nil, store.ErrRulesetNotFound
 	}
 
 	ops := make([]clientv3.Op, 0, resp.Count)
@@ -136,7 +136,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
-		path, version := pathVersionFromKey(string(rr.Kvs[0].Key))
+		path, version := s.pathVersionFromKey(string(rr.Kvs[0].Key))
 		entries.Entries[i] = store.RulesetEntry{
 			Path:    path,
 			Version: version,
@@ -166,7 +166,7 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrNotFound
+		return nil, store.ErrRulesetNotFound
 	}
 
 	var entries store.RulesetEntries
@@ -181,7 +181,7 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 			return nil, errors.Wrap(err, "failed to unmarshal entry")
 		}
 
-		path, version := pathVersionFromKey(string(pair.Key))
+		path, version := s.pathVersionFromKey(string(pair.Key))
 		entries.Entries[i] = store.RulesetEntry{
 			Path:    path,
 			Version: version,

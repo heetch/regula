@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	pb "github.com/heetch/regula/store/etcd/proto"
@@ -25,7 +25,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	}
 
 	_, err = concurrency.NewSTM(s.Client, txfn, concurrency.WithAbortContext(ctx))
-	if err != nil && err != store.ErrNotModified && !store.IsValidationError(err) {
+	if err != nil && err != store.ErrRulesetNotModified && !store.IsValidationError(err) {
 		return nil, errors.Wrap(err, "failed to put ruleset")
 	}
 
@@ -67,9 +67,9 @@ func (p *rulesPutter) put(ctx context.Context, path string, ruleset *regula.Rule
 
 	if !changed {
 		// fetch latest version string
-		entry.Version = p.stm.Get(p.s.latestVersionPath(path))
+		_, entry.Version = p.s.pathVersionFromKey((p.stm.Get(p.s.latestVersionPath(path))))
 
-		return &entry, nil
+		return &entry, store.ErrRulesetNotModified
 	}
 
 	// create a new version of the ruleset
@@ -89,7 +89,7 @@ func (p *rulesPutter) put(ctx context.Context, path string, ruleset *regula.Rule
 func (p *rulesPutter) validateRuleset(stm concurrency.STM, path string, ruleset *regula.Ruleset) (*regula.Signature, error) {
 	data := stm.Get(p.s.signaturesPath(path))
 	if data == "" {
-		return nil, store.ErrNotFound
+		return nil, store.ErrSignatureNotFound
 	}
 
 	var pbsig pb.Signature

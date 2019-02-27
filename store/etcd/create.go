@@ -29,9 +29,10 @@ func (s *RulesetService) CreateSignature(ctx context.Context, path string, signa
 
 	resp, err := s.Client.Txn(ctx).
 		// if a key exists, its version is > 0
-		If(clientv3.Compare(clientv3.Version(sigPath), "==", 0)).
+		If(clientv3.Compare(clientv3.Version(sigPath), "=", 0)).
 		// store the signature
 		Then(clientv3.OpPut(sigPath, string(value))).
+		Else(clientv3.OpGet(sigPath)).
 		Commit()
 	if err != nil {
 		return errors.Wrap(err, "failed to store signature")

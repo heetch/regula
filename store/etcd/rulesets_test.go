@@ -57,10 +57,16 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 
 func createRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.Ruleset) *store.RulesetEntry {
 	e, err := s.Put(context.Background(), path, r)
-	if err != nil && err != store.ErrNotModified {
+	if err != nil && err != store.ErrRulesetNotModified {
 		require.NoError(t, err)
 	}
 	return e
+}
+
+func createBoolRuleset(t *testing.T, s *etcd.RulesetService, path string, r *regula.Ruleset) *store.RulesetEntry {
+	err := s.CreateSignature(context.Background(), path, regula.NewSignature().ReturnsBool())
+	require.False(t, err != nil && err != store.ErrAlreadyExists)
+	return createRuleset(t, s, path, r)
 }
 
 func TestGet(t *testing.T) {
@@ -69,11 +75,12 @@ func TestGet(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
+	path := "p/a/t/h"
+	sig := regula.NewSignature().ReturnsBool()
+
 	t.Run("Root", func(t *testing.T) {
-		path := "p/a/t/h"
-		rs1, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		sig := regula.NewSignature(rs1)
-		createRuleset(t, s, path, rs1)
+		rs1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		createBoolRuleset(t, s, path, rs1)
 
 		entry1, err := s.Get(context.Background(), path, "")
 		require.NoError(t, err)
@@ -86,8 +93,8 @@ func TestGet(t *testing.T) {
 		// we are waiting 1 second here to avoid creating the new version in the same second as the previous one
 		// ksuid gives a sorting with a one second precision
 		time.Sleep(time.Second)
-		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)))
-		createRuleset(t, s, path, rs2)
+		rs2 := regula.NewRuleset(rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true)))
+		createBoolRuleset(t, s, path, rs2)
 
 		// by default, it should return the latest version
 		entry2, err := s.Get(context.Background(), path, "")
@@ -110,7 +117,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("Not found", func(t *testing.T) {
 		_, err := s.Get(context.Background(), "doesntexist", "")
-		require.Equal(t, err, store.ErrNotFound)
+		require.Equal(t, err, store.ErrRulesetNotFound)
 	})
 }
 
@@ -121,17 +128,17 @@ func TestList(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+	rs := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
 	// Root tests the basic behaviour without prefix.
 	t.Run("Root", func(t *testing.T) {
 		prefix := "list/root/"
 
-		createRuleset(t, s, prefix+"c", rs)
-		createRuleset(t, s, prefix+"a", rs)
-		createRuleset(t, s, prefix+"a/1", rs)
-		createRuleset(t, s, prefix+"b", rs)
-		createRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"c", rs)
+		createBoolRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"a/1", rs)
+		createBoolRuleset(t, s, prefix+"b", rs)
+		createBoolRuleset(t, s, prefix+"a", rs)
 
 		paths := []string{prefix + "a", prefix + "a/1", prefix + "b", prefix + "c"}
 
@@ -147,13 +154,13 @@ func TestList(t *testing.T) {
 	// Assert that only latest version for each ruleset is returned by default.
 	t.Run("Last version only", func(t *testing.T) {
 		prefix := "list/last/version/"
-		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
-		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+		rs1 := regula.NewRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2 := regula.NewRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
 
-		createRuleset(t, s, prefix+"a", rs)
-		createRuleset(t, s, prefix+"a/1", rs)
-		createRuleset(t, s, prefix+"a", rs1)
-		createRuleset(t, s, prefix+"a", rs2)
+		createBoolRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"a/1", rs)
+		createBoolRuleset(t, s, prefix+"a", rs1)
+		createBoolRuleset(t, s, prefix+"a", rs2)
 
 		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
 		require.NoError(t, err)
@@ -166,15 +173,15 @@ func TestList(t *testing.T) {
 	// Assert that all versions are returned when passing the AllVersions option.
 	t.Run("All versions", func(t *testing.T) {
 		prefix := "list/all/version/"
-		rs1, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
-		rs2, _ := regula.NewBoolRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
+		rs1 := regula.NewRuleset(rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true)))
+		rs2 := regula.NewRuleset(rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true)))
 
-		createRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"a", rs)
 		time.Sleep(time.Second)
-		createRuleset(t, s, prefix+"a", rs1)
+		createBoolRuleset(t, s, prefix+"a", rs1)
 		time.Sleep(time.Second)
-		createRuleset(t, s, prefix+"a", rs2)
-		createRuleset(t, s, prefix+"a/1", rs)
+		createBoolRuleset(t, s, prefix+"a", rs2)
+		createBoolRuleset(t, s, prefix+"a/1", rs)
 
 		paths := []string{prefix + "a", prefix + "a", prefix + "a", prefix + "a/1"}
 
@@ -212,7 +219,7 @@ func TestList(t *testing.T) {
 
 		t.Run("NotFound", func(t *testing.T) {
 			_, err = s.List(context.Background(), prefix+"doesntexist", &store.ListOptions{AllVersions: true})
-			require.Equal(t, err, store.ErrNotFound)
+			require.Equal(t, err, store.ErrRulesetNotFound)
 		})
 
 	})
@@ -221,10 +228,10 @@ func TestList(t *testing.T) {
 	t.Run("Prefix", func(t *testing.T) {
 		prefix := "list/prefix/"
 
-		createRuleset(t, s, prefix+"x", rs)
-		createRuleset(t, s, prefix+"xx", rs)
-		createRuleset(t, s, prefix+"x/1", rs)
-		createRuleset(t, s, prefix+"x/2", rs)
+		createBoolRuleset(t, s, prefix+"x", rs)
+		createBoolRuleset(t, s, prefix+"xx", rs)
+		createBoolRuleset(t, s, prefix+"x/1", rs)
+		createBoolRuleset(t, s, prefix+"x/2", rs)
 
 		paths := []string{prefix + "x", prefix + "x/1", prefix + "x/2", prefix + "xx"}
 
@@ -240,18 +247,18 @@ func TestList(t *testing.T) {
 	// NotFound tests List with a prefix which doesn't exist.
 	t.Run("NotFound", func(t *testing.T) {
 		_, err := s.List(context.Background(), "doesntexist", &store.ListOptions{})
-		require.Equal(t, err, store.ErrNotFound)
+		require.Equal(t, err, store.ErrRulesetNotFound)
 	})
 
 	// Paging tests List with pagination.
 	t.Run("Paging", func(t *testing.T) {
 		prefix := "list/paging/"
 
-		createRuleset(t, s, prefix+"y", rs)
-		createRuleset(t, s, prefix+"yy", rs)
-		createRuleset(t, s, prefix+"y/1", rs)
-		createRuleset(t, s, prefix+"y/2", rs)
-		createRuleset(t, s, prefix+"y/3", rs)
+		createBoolRuleset(t, s, prefix+"y", rs)
+		createBoolRuleset(t, s, prefix+"yy", rs)
+		createBoolRuleset(t, s, prefix+"y/1", rs)
+		createBoolRuleset(t, s, prefix+"y/2", rs)
+		createBoolRuleset(t, s, prefix+"y/3", rs)
 
 		opt := store.ListOptions{Limit: 2}
 		entries, err := s.List(context.Background(), prefix+"y", &opt)
@@ -307,20 +314,20 @@ func TestListPaths(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+	rs := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
 	// Root is the basic behaviour without prefix with pathsOnly parameter set to true.
 	t.Run("Root", func(t *testing.T) {
 		prefix := "list/paths/root/"
 
-		createRuleset(t, s, prefix+"a", rs)
-		createRuleset(t, s, prefix+"b", rs)
-		createRuleset(t, s, prefix+"a/1", rs)
-		createRuleset(t, s, prefix+"c", rs)
-		createRuleset(t, s, prefix+"a", rs)
-		createRuleset(t, s, prefix+"a/1", rs)
-		createRuleset(t, s, prefix+"a/2", rs)
-		createRuleset(t, s, prefix+"d", rs)
+		createBoolRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"b", rs)
+		createBoolRuleset(t, s, prefix+"a/1", rs)
+		createBoolRuleset(t, s, prefix+"c", rs)
+		createBoolRuleset(t, s, prefix+"a", rs)
+		createBoolRuleset(t, s, prefix+"a/1", rs)
+		createBoolRuleset(t, s, prefix+"a/2", rs)
+		createBoolRuleset(t, s, prefix+"d", rs)
 
 		paths := []string{prefix + "a", prefix + "a/1", prefix + "a/2", prefix + "b", prefix + "c", prefix + "d"}
 
@@ -341,12 +348,12 @@ func TestListPaths(t *testing.T) {
 	t.Run("Prefix", func(t *testing.T) {
 		prefix := "list/paths/prefix/"
 
-		createRuleset(t, s, prefix+"x", rs)
-		createRuleset(t, s, prefix+"xx", rs)
-		createRuleset(t, s, prefix+"x/1", rs)
-		createRuleset(t, s, prefix+"xy", rs)
-		createRuleset(t, s, prefix+"xy/ab", rs)
-		createRuleset(t, s, prefix+"xyz", rs)
+		createBoolRuleset(t, s, prefix+"x", rs)
+		createBoolRuleset(t, s, prefix+"xx", rs)
+		createBoolRuleset(t, s, prefix+"x/1", rs)
+		createBoolRuleset(t, s, prefix+"xy", rs)
+		createBoolRuleset(t, s, prefix+"xy/ab", rs)
+		createBoolRuleset(t, s, prefix+"xyz", rs)
 
 		paths := []string{prefix + "xy", prefix + "xy/ab", prefix + "xyz"}
 
@@ -367,19 +374,19 @@ func TestListPaths(t *testing.T) {
 	t.Run("NotFound", func(t *testing.T) {
 		opt := store.ListOptions{PathsOnly: true}
 		_, err := s.List(context.Background(), "doesntexist", &opt)
-		require.Equal(t, err, store.ErrNotFound)
+		require.Equal(t, err, store.ErrRulesetNotFound)
 	})
 
 	// Paging tests List with pagination with pathsOnly parameter set to true.
 	t.Run("Paging", func(t *testing.T) {
 		prefix := "list/paths/paging/"
 
-		createRuleset(t, s, prefix+"foo", rs)
-		createRuleset(t, s, prefix+"foo/bar", rs)
-		createRuleset(t, s, prefix+"foo/bar/baz", rs)
-		createRuleset(t, s, prefix+"foo/bar", rs)
-		createRuleset(t, s, prefix+"foo/babar", rs)
-		createRuleset(t, s, prefix+"foo", rs)
+		createBoolRuleset(t, s, prefix+"foo", rs)
+		createBoolRuleset(t, s, prefix+"foo/bar", rs)
+		createBoolRuleset(t, s, prefix+"foo/bar/baz", rs)
+		createBoolRuleset(t, s, prefix+"foo/bar", rs)
+		createBoolRuleset(t, s, prefix+"foo/babar", rs)
+		createBoolRuleset(t, s, prefix+"foo", rs)
 
 		opt := store.ListOptions{Limit: 2, PathsOnly: true}
 		entries, err := s.List(context.Background(), prefix+"f", &opt)
@@ -427,141 +434,19 @@ func TestListPaths(t *testing.T) {
 	})
 }
 
-func TestLatest(t *testing.T) {
-	t.Parallel()
-
-	s, cleanup := newEtcdRulesetService(t)
-	defer cleanup()
-
-	oldRse, _ := regula.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.StringValue("a"),
-		),
-	)
-
-	newRse, _ := regula.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.StringValue("b"),
-		),
-	)
-
-	createRuleset(t, s, "a", oldRse)
-	// sleep 1 second because ksuid doesn't guarantee the order within the same second since it's based on a 32 bits timestamp (second).
-	time.Sleep(time.Second)
-	createRuleset(t, s, "a", newRse)
-
-	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-	createRuleset(t, s, "b", rs)
-	createRuleset(t, s, "c", rs)
-	createRuleset(t, s, "abc", rs)
-	createRuleset(t, s, "abcd", rs)
-
-	t.Run("OK - several versions of a ruleset", func(t *testing.T) {
-		path := "a"
-
-		entry, err := s.Latest(context.Background(), path)
-		require.NoError(t, err)
-		require.Equal(t, path, entry.Path)
-		require.Equal(t, newRse, entry.Ruleset)
-	})
-
-	t.Run("OK - only one version of a ruleset", func(t *testing.T) {
-		path := "b"
-
-		entry, err := s.Latest(context.Background(), path)
-		require.NoError(t, err)
-		require.Equal(t, path, entry.Path)
-		require.Equal(t, rs, entry.Ruleset)
-	})
-
-	t.Run("NOK - path doesn't exist", func(t *testing.T) {
-		path := "aa"
-
-		_, err := s.Latest(context.Background(), path)
-		require.Equal(t, err, store.ErrNotFound)
-	})
-
-	t.Run("NOK - empty path", func(t *testing.T) {
-		path := ""
-
-		_, err := s.Latest(context.Background(), path)
-		require.Equal(t, err, store.ErrNotFound)
-	})
-
-	t.Run("NOK - path exists but it's not a ruleset", func(t *testing.T) {
-		path := "ab"
-
-		_, err := s.Latest(context.Background(), path)
-		require.Error(t, err)
-		require.Equal(t, err, store.ErrNotFound)
-	})
-}
-
-func TestOneByVersion(t *testing.T) {
-	t.Parallel()
-
-	s, cleanup := newEtcdRulesetService(t)
-	defer cleanup()
-
-	oldRse, _ := regula.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.StringValue("a"),
-		),
-	)
-
-	newRse, _ := regula.NewStringRuleset(
-		rule.New(
-			rule.True(),
-			rule.StringValue("b"),
-		),
-	)
-
-	createRuleset(t, s, "a", oldRse)
-	entry, err := s.Latest(context.Background(), "a")
-	require.NoError(t, err)
-	version := entry.Version
-
-	createRuleset(t, s, "a", newRse)
-
-	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-	createRuleset(t, s, "abc", rs)
-
-	t.Run("OK", func(t *testing.T) {
-		path := "a"
-
-		entry, err := s.OneByVersion(context.Background(), path, version)
-		require.NoError(t, err)
-		require.Equal(t, path, entry.Path)
-		require.Equal(t, version, entry.Version)
-		require.Equal(t, oldRse, entry.Ruleset)
-	})
-
-	t.Run("NOK", func(t *testing.T) {
-		paths := []string{
-			"a",  // doesn't exist
-			"ab", // exists but not a ruleset
-			"",   // empty path
-		}
-
-		for _, path := range paths {
-			_, err := s.OneByVersion(context.Background(), path, "123version")
-			require.Equal(t, err, store.ErrNotFound)
-		}
-	})
-}
-
 func TestPut(t *testing.T) {
 	t.Parallel()
 
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
+	path := "a"
+	sig := regula.NewSignature().ReturnsBool()
+	require.NoError(t, s.CreateSignature(context.Background(), path, sig))
+
 	t.Run("OK", func(t *testing.T) {
 		path := "a"
-		rs, _ := regula.NewBoolRuleset(
+		rs := regula.NewRuleset(
 			rule.New(
 				rule.True(),
 				rule.BoolValue(true),
@@ -575,11 +460,11 @@ func TestPut(t *testing.T) {
 		require.Equal(t, rs, entry.Ruleset)
 
 		// verify ruleset creation
-		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "entries", path), clientv3.WithPrefix())
+		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "rulesets", path), clientv3.WithPrefix())
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "entries", "a")+"!"))
+		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "rulesets", "a")+"!"))
 
 		// verify checksum creation
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())
@@ -604,11 +489,11 @@ func TestPut(t *testing.T) {
 
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
-		require.Equal(t, err, store.ErrNotModified)
+		require.Equal(t, store.ErrRulesetNotModified, err)
 		require.Equal(t, entry, entry2)
 
 		// create new version with different ruleset
-		rs, _ = regula.NewBoolRuleset(
+		rs = regula.NewRuleset(
 			rule.New(
 				rule.True(),
 				rule.BoolValue(false),
@@ -632,7 +517,9 @@ func TestPut(t *testing.T) {
 
 	t.Run("Signatures", func(t *testing.T) {
 		path := "b"
-		rs1, err := regula.NewBoolRuleset(
+		require.NoError(t, s.CreateSignature(context.Background(), path, regula.NewSignature().ReturnsBool().StringP("a").BoolP("b").Int64P("c")))
+
+		rs1 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -642,13 +529,12 @@ func TestPut(t *testing.T) {
 				rule.BoolValue(true),
 			),
 		)
-		require.NoError(t, err)
 
-		_, err = s.Put(context.Background(), path, rs1)
+		_, err := s.Put(context.Background(), path, rs1)
 		require.NoError(t, err)
 
 		// same params, different return type
-		rs2, err := regula.NewStringRuleset(
+		rs2 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -658,13 +544,12 @@ func TestPut(t *testing.T) {
 				rule.StringValue("true"),
 			),
 		)
-		require.NoError(t, err)
 
 		_, err = s.Put(context.Background(), path, rs2)
 		require.True(t, store.IsValidationError(err))
 
 		// adding new params
-		rs3, err := regula.NewBoolRuleset(
+		rs3 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -675,13 +560,12 @@ func TestPut(t *testing.T) {
 				rule.BoolValue(true),
 			),
 		)
-		require.NoError(t, err)
 
 		_, err = s.Put(context.Background(), path, rs3)
 		require.True(t, store.IsValidationError(err))
 
 		// changing param types
-		rs4, err := regula.NewBoolRuleset(
+		rs4 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -692,13 +576,12 @@ func TestPut(t *testing.T) {
 				rule.BoolValue(true),
 			),
 		)
-		require.NoError(t, err)
 
 		_, err = s.Put(context.Background(), path, rs4)
 		require.True(t, store.IsValidationError(err))
 
 		// adding new rule with different param types
-		rs5, err := regula.NewBoolRuleset(
+		rs5 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -723,7 +606,7 @@ func TestPut(t *testing.T) {
 		require.True(t, store.IsValidationError(err))
 
 		// adding new rule with correct param types but less
-		rs6, _ := regula.NewBoolRuleset(
+		rs6 := regula.NewRuleset(
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -759,11 +642,11 @@ func TestWatch(t *testing.T) {
 
 		time.Sleep(time.Second)
 
-		rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+		rs := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 
-		createRuleset(t, s, "aa", rs)
-		createRuleset(t, s, "ab", rs)
-		createRuleset(t, s, "a/1", rs)
+		createBoolRuleset(t, s, "aa", rs)
+		createBoolRuleset(t, s, "ab", rs)
+		createBoolRuleset(t, s, "a/1", rs)
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -794,7 +677,10 @@ func TestEval(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	rs, _ := regula.NewBoolRuleset(
+	sig := regula.NewSignature().ReturnsBool().StringP("id")
+	require.NoError(t, s.CreateSignature(context.Background(), "a", sig))
+
+	rs := regula.NewRuleset(
 		rule.New(
 			rule.Eq(
 				rule.StringParam("id"),
@@ -829,7 +715,10 @@ func TestEvalVersion(t *testing.T) {
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
-	rs, _ := regula.NewBoolRuleset(
+	sig := regula.NewSignature().ReturnsBool().StringP("id")
+	require.NoError(t, s.CreateSignature(context.Background(), "a", sig))
+
+	rs := regula.NewRuleset(
 		rule.New(
 			rule.Eq(
 				rule.StringParam("id"),

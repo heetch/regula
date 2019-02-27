@@ -47,7 +47,7 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 	}
 
 	if version == "" {
-		_, version = pathVersionFromKey(string(res.Kvs[0].Value))
+		_, version = s.pathVersionFromKey(string(res.Kvs[0].Key))
 	}
 
 	return &regula.EvalResult{

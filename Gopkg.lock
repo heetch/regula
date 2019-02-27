@@ -12,8 +12,8 @@
     "mvcc/mvccpb",
     "pkg/types"
   ]
-  revision = "2cf9e51d2a78003b164c2998886158e60ded1cbb"
-  version = "v3.3.11"
+  revision = "d57e8b8d97adfc4a6c224fe116714bf1a1f3beb9"
+  version = "v3.3.12"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -28,8 +28,8 @@
     "proto",
     "protoc-gen-gogo/descriptor"
   ]
-  revision = "4cbf7e384e768b4e01799441fdf2a706a5635ae7"
-  version = "v1.2.0"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -57,8 +57,8 @@
 [[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c"
-  version = "v0.0.4"
+  revision = "369ecd8cea9851e459abb67eb171853e3986591e"
+  version = "v0.0.6"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -108,14 +108,20 @@
 [[projects]]
   name = "github.com/tidwall/gjson"
   packages = ["."]
-  revision = "5a96cfda705e1762dc0671e26b0b78925ad97e29"
-  version = "v1.1.5"
+  revision = "eee0b6226f0d1db2675a176fdfaa8419bcad4ca8"
+  version = "v1.2.1"
 
 [[projects]]
   name = "github.com/tidwall/match"
   packages = ["."]
   revision = "33827db735fff6510490d69a8622612558a557ed"
   version = "v1.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/pretty"
+  packages = ["."]
+  revision = "65a9db5fad5105a89e17f38adcc9878685be6d78"
 
 [[projects]]
   name = "github.com/zenazn/goji"
@@ -136,13 +142,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "ed066c81e75eba56dd9bd2139ade88125b855585"
+  revision = "fe579d43d83210096a79b46dcca0e3721058393a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "054c452bb702e465e95ce8e7a3d9a6cf0cd1188d"
+  revision = "cc5685c2db1239775905f3911f0067c0fa74762f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -169,7 +175,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "db91494dd46c1fdcbbde05e5ff5eb56df8f7d79a"
+  revision = "082222b4a5c572e33e82ee9162d1352c7cf38682"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -213,6 +219,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ec00bf4786126c0ac9f2050e8dc7e33cac48b415c6035832a24df5a7824f17b0"
+  inputs-digest = "6edba8e824deefa38b7ed70871c8f26ec49d6918d3e81531e6ede23b21871a7b"
   solver-name = "gps-cdcl"
   solver-version = 1
