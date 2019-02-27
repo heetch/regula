@@ -34,16 +34,7 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 		opt(&cfg)
 	}
 
-	var (
-		result *EvalResult
-		err    error
-	)
-
-	if cfg.Version != "" {
-		result, err = e.evaluator.EvalVersion(ctx, path, cfg.Version, params)
-	} else {
-		result, err = e.evaluator.Eval(ctx, path, params)
-	}
+	result, err := e.evaluator.Eval(ctx, path, cfg.Version, params)
 	if err != nil {
 		if err == rerrors.ErrRulesetNotFound || err == rerrors.ErrNoMatch {
 			return nil, err
@@ -107,7 +98,7 @@ func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params
 // tagged with the "ruleset" struct tag.
 func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Params) error {
 	b := backend.Func("regula", func(ctx context.Context, path string) ([]byte, error) {
-		res, err := e.evaluator.Eval(ctx, path, params)
+		res, err := e.evaluator.Eval(ctx, path, "", params)
 		if err != nil {
 			if err == rerrors.ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
