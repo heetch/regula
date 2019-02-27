@@ -85,7 +85,27 @@ Blanche thought a little and then asked:
 
 Heureux smiled kindly and answered:
 
-> This is a very important point.  Regula and RUSE aren't there to make the app do new things, we still determine what the app *can* do, but the rules determine *what* it should do in a given situation.  They're like an especially flexible settings panel for the app. 
+> This is a very important point.  Regula and RUSE aren't there to
+> make the app do new things, we still determine what the app *can*
+> do, but the rules determine *what* it should do in a given
+> situation.  They're like an especially flexible settings panel for
+> the app.
+>
+> The software engineers, and the product manager can agree up front
+> what aspects of the system should be tweakable, what information
+> would be needed to make these decisions and what type of information
+> is communicated back to the app when a decision is made.
+>
+> This combination or information, combined with a unique path to the
+> ruleset constitutes its signature and that is the contract between
+> the software engineering team and the product manager.  The software
+> engineering team can trust the contract before the product manager
+> ever attempts to create a rule.  They can build that signature into
+> their code and they can rely on Regula to give them meaningful
+> responses before any rules exist, and when they they are added.  The
+> product manager can rely on the software to respect the contract and
+> have confidence that they won't break the software by writing rules
+> in the ruleset.
 
 Blanche nodded sagely, then continued.
 
@@ -107,3 +127,67 @@ Heureux took a deep breath, and said:
 >parameters, and the type of the returned value is called the
 >"signature" of the rule-set.
 
+Heureux paused and walked over the whiteboard.  He drew quickly scribbled a rought drawing of part of the Regula UI.
+![Ruleset Creation](./regula-01-ruleset-creation.png)
+
+This is the rule-set creation UI.  If we look at the right
+hand side of the screen we can see the heading "New ruleset" and
+directly below this we see a "Path" field. This should be a unique
+identifier for your rule. It should start and end with a letter or
+number, but it can contain dashes and slashes in its body.  By
+convention we use slashes to indicate hierarchy and dashes to
+separate words in any given level of the hierarchy. Lets say we want
+a collection of rulesets for the "book of ruse, and within that set
+we want a sub-set called "examples", and within that subset we want
+a rule-set called "signature example", we'd create that with the
+path:
+
+    book-of-ruse/examples/signature-example
+
+OK, below this we see the heading "Parameters" and a big "+" button.
+If we click on that button two new fields appear: "Name" and "Type".
+We can add as many of these paramters as we like, and remove them
+again using the big red "-" button at the end of each line.  The
+"Name" field should contain something meaningful that describes what
+information it will contain.  That name must start with a letter,
+but it can also contain numbers and dashes, though it cannot end
+with a dash.  For this example we'll add a parameter called:
+
+   day-of-the-week 
+Now we have to select a type for our parameter. There are four choices:
+
+   - Int64
+   - Float64
+   - Bool
+   - String
+
+An Int64 is a number without any decimal places: 1, 2 or -220003030
+for example.  A float64 is a number with decimals places: 1.23, 3.14
+or -99.9494 are all examples. A Bool (short for Boolean) is either
+true or false, you can think of it like a light switch, it's either on
+or off (true of false).  A string is just some text, it can contain
+spaces, punctuation, numbers, pretty much anything.  We have two valid
+choices for our "day-of-the-week" parameter, we could either pass an
+Int64, where we assign a number to each day of the week (1 = Monday, 2
+= Tuesday, and so on), or we could use a String and simply pass the
+name of the day.  Because we like clarity we'll use a string.
+
+Finally we see a a field called "Return Type", No name is required
+here (a rulset can only return one thing) but, as well as the simple
+types we've already seen, the return type can also be another type,
+JSON.  JSON is short for JavaScript Object Notation.  Essentially JSON
+allows us to create structures of "tagged" data, in the Regula ruleset
+world this means that instead of just returning a single, simple
+value, we can return a whole tree of data.  Because this data can be
+arbitrarily complex, and will have to be handled by the client
+program, the use of JSON as a return type is a topic you'll have to
+discuss at length with the software engineers, so we won't go into
+depth about it here.
+
+As Heureux explained all this he noticed that Blanch was starting to look more and more dazed and her eyelids were getting heavy.  Before she ended up snoring like Somnolent, he said:
+
+> Ah, Blanche that was a lot to take in.  Let's take a break.
+
+Blanche realising this was true, agreed.  Heck, I'm tired just writing
+this so maybe, dear reader, you and I should both get some coffee and
+a donut now and reconvene here later, to work through some examples.
