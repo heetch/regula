@@ -111,6 +111,19 @@ func (s *RulesetService) Put(ctx context.Context, path string, rs *regula.Rulese
 	return &resp, err
 }
 
+// Create creates a ruleset using on the given path using the given signature.
+func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Signature) (*api.Ruleset, error) {
+	req, err := s.client.newRequest("POST", s.joinPath(path), sig)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp api.Ruleset
+
+	_, err = s.client.try(ctx, req, &resp)
+	return &resp, err
+}
+
 // WatchResponse contains a list of events occured on a group of rulesets.
 // If an error occurs during the watching, the Err field will be populated.
 type WatchResponse struct {
