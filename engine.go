@@ -229,17 +229,28 @@ func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
 	return ri.r, nil
 }
 
-// Eval evaluates the latest added ruleset or returns rerrors.ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error) {
+// Eval evaluates the selected ruleset version, or the latest one if the version is empty, and returns errors.ErrRulesetNotFound if not found.
+func (b *RulesetBuffer) Eval(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
-	l, ok := b.rulesets[path]
-	if !ok || len(l) == 0 {
-		return nil, rerrors.ErrRulesetNotFound
+	var ri *rulesetInfo
+	var err error
+
+	if version == "" {
+		l, ok := b.rulesets[path]
+		if !ok || len(l) == 0 {
+			return nil, rerrors.ErrRulesetNotFound
+		}
+
+		ri = l[len(l)-1]
+	} else {
+		ri, err = b.getVersion(path, version)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	ri := l[len(l)-1]
 	v, err := ri.r.Eval(params)
 	if err != nil {
 		return nil, err
