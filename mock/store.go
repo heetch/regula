@@ -13,6 +13,8 @@ var _ store.RulesetService = new(RulesetService)
 
 // RulesetService mocks the store.RulesetService interface.
 type RulesetService struct {
+	CreateCount      int
+	CreateFn         func(ctx context.Context, path string, signature *regula.Signature) error
 	GetCount         int
 	GetFn            func(ctx context.Context, path, version string) (*store.RulesetEntry, error)
 	ListCount        int
@@ -25,6 +27,17 @@ type RulesetService struct {
 	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	EvalVersionCount int
 	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+}
+
+// Create runs CreateFn if provided and increments CreateCount when invoked.
+func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Signature) error {
+	s.CreateCount++
+
+	if s.CreateFn != nil {
+		return s.CreateFn(ctx, path, sig)
+	}
+
+	return nil
 }
 
 // Get runs GetFn if provided and increments GetCount when invoked.
