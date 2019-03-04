@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 
 	"github.com/heetch/regula"
@@ -22,22 +21,19 @@ var (
 )
 
 // NewHandler creates a http handler serving the UI application and the UI backend.
-func NewHandler(service store.RulesetService, distPath string) http.Handler {
+func NewHandler(service store.RulesetService, fs http.FileSystem) http.Handler {
 	var mux http.ServeMux
 
 	// internal API
 	mux.Handle("/i/", http.StripPrefix("/i", newInternalHandler(service)))
 
 	// static files
-	fs := http.FileServer(http.Dir(distPath))
-	mux.Handle("/css/", fs)
-	mux.Handle("/js/", fs)
-	mux.Handle("/fonts/", fs)
-
+	h := http.FileServer(fs)
+	mux.Handle("/css/", h)
+	mux.Handle("/js/", h)
+	mux.Handle("/fonts/", h)
 	// catch all url that deleguates the routing to the front app router
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(distPath, "index.html"))
-	})
+	mux.Handle("/", h)
 
 	return &mux
 }
