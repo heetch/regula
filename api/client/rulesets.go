@@ -105,7 +105,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rul
 	return &resp, err
 }
 
-// Create creates a ruleset using on the given path using the given signature.
+// Create creates a ruleset at the given path using the given signature.
 func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Signature) (*regula.Ruleset, error) {
 	req, err := s.client.newRequest("POST", s.joinPath(path), sig)
 	if err != nil {
