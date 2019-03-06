@@ -41,6 +41,7 @@ func NewHandler(service store.RulesetService, fs http.FileSystem) http.Handler {
 			writeError(w, r, err, http.StatusInternalServerError)
 			return
 		}
+		defer f.Close()
 		_, err = io.Copy(w, f)
 		if err != nil {
 			writeError(w, r, err, http.StatusInternalServerError)
