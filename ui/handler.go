@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -32,8 +33,20 @@ func NewHandler(service store.RulesetService, fs http.FileSystem) http.Handler {
 	mux.Handle("/css/", h)
 	mux.Handle("/js/", h)
 	mux.Handle("/fonts/", h)
+
 	// catch all url that deleguates the routing to the front app router
-	mux.Handle("/", h)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		f, err := fs.Open("index.html")
+		if err != nil {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+		_, err = io.Copy(w, f)
+		if err != nil {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+	})
 
 	return &mux
 }
