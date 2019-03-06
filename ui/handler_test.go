@@ -26,7 +26,7 @@ func doRequest(h http.Handler, method, path string, body io.Reader) *httptest.Re
 
 func TestPOSTNewRulesetWithParserError(t *testing.T) {
 	s := new(mock.RulesetService)
-	rec := doRequest(NewHandler(s, ""), "POST", "/i/rulesets/",
+	rec := doRequest(NewHandler(s, http.Dir("")), "POST", "/i/rulesets/",
 		strings.NewReader(`{
     "path": "Path1",
     "signature": {
@@ -67,7 +67,7 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
 
 func TestPOSTNewRuleset(t *testing.T) {
 	s := new(mock.RulesetService)
-	rec := doRequest(NewHandler(s, ""), "POST", "/i/rulesets/",
+	rec := doRequest(NewHandler(s, http.Dir("")), "POST", "/i/rulesets/",
 		strings.NewReader(`{
     "path": "Path1",
     "signature": {
@@ -121,7 +121,7 @@ func TestInternalHandler(t *testing.T) {
 			return &entries, nil
 		}
 
-		rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
+		rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/", nil)
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.JSONEq(t, `{"rulesets": [{"path": "Path0"},{"path": "Path1"},{"path": "Path2"}]}`, rec.Body.String())
 	})
@@ -134,7 +134,7 @@ func TestInternalHandler(t *testing.T) {
 			return new(store.RulesetEntries), nil
 		}
 
-		rec := doRequest(NewHandler(s, ""), "GET", "/i/rulesets/", nil)
+		rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/", nil)
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.JSONEq(t, `{"rulesets": []}`, rec.Body.String())
 	})
