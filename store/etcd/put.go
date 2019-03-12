@@ -7,6 +7,7 @@ import (
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/golang/protobuf/proto"
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/pkg/errors"
@@ -14,13 +15,13 @@ import (
 )
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
-func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
-	var entry *store.RulesetEntry
+func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error) {
+	var ruleset *regula.Ruleset
 	var err error
 
 	txfn := func(stm concurrency.STM) error {
 		p := rulesPutter{s, stm}
-		entry, err = p.put(ctx, path, ruleset)
+		ruleset, err = p.put(ctx, path, rules)
 		return err
 	}
 
@@ -29,7 +30,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 		return nil, errors.Wrap(err, "failed to put ruleset")
 	}
 
-	return entry, err
+	return ruleset, err
 }
 
 // rulesPutter is responsible for validating and storing rules, updating checksums and other actions
@@ -39,22 +40,22 @@ type rulesPutter struct {
 	stm concurrency.STM
 }
 
-func (p *rulesPutter) put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+func (p *rulesPutter) put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error) {
 	var err error
 
-	entry := store.RulesetEntry{
-		Path:    path,
-		Ruleset: ruleset,
+	ruleset := regula.Ruleset{
+		Path:  path,
+		Rules: rules,
 	}
 
-	// validate the ruleset
-	entry.Signature, err = p.validateRuleset(p.stm, path, ruleset)
+	// validate the rules
+	ruleset.Signature, err = p.validateRules(p.stm, path, rules)
 	if err != nil {
 		return nil, err
 	}
 
 	// encode rules
-	data, err := proto.Marshal(rulesetToProtobuf(ruleset))
+	data, err := proto.Marshal(rulesToProtobuf(rules))
 	if err != nil {
 		return nil, err
 	}
@@ -67,26 +68,26 @@ func (p *rulesPutter) put(ctx context.Context, path string, ruleset *regula.Rule
 
 	if !changed {
 		// fetch latest version string
-		_, entry.Version = p.s.pathVersionFromKey((p.stm.Get(p.s.latestVersionPath(path))))
+		_, ruleset.Version = p.s.pathVersionFromKey((p.stm.Get(p.s.latestVersionPath(path))))
 
-		return &entry, store.ErrRulesetNotModified
+		return &ruleset, store.ErrRulesetNotModified
 	}
 
 	// create a new version of the ruleset
-	entry.Version, err = p.createNewVersion(p.stm, path, data)
+	ruleset.Version, err = p.createNewVersion(p.stm, path, data)
 	if err != nil {
 		return nil, err
 	}
 
 	// update the pointer to the latest ruleset version
-	p.stm.Put(p.s.latestVersionPath(path), p.s.rulesetsPath(path, entry.Version))
+	p.stm.Put(p.s.latestVersionPath(path), p.s.rulesPath(path, ruleset.Version))
 
-	return &entry, p.updateVersionRegistry(p.stm, path, entry.Version)
+	return &ruleset, p.updateVersionRegistry(p.stm, path, ruleset.Version)
 }
 
 // validateRules fetches the signature from the store and validates all the rules against it.
 // if the rules are valid, it returns the signature.
-func (p *rulesPutter) validateRuleset(stm concurrency.STM, path string, ruleset *regula.Ruleset) (*regula.Signature, error) {
+func (p *rulesPutter) validateRules(stm concurrency.STM, path string, rules []*rule.Rule) (*regula.Signature, error) {
 	data := stm.Get(p.s.signaturesPath(path))
 	if data == "" {
 		return nil, store.ErrSignatureNotFound
@@ -99,7 +100,7 @@ func (p *rulesPutter) validateRuleset(stm concurrency.STM, path string, ruleset 
 	}
 
 	sig := signatureFromProtobuf(&pbsig)
-	for _, r := range ruleset.Rules {
+	for _, r := range rules {
 		if err := store.ValidateRule(sig, r); err != nil {
 			return nil, err
 		}
@@ -139,7 +140,7 @@ func (p *rulesPutter) createNewVersion(stm concurrency.STM, path string, data []
 	}
 	version := k.String()
 
-	stm.Put(p.s.rulesetsPath(path, version), string(data))
+	stm.Put(p.s.rulesPath(path, version), string(data))
 
 	return version, nil
 }

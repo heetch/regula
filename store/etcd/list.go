@@ -8,6 +8,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/pkg/errors"
@@ -21,9 +22,9 @@ func computeLimit(l int) int {
 }
 
 // List returns the latest version of each ruleset under the given prefix.
-// If the prefix is empty, it returns entries from the beginning following the lexical order.
+// If the prefix is empty, it returns rulesets from the beginning following the lexical order.
 // The listing can be customised using the ListOptions type.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
 	var key string
@@ -40,7 +41,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 
 		var rangeEnd string
 		if opt.AllVersions {
-			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesetsPath(prefix, ""))
+			rangeEnd = clientv3.GetPrefixRangeEnd(s.rulesPath(prefix, ""))
 		} else {
 			rangeEnd = clientv3.GetPrefixRangeEnd(s.latestVersionPath(prefix))
 		}
@@ -63,7 +64,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 }
 
 // listPathsOnly returns only the path for each ruleset.
-func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
 	opts = append(opts, clientv3.WithKeysOnly())
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
@@ -76,29 +77,29 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 		return nil, store.ErrRulesetNotFound
 	}
 
-	entries := store.RulesetEntries{
-		Entries: make([]store.RulesetEntry, len(resp.Kvs)),
+	rulesets := store.Rulesets{
+		Rulesets: make([]regula.Ruleset, len(resp.Kvs)),
 	}
-	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	for i, pair := range resp.Kvs {
 		p := strings.TrimPrefix(string(pair.Key), s.latestVersionPath("")+"/")
-		entries.Entries[i].Path = p
+		rulesets.Rulesets[i].Path = p
 	}
 
-	if len(entries.Entries) < limit || !resp.More {
-		return &entries, nil
+	if len(rulesets.Rulesets) < limit || !resp.More {
+		return &rulesets, nil
 	}
 
-	lastEntry := entries.Entries[len(entries.Entries)-1]
+	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
-	return &entries, nil
+	return &rulesets, nil
 }
 
 // listLastVersion returns only the latest version for each ruleset.
-func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
+func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch latest keys")
@@ -120,13 +121,13 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 		return nil, errors.Wrap(err, "transaction failed to fetch selected rulesets")
 	}
 
-	var entries store.RulesetEntries
-	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
-	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
+	var rulesets store.Rulesets
+	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	rulesets.Rulesets = make([]regula.Ruleset, len(resp.Kvs))
 
 	// Responses handles responses for each OpGet calls in the transaction.
 	for i, resps := range txnresp.Responses {
-		var pbr pb.Ruleset
+		var pbr pb.Rules
 		rr := resps.GetResponseRange()
 
 		// Given that we are getting a leaf in the tree (a ruleset entry), we are sure that we will always have one value in the Kvs slice.
@@ -137,30 +138,30 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 		}
 
 		path, version := s.pathVersionFromKey(string(rr.Kvs[0].Key))
-		entries.Entries[i] = store.RulesetEntry{
+		rulesets.Rulesets[i] = regula.Ruleset{
 			Path:    path,
 			Version: version,
-			Ruleset: rulesetFromProtobuf(&pbr),
+			Rules:   rulesFromProtobuf(&pbr),
 		}
 	}
 
-	if len(entries.Entries) < limit || !resp.More {
-		return &entries, nil
+	if len(rulesets.Rulesets) < limit || !resp.More {
+		return &rulesets, nil
 	}
 
-	lastEntry := entries.Entries[len(entries.Entries)-1]
+	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
-	return &entries, nil
+	return &rulesets, nil
 }
 
 // listAllVersions returns all available versions for each ruleset.
-func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.RulesetEntries, error) {
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(key, ""), opts...)
+func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
+	resp, err := s.Client.KV.Get(ctx, s.rulesPath(key, ""), opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch all entries")
+		return nil, errors.Wrap(err, "failed to fetch all rulesets")
 	}
 
 	// if a prefix is provided it must always return results
@@ -169,11 +170,11 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 		return nil, store.ErrRulesetNotFound
 	}
 
-	var entries store.RulesetEntries
-	entries.Revision = strconv.FormatInt(resp.Header.Revision, 10)
-	entries.Entries = make([]store.RulesetEntry, len(resp.Kvs))
+	var rulesets store.Rulesets
+	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
+	rulesets.Rulesets = make([]regula.Ruleset, len(resp.Kvs))
 	for i, pair := range resp.Kvs {
-		var pbr pb.Ruleset
+		var pbr pb.Rules
 
 		err = proto.Unmarshal(pair.Value, &pbr)
 		if err != nil {
@@ -182,21 +183,21 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 		}
 
 		path, version := s.pathVersionFromKey(string(pair.Key))
-		entries.Entries[i] = store.RulesetEntry{
+		rulesets.Rulesets[i] = regula.Ruleset{
 			Path:    path,
 			Version: version,
-			Ruleset: rulesetFromProtobuf(&pbr),
+			Rules:   rulesFromProtobuf(&pbr),
 		}
 	}
 
-	if len(entries.Entries) < limit || !resp.More {
-		return &entries, nil
+	if len(rulesets.Rulesets) < limit || !resp.More {
+		return &rulesets, nil
 	}
 
-	lastEntry := entries.Entries[len(entries.Entries)-1]
+	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	entries.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
+	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
 
-	return &entries, nil
+	return &rulesets, nil
 }

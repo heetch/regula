@@ -23,7 +23,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 		opts = append(opts, clientv3.WithRev(i+1))
 	}
 
-	wc := s.Client.Watch(ctx, s.rulesetsPath(prefix, ""), opts...)
+	wc := s.Client.Watch(ctx, s.rulesPath(prefix, ""), opts...)
 	for {
 		select {
 		case wresp := <-wc:
@@ -45,7 +45,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					continue
 				}
 
-				var pbrs pb.Ruleset
+				var pbrs pb.Rules
 				err := proto.Unmarshal(ev.Kv.Value, &pbrs)
 				if err != nil {
 					s.Logger.Debug().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed")
@@ -53,7 +53,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				}
 				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
 				events[i].Path = path
-				events[i].Ruleset = rulesetFromProtobuf(&pbrs)
+				events[i].Rules = rulesFromProtobuf(&pbrs)
 				events[i].Version = version
 			}
 

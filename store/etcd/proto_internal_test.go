@@ -13,12 +13,12 @@ import (
 func TestFromProtobufRuleset(t *testing.T) {
 	cases := []struct {
 		name string
-		pb   *pb.Ruleset
-		exp  func() *regula.Ruleset
+		pb   *pb.Rules
+		exp  func() []*rule.Rule
 	}{
 		{
 			name: "Flat root",
-			pb: &pb.Ruleset{
+			pb: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -38,13 +38,13 @@ func TestFromProtobufRuleset(t *testing.T) {
 					},
 				},
 			},
-			exp: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(42)))
+			exp: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.True(), rule.Int64Value(42))}
 			},
 		},
 		{
 			name: "Eq returns a bool without parameters",
-			pb: &pb.Ruleset{
+			pb: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -82,13 +82,13 @@ func TestFromProtobufRuleset(t *testing.T) {
 					},
 				},
 			},
-			exp: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
+			exp: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true))}
 			},
 		},
 		{
 			name: "And returns a string with parameters",
-			pb: &pb.Ruleset{
+			pb: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -126,13 +126,13 @@ func TestFromProtobufRuleset(t *testing.T) {
 					},
 				},
 			},
-			exp: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
+			exp: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo"))}
 			},
 		},
 		{
 			name: "And with nested operator",
-			pb: &pb.Ruleset{
+			pb: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -179,13 +179,13 @@ func TestFromProtobufRuleset(t *testing.T) {
 					},
 				},
 			},
-			exp: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
+			exp: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42))}
 			},
 		},
 		{
 			name: "Two rules",
-			pb: &pb.Ruleset{
+			pb: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -266,19 +266,19 @@ func TestFromProtobufRuleset(t *testing.T) {
 					},
 				},
 			},
-			exp: func() *regula.Ruleset {
-				return regula.NewRuleset(
+			exp: func() []*rule.Rule {
+				return []*rule.Rule{
 					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
 					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
-				)
+				}
 			},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var rs *regula.Ruleset
-			require.NotPanics(t, func() { rs = rulesetFromProtobuf(c.pb) })
+			var rs []*rule.Rule
+			require.NotPanics(t, func() { rs = rulesFromProtobuf(c.pb) })
 			require.Equal(t, c.exp(), rs)
 		})
 	}
@@ -288,15 +288,15 @@ func TestFromProtobufRuleset(t *testing.T) {
 func TestToProtobufRuleset(t *testing.T) {
 	cases := []struct {
 		name string
-		rs   func() *regula.Ruleset
-		exp  *pb.Ruleset
+		rs   func() []*rule.Rule
+		exp  *pb.Rules
 	}{
 		{
 			name: "Flat root",
-			rs: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(42)))
+			rs: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.True(), rule.Int64Value(42))}
 			},
-			exp: &pb.Ruleset{
+			exp: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -319,10 +319,10 @@ func TestToProtobufRuleset(t *testing.T) {
 		},
 		{
 			name: "Eq returns a bool without parameters",
-			rs: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true)))
+			rs: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.Eq(rule.True(), rule.True()), rule.BoolValue(true))}
 			},
-			exp: &pb.Ruleset{
+			exp: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -363,10 +363,10 @@ func TestToProtobufRuleset(t *testing.T) {
 		},
 		{
 			name: "And returns a string with parameters",
-			rs: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo")))
+			rs: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.StringValue("foo"))}
 			},
-			exp: &pb.Ruleset{
+			exp: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -407,10 +407,10 @@ func TestToProtobufRuleset(t *testing.T) {
 		},
 		{
 			name: "And with nested operator",
-			rs: func() *regula.Ruleset {
-				return regula.NewRuleset(rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)))
+			rs: func() []*rule.Rule {
+				return []*rule.Rule{rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42))}
 			},
-			exp: &pb.Ruleset{
+			exp: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -460,13 +460,13 @@ func TestToProtobufRuleset(t *testing.T) {
 		},
 		{
 			name: "Two rules",
-			rs: func() *regula.Ruleset {
-				return regula.NewRuleset(
+			rs: func() []*rule.Rule {
+				return []*rule.Rule{
 					rule.New(rule.And(rule.Not(rule.BoolValue(false)), rule.BoolParam("param")), rule.Float64Value(42.42)),
 					rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.Float64Value(21.21)),
-				)
+				}
 			},
-			exp: &pb.Ruleset{
+			exp: &pb.Rules{
 				Rules: []*pb.Rule{
 					{
 						Result: &pb.Value{
@@ -552,8 +552,8 @@ func TestToProtobufRuleset(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var rs *pb.Ruleset
-			require.NotPanics(t, func() { rs = rulesetToProtobuf(c.rs()) })
+			var rs *pb.Rules
+			require.NotPanics(t, func() { rs = rulesToProtobuf(c.rs()) })
 			require.Equal(t, c.exp, rs)
 		})
 	}

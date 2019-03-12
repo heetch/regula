@@ -63,7 +63,7 @@ type RulesetEvent struct {
 	Type    string
 	Path    string
 	Version string
-	Ruleset *regula.Ruleset
+	Rules   []*rule.Rule
 }
 
 // RulesetEvents holds a list of events occured on a group of rulesets.

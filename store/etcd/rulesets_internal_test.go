@@ -29,11 +29,11 @@ func TestPathMethods(t *testing.T) {
 		Namespace: "test",
 	}
 
-	exp := "test/rulesets/rulesets/path" + versionSeparator + "version"
-	require.Equal(t, exp, s.rulesetsPath("path", "version"))
+	exp := "test/rulesets/rules/path" + versionSeparator + "version"
+	require.Equal(t, exp, s.rulesPath("path", "version"))
 
-	exp = "test/rulesets/rulesets/path"
-	require.Equal(t, exp, s.rulesetsPath("path", ""))
+	exp = "test/rulesets/rules/path"
+	require.Equal(t, exp, s.rulesPath("path", ""))
 
 	exp = "test/rulesets/checksums/path"
 	require.Equal(t, exp, s.checksumsPath("path"))
@@ -56,7 +56,7 @@ func BenchmarkProtoMarshalling(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := proto.Marshal(rulesetToProtobuf(rs))
+		_, err := proto.Marshal(rulesToProtobuf(rs.Rules))
 		require.NoError(b, err)
 	}
 }
@@ -80,12 +80,12 @@ func BenchmarkProtoUnmarshalling(b *testing.B) {
 		rule.New(rule.And(rule.BoolParam("1st-param"), rule.BoolParam("2nd-param")), rule.BoolValue(false)),
 	)
 
-	bb, err := proto.Marshal(rulesetToProtobuf(rs))
+	bb, err := proto.Marshal(rulesToProtobuf(rs.Rules))
 	require.NoError(b, err)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		var pbrs pb.Ruleset
+		var pbrs pb.Rules
 		err := proto.Unmarshal(bb, &pbrs)
 		require.NoError(b, err)
 	}

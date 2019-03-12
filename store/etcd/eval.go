@@ -18,9 +18,9 @@ func (s *RulesetService) Eval(ctx context.Context, path, version string, params 
 	var err error
 
 	if version == "" {
-		res, err = s.Client.Get(ctx, s.rulesetsPath(path, "")+versionSeparator, clientv3.WithLastKey()...)
+		res, err = s.Client.Get(ctx, s.rulesPath(path, "")+versionSeparator, clientv3.WithLastKey()...)
 	} else {
-		res, err = s.Client.Get(ctx, s.rulesetsPath(path, version))
+		res, err = s.Client.Get(ctx, s.rulesPath(path, version))
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch ruleset: %s", path)
@@ -30,13 +30,13 @@ func (s *RulesetService) Eval(ctx context.Context, path, version string, params 
 		return nil, rerrors.ErrRulesetNotFound
 	}
 
-	var pr pb.Ruleset
+	var pr pb.Rules
 	err = proto.Unmarshal(res.Kvs[0].Value, &pr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal ruleset")
 	}
 
-	v, err := rulesetFromProtobuf(&pr).Eval(params)
+	v, err := regula.NewRuleset(rulesFromProtobuf(&pr)...).Eval(params)
 	if err != nil {
 		return nil, err
 	}

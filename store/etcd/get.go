@@ -5,6 +5,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/store"
 	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/pkg/errors"
@@ -12,7 +13,7 @@ import (
 
 // Get returns the ruleset related to the given path. By default, it returns the latest one.
 // It returns the related ruleset version if it's specified.
-func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula.Ruleset, error) {
 	if path == "" {
 		return nil, store.ErrRulesetNotFound
 	}
@@ -23,9 +24,9 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 	}
 
 	if version == "" {
-		ops = append(ops, clientv3.OpGet(s.rulesetsPath(path, "")+versionSeparator, clientv3.WithLastKey()...))
+		ops = append(ops, clientv3.OpGet(s.rulesPath(path, "")+versionSeparator, clientv3.WithLastKey()...))
 	} else {
-		ops = append(ops, clientv3.OpGet(s.rulesetsPath(path, version)))
+		ops = append(ops, clientv3.OpGet(s.rulesPath(path, version)))
 	}
 	// running all the requests within a single transaction so only one network round trip is performed.
 	resp, err := s.Client.KV.Txn(ctx).Then(ops...).Commit()
@@ -55,9 +56,9 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 		return nil, errors.Wrap(err, "failed to unmarshal versions")
 	}
 
-	// decode ruleset
-	var ruleset pb.Ruleset
-	err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &ruleset)
+	// decode rules
+	var rules pb.Rules
+	err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &rules)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal ruleset")
 	}
@@ -65,10 +66,10 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 		_, version = s.pathVersionFromKey(string(resp.Responses[2].GetResponseRange().Kvs[0].Key))
 	}
 
-	return &store.RulesetEntry{
+	return &regula.Ruleset{
 		Path:      path,
 		Version:   version,
-		Ruleset:   rulesetFromProtobuf(&ruleset),
+		Rules:     rulesFromProtobuf(&rules),
 		Signature: signatureFromProtobuf(&sig),
 		Versions:  versions.Versions,
 	}, nil
