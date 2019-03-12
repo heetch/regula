@@ -28,6 +28,9 @@ func TestAPI(t *testing.T) {
 		WatchTimeout: 1 * time.Second,
 	})
 
+	r1 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+	r2 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+
 	t.Run("Root", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
@@ -36,30 +39,29 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		e1 := store.RulesetEntry{
+		e1 := regula.Ruleset{
 			Path:      "a",
 			Version:   "version",
-			Ruleset:   r1,
+			Rules:     r1,
 			Versions:  []string{"version"},
 			Signature: &regula.Signature{ReturnType: "bool"},
 		}
 
-		e2 := store.RulesetEntry{
+		e2 := regula.Ruleset{
 			Path:      "a",
 			Version:   "version2",
-			Ruleset:   r1,
+			Rules:     r1,
 			Versions:  []string{"version1", "version2"},
 			Signature: &regula.Signature{ReturnType: "bool"},
 		}
 
-		call := func(t *testing.T, u string, code int, e *store.RulesetEntry, err error) {
+		call := func(t *testing.T, u string, code int, e *regula.Ruleset, err error) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
 			require.NoError(t, uerr)
 			version := uu.Query().Get("version")
-			s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+			s.GetFn = func(ctx context.Context, path, v string) (*regula.Ruleset, error) {
 				require.Equal(t, v, version)
 				return e, err
 			}
@@ -79,7 +81,7 @@ func TestAPI(t *testing.T) {
 				require.Equal(t, e.Path, res.Path)
 				require.Equal(t, e.Signature, res.Signature)
 				require.Equal(t, e.Version, res.Version)
-				require.Equal(t, e.Ruleset, res.Ruleset)
+				require.Equal(t, e.Rules, res.Rules)
 			}
 		}
 
@@ -101,18 +103,16 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		r2 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		l := store.RulesetEntries{
-			Entries: []store.RulesetEntry{
-				{Path: "aa", Ruleset: r1},
-				{Path: "bb", Ruleset: r2},
+		l := store.Rulesets{
+			Rulesets: []regula.Ruleset{
+				{Path: "aa", Rules: r1},
+				{Path: "bb", Rules: r2},
 			},
 			Revision: "somerev",
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.RulesetEntries, lopt *store.ListOptions, err error) {
+		call := func(t *testing.T, u string, code int, l *store.Rulesets, lopt *store.ListOptions, err error) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -123,7 +123,7 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
 				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
 				assert.Equal(t, token, opt.ContinueToken)
 				assert.Equal(t, lopt, opt)
@@ -141,11 +141,11 @@ func TestAPI(t *testing.T) {
 				var res api.Rulesets
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l.Entries), len(res.Rulesets))
-				for i := range l.Entries {
-					require.EqualValues(t, l.Entries[i], res.Rulesets[i])
+				require.Equal(t, len(l.Rulesets), len(res.Rulesets))
+				for i := range l.Rulesets {
+					require.EqualValues(t, l.Rulesets[i], res.Rulesets[i])
 				}
-				if len(l.Entries) > 0 {
+				if len(l.Rulesets) > 0 {
 					require.Equal(t, "sometoken", res.Continue)
 				}
 			}
@@ -168,19 +168,19 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.RulesetEntries), &store.ListOptions{}, nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(store.Rulesets), &store.ListOptions{}, nil)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.RulesetEntries), &store.ListOptions{}, store.ErrRulesetNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.Rulesets), &store.ListOptions{}, store.ErrRulesetNotFound)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.RulesetEntries), &store.ListOptions{}, store.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.Rulesets), &store.ListOptions{}, store.ErrInvalidContinueToken)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.RulesetEntries), &store.ListOptions{}, errors.New("unexpected error"))
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.Rulesets), &store.ListOptions{}, errors.New("unexpected error"))
 		})
 
 		t.Run("InvalidLimit", func(t *testing.T) {
@@ -211,12 +211,8 @@ func TestAPI(t *testing.T) {
 			t.Helper()
 			resetStore(s)
 
-			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				testParamsFn(params)
-				return (*regula.EvalResult)(result), nil
-			}
-
-			s.EvalVersionFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				return (*regula.EvalResult)(result), nil
 			}
 
@@ -264,11 +260,11 @@ func TestAPI(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
 			})
-			require.Equal(t, 1, s.EvalVersionCount)
+			require.Equal(t, 1, s.EvalCount)
 		})
 
 		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				return nil, rerrors.ErrRulesetNotFound
 			}
 
@@ -295,7 +291,7 @@ func TestAPI(t *testing.T) {
 			}
 
 			for _, e := range errs {
-				s.EvalFn = func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
+				s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 					return nil, e
 				}
 
@@ -309,13 +305,11 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		r2 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
 		l := store.RulesetEvents{
 			Events: []store.RulesetEvent{
-				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r1},
-				{Type: store.RulesetPutEvent, Path: "b", Ruleset: r2},
-				{Type: store.RulesetPutEvent, Path: "a", Ruleset: r2},
+				{Type: store.RulesetPutEvent, Path: "a", Rules: r1},
+				{Type: store.RulesetPutEvent, Path: "b", Rules: r2},
+				{Type: store.RulesetPutEvent, Path: "a", Rules: r2},
 			},
 			Revision: "rev",
 		}
@@ -394,17 +388,16 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		r1 := regula.NewRuleset(rule.New(rule.True(), rule.BoolValue(true)))
-		e1 := store.RulesetEntry{
+		e1 := regula.Ruleset{
 			Path:    "a",
 			Version: "version",
-			Ruleset: r1,
+			Rules:   r1,
 		}
 
-		call := func(t *testing.T, url string, code int, e *store.RulesetEntry, putErr error) {
+		call := func(t *testing.T, url string, code int, e *regula.Ruleset, putErr error) {
 			t.Helper()
 
-			s.PutFn = func(context.Context, string) (*store.RulesetEntry, error) {
+			s.PutFn = func(context.Context, string, []*rule.Rule) (*regula.Ruleset, error) {
 				return e, putErr
 			}
 			defer func() { s.PutFn = nil }()
@@ -453,14 +446,14 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Create", func(t *testing.T) {
-		sig := regula.NewSignature().BoolP("foo").ReturnsInt64()
+		sig := regula.Signature{ReturnType: "int64"}
 
-		e1 := store.RulesetEntry{
+		e1 := regula.Ruleset{
 			Path:      "a",
-			Signature: sig,
+			Signature: &sig,
 		}
 
-		call := func(t *testing.T, url string, code int, e *store.RulesetEntry, createErr error) {
+		call := func(t *testing.T, url string, code int, e *regula.Ruleset, createErr error) {
 			t.Helper()
 
 			s.CreateFn = func(context.Context, string, *regula.Signature) error {
@@ -505,10 +498,8 @@ func resetStore(s *mock.RulesetService) {
 	s.WatchCount = 0
 	s.PutCount = 0
 	s.EvalCount = 0
-	s.EvalVersionCount = 0
 	s.ListFn = nil
 	s.WatchFn = nil
 	s.PutFn = nil
 	s.EvalFn = nil
-	s.EvalVersionFn = nil
 }

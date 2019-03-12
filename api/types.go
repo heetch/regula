@@ -32,7 +32,7 @@ func (e Error) Error() string {
 type Ruleset struct {
 	Path      string            `json:"path"`
 	Version   string            `json:"version,omitempty"`
-	Ruleset   *regula.Ruleset   `json:"ruleset,omitempty"`
+	Rules     []*rule.Rule      `json:"rules,omitempty"`
 	Signature *regula.Signature `json:"signature,omitempty"`
 	Versions  []string          `json:"versions,omitempty"`
 }
@@ -51,10 +51,10 @@ const (
 
 // Event describes an event occured on a ruleset.
 type Event struct {
-	Type    string          `json:"type"`
-	Path    string          `json:"path"`
-	Version string          `json:"version"`
-	Ruleset *regula.Ruleset `json:"ruleset"`
+	Type    string       `json:"type"`
+	Path    string       `json:"path"`
+	Version string       `json:"version"`
+	Rules   []*rule.Rule `json:"rules"`
 }
 
 // Events holds a list of events occured on a group of rulesets.

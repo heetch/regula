@@ -16,13 +16,13 @@ type RulesetService struct {
 	CreateCount int
 	CreateFn    func(ctx context.Context, path string, signature *regula.Signature) error
 	GetCount    int
-	GetFn       func(ctx context.Context, path, version string) (*store.RulesetEntry, error)
+	GetFn       func(ctx context.Context, path, version string) (*regula.Ruleset, error)
 	ListCount   int
-	ListFn      func(context.Context, string, *store.ListOptions) (*store.RulesetEntries, error)
+	ListFn      func(context.Context, string, *store.ListOptions) (*store.Rulesets, error)
 	WatchCount  int
 	WatchFn     func(context.Context, string, string) (*store.RulesetEvents, error)
 	PutCount    int
-	PutFn       func(context.Context, string) (*store.RulesetEntry, error)
+	PutFn       func(context.Context, string, []*rule.Rule) (*regula.Ruleset, error)
 	EvalCount   int
 	EvalFn      func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
@@ -39,7 +39,7 @@ func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Si
 }
 
 // Get runs GetFn if provided and increments GetCount when invoked.
-func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula.Ruleset, error) {
 	s.GetCount++
 
 	if s.GetFn != nil {
@@ -50,7 +50,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*store.
 }
 
 // List runs ListFn if provided and increments ListCount when invoked.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.RulesetEntries, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
@@ -72,11 +72,11 @@ func (s *RulesetService) Watch(ctx context.Context, prefix, revision string) (*s
 }
 
 // Put runs PutFn if provided and increments PutCount when invoked.
-func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
+func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error) {
 	s.PutCount++
 
 	if s.PutFn != nil {
-		return s.PutFn(ctx, path)
+		return s.PutFn(ctx, path, rules)
 	}
 	return nil, nil
 }

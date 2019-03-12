@@ -13,6 +13,7 @@ import (
 	"github.com/heetch/regula/api"
 	rerrors "github.com/heetch/regula/errors"
 	reghttp "github.com/heetch/regula/http"
+	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 )
@@ -96,7 +97,7 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 	v := r.URL.Query().Get("version")
 
-	entry, err := s.rulesets.Get(r.Context(), path, v)
+	ruleset, err := s.rulesets.Get(r.Context(), path, v)
 	if err != nil {
 		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
@@ -107,7 +108,7 @@ func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, (*api.Ruleset)(entry), http.StatusOK)
+	reghttp.EncodeJSON(w, r, (*api.Ruleset)(ruleset), http.StatusOK)
 }
 
 // list fetches all the rulesets from the store and writes them to the http response if
@@ -134,7 +135,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 		return
 	}
 
-	entries, err := s.rulesets.List(r.Context(), prefix, &opt)
+	rulesets, err := s.rulesets.List(r.Context(), prefix, &opt)
 	if err != nil {
 		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
@@ -152,12 +153,12 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 
 	var rl api.Rulesets
 
-	rl.Rulesets = make([]api.Ruleset, len(entries.Entries))
-	for i := range entries.Entries {
-		rl.Rulesets[i] = api.Ruleset(entries.Entries[i])
+	rl.Rulesets = make([]api.Ruleset, len(rulesets.Rulesets))
+	for i := range rulesets.Rulesets {
+		rl.Rulesets[i] = api.Ruleset(rulesets.Rulesets[i])
 	}
-	rl.Revision = entries.Revision
-	rl.Continue = entries.Continue
+	rl.Revision = rulesets.Revision
+	rl.Continue = rulesets.Continue
 
 	reghttp.EncodeJSON(w, r, &rl, http.StatusOK)
 }
@@ -171,12 +172,7 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 		params[k] = v[0]
 	}
 
-	if v, ok := r.URL.Query()["version"]; ok {
-		res, err = s.rulesets.EvalVersion(r.Context(), path, v[0], params)
-	} else {
-		res, err = s.rulesets.Eval(r.Context(), path, params)
-	}
-
+	res, err = s.rulesets.Eval(r.Context(), path, r.URL.Query().Get("version"), params)
 	if err != nil {
 		if err == rerrors.ErrRulesetNotFound {
 			writeError(w, r, fmt.Errorf("the path '%s' doesn't exist", path), http.StatusNotFound)
@@ -233,15 +229,15 @@ func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string
 
 // put creates a new version of a ruleset.
 func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
-	var rs regula.Ruleset
+	var rules []*rule.Rule
 
-	err := json.NewDecoder(r.Body).Decode(&rs)
+	err := json.NewDecoder(r.Body).Decode(&rules)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
-	entry, err := s.rulesets.Put(r.Context(), path, &rs)
+	ruleset, err := s.rulesets.Put(r.Context(), path, rules)
 	if err != nil && err != store.ErrRulesetNotModified {
 		if store.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
@@ -252,5 +248,5 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, (*api.Ruleset)(entry), http.StatusOK)
+	reghttp.EncodeJSON(w, r, (*api.Ruleset)(ruleset), http.StatusOK)
 }
