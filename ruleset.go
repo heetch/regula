@@ -1,16 +1,18 @@
 package regula
 
 import (
-	"encoding/json"
-
 	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
 
-// A Ruleset is list of rules.
+// A Ruleset is a list of rules.
 type Ruleset struct {
-	Rules []*rule.Rule `json:"rules"`
+	Path      string
+	Version   string
+	Rules     []*rule.Rule
+	Signature *Signature
+	Versions  []string
 }
 
 // NewRuleset creates a ruleset.
@@ -33,16 +35,6 @@ func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
 	}
 
 	return nil, rerrors.ErrNoMatch
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (r *Ruleset) UnmarshalJSON(data []byte) error {
-	type ruleset Ruleset
-	if err := json.Unmarshal(data, (*ruleset)(r)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Params returns a list of all the parameters used in all the underlying rules.
