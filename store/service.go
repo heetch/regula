@@ -22,14 +22,14 @@ type RulesetService interface {
 	// Create a ruleset entry using a signature.
 	Create(ctx context.Context, path string, signature *regula.Signature) error
 	// Put is used to create a new version of the ruleset.
-	Put(ctx context.Context, path string, ruleset *regula.Ruleset) (*RulesetEntry, error)
+	Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error)
 	// Get returns a ruleset alongside its metadata. By default, it returns the latest version.
 	// If the version is not empty, the specified version is returned.
-	Get(ctx context.Context, path, version string) (*RulesetEntry, error)
+	Get(ctx context.Context, path, version string) (*regula.Ruleset, error)
 	// List returns the latest version of each ruleset whose path starts by the given prefix.
 	// If the prefix is empty, it returns all the entries following the lexical order.
 	// The listing is paginated and can be customised using the ListOptions type.
-	List(ctx context.Context, prefix string, opt *ListOptions) (*RulesetEntries, error)
+	List(ctx context.Context, prefix string, opt *ListOptions) (*Rulesets, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
@@ -45,18 +45,9 @@ type ListOptions struct {
 	AllVersions   bool // return all versions of each rulesets
 }
 
-// RulesetEntry holds a ruleset and its metadata.
-type RulesetEntry struct {
-	Path      string
-	Version   string
-	Ruleset   *regula.Ruleset
-	Signature *regula.Signature
-	Versions  []string
-}
-
-// RulesetEntries holds a list of ruleset entries.
-type RulesetEntries struct {
-	Entries  []RulesetEntry
+// Rulesets holds a list of rulesets.
+type Rulesets struct {
+	Rulesets []regula.Ruleset
 	Revision string // revision when the request was applied
 	Continue string // token of the next page, if any
 }
