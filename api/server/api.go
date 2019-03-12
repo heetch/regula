@@ -88,7 +88,7 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, &api.Ruleset{
+	reghttp.EncodeJSON(w, r, &regula.Ruleset{
 		Path:      path,
 		Signature: &sig,
 	}, http.StatusCreated)
@@ -108,7 +108,7 @@ func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, (*api.Ruleset)(ruleset), http.StatusOK)
+	reghttp.EncodeJSON(w, r, ruleset, http.StatusOK)
 }
 
 // list fetches all the rulesets from the store and writes them to the http response if
@@ -151,16 +151,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 		return
 	}
 
-	var rl api.Rulesets
-
-	rl.Rulesets = make([]api.Ruleset, len(rulesets.Rulesets))
-	for i := range rulesets.Rulesets {
-		rl.Rulesets[i] = api.Ruleset(rulesets.Rulesets[i])
-	}
-	rl.Revision = rulesets.Revision
-	rl.Continue = rulesets.Continue
-
-	reghttp.EncodeJSON(w, r, &rl, http.StatusOK)
+	reghttp.EncodeJSON(w, r, (*api.Rulesets)(rulesets), http.StatusOK)
 }
 
 func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
@@ -248,5 +239,5 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, (*api.Ruleset)(ruleset), http.StatusOK)
+	reghttp.EncodeJSON(w, r, ruleset, http.StatusOK)
 }

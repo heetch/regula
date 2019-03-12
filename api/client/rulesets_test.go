@@ -36,7 +36,7 @@ func ExampleRulesetService_List() {
 	}
 
 	for _, e := range list.Rulesets {
-		e.Ruleset.Eval(nil)
+		e.Eval(nil)
 	}
 }
 
@@ -54,7 +54,7 @@ func ExampleRulesetService_List_withPagination() {
 	}
 
 	for _, e := range list.Rulesets {
-		e.Ruleset.Eval(nil)
+		e.Eval(nil)
 	}
 
 	for list.Continue != "" {
@@ -67,7 +67,7 @@ func ExampleRulesetService_List_withPagination() {
 		}
 
 		for _, e := range list.Rulesets {
-			e.Ruleset.Eval(nil)
+			e.Eval(nil)
 		}
 	}
 }
@@ -108,18 +108,18 @@ func TestRulesetService(t *testing.T) {
 		require.Equal(t, "some err", aerr.Err)
 	})
 
+	rules := []*rule.Rule{rule.New(rule.True(), rule.Int64Value(1))}
+
 	t.Run("Retries/Success", func(t *testing.T) {
 		i := 0
-
-		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			i++
 
-			var body regula.Ruleset
+			var body []*rule.Rule
 			err := json.NewDecoder(r.Body).Decode(&body)
 			assert.NoError(t, err)
-			assert.Equal(t, rs, &body)
+			assert.EqualValues(t, rules, body)
 
 			if i < 2 {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -136,7 +136,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 		cli.RetryDelay = 10 * time.Millisecond
 
-		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		_, err = cli.Rulesets.Put(context.Background(), "path", rules)
 		aerr := err.(*api.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
@@ -152,10 +152,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 		cli.RetryDelay = 10 * time.Millisecond
 
-		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
-		require.NoError(t, err)
-
-		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		_, err = cli.Rulesets.Put(context.Background(), "path", rules)
 		aerr := err.(*api.Error)
 		require.Equal(t, http.StatusInternalServerError, aerr.Response.StatusCode)
 	})
@@ -172,10 +169,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 		cli.RetryDelay = 10 * time.Millisecond
 
-		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
-		require.NoError(t, err)
-
-		_, err = cli.Rulesets.Put(context.Background(), "path", rs)
+		_, err = cli.Rulesets.Put(context.Background(), "path", rules)
 		_, ok := err.(net.Error)
 		require.True(t, ok)
 	})
@@ -246,11 +240,18 @@ func TestRulesetService(t *testing.T) {
 	})
 
 	t.Run("PutRuleset", func(t *testing.T) {
+		rules := []*rule.Rule{rule.New(rule.True(), rule.Int64Value(1))}
+
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.NotEmpty(t, r.Header.Get("User-Agent"))
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
 			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 			assert.Equal(t, "/rulesets/a", r.URL.Path)
+
+			var body []*rule.Rule
+			err := json.NewDecoder(r.Body).Decode(&body)
+			assert.NoError(t, err)
+			assert.EqualValues(t, rules, body)
 			fmt.Fprintf(w, `{"path": "a", "version": "v"}`)
 		}))
 		defer ts.Close()
@@ -259,9 +260,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		rs := regula.NewRuleset(rule.New(rule.True(), rule.Int64Value(1)))
-
-		ars, err := cli.Rulesets.Put(context.Background(), "a", rs)
+		ars, err := cli.Rulesets.Put(context.Background(), "a", rules)
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)

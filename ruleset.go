@@ -6,13 +6,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// A Ruleset is a list of rules.
+// A Ruleset is a list of rules and their metadata.
 type Ruleset struct {
-	Path      string
-	Version   string
-	Rules     []*rule.Rule
-	Signature *Signature
-	Versions  []string
+	Path      string       `json:"path"`
+	Version   string       `json:"version,omitempty"`
+	Rules     []*rule.Rule `json:"rules,omitempty"`
+	Signature *Signature   `json:"signature,omitempty"`
+	Versions  []string     `json:"versions,omitempty"`
 }
 
 // NewRuleset creates a ruleset.

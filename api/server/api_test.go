@@ -74,7 +74,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res api.Ruleset
+				var res regula.Ruleset
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.Len(t, res.Versions, len(e.Versions))
@@ -413,7 +413,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var rs api.Ruleset
+				var rs regula.Ruleset
 				err := json.NewDecoder(w.Body).Decode(&rs)
 				require.NoError(t, err)
 				require.EqualValues(t, *e, rs)
@@ -472,7 +472,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusCreated {
-				var rs api.Ruleset
+				var rs regula.Ruleset
 				err := json.NewDecoder(w.Body).Decode(&rs)
 				require.NoError(t, err)
 				require.EqualValues(t, *e, rs)

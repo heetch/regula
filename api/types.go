@@ -28,20 +28,11 @@ func (e Error) Error() string {
 		e.Err)
 }
 
-// Ruleset holds a ruleset and its metadata.
-type Ruleset struct {
-	Path      string            `json:"path"`
-	Version   string            `json:"version,omitempty"`
-	Rules     []*rule.Rule      `json:"rules,omitempty"`
-	Signature *regula.Signature `json:"signature,omitempty"`
-	Versions  []string          `json:"versions,omitempty"`
-}
-
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
-	Rulesets []Ruleset `json:"rulesets"`
-	Revision string    `json:"revision"`
-	Continue string    `json:"continue,omitempty"`
+	Rulesets []regula.Ruleset `json:"rulesets"`
+	Revision string           `json:"revision"`
+	Continue string           `json:"continue,omitempty"`
 }
 
 // List of possible events executed against a ruleset.

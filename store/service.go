@@ -54,8 +54,7 @@ type Rulesets struct {
 
 // List of possible events executed against a ruleset.
 const (
-	RulesetCreateEvent = "CREATE"
-	RulesetPutEvent    = "PUT"
+	RulesetPutEvent = "PUT"
 )
 
 // RulesetEvent describes an event that occured on a ruleset.
