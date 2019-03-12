@@ -274,7 +274,7 @@ func TestRulesetService(t *testing.T) {
 			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 			assert.Equal(t, "/rulesets/a", r.URL.Path)
 			assert.Equal(t, "POST", r.Method)
-			fmt.Fprintf(w, `{"path": "a", "signature": {"returnType": "bool", "paramTypes":{"foo": "bool"} }}`)
+			fmt.Fprintf(w, `{"path": "a", "signature": {"returnType": "bool", "params":{"foo": "bool"} }}`)
 		}))
 		defer ts.Close()
 
@@ -282,7 +282,7 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		cli.Logger = zerolog.New(ioutil.Discard)
 
-		sig := regula.NewSignature().ReturnsBool().BoolP("foo")
+		sig := &regula.Signature{ReturnType: "bool", Params: map[string]string{"foo": "bool"}}
 
 		rs, err := cli.Rulesets.Create(context.Background(), "a", sig)
 		require.NoError(t, err)
