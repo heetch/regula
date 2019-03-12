@@ -98,7 +98,7 @@ func TestValidation(t *testing.T) {
 }
 
 func TestValidateRule(t *testing.T) {
-	sig := regula.NewSignature().ReturnsBool().Int64P("foo")
+	sig := regula.Signature{ReturnType: "bool", Params: map[string]string{"foo": "int64"}}
 
 	tests := []struct {
 		name  string
@@ -118,7 +118,7 @@ func TestValidateRule(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.fails, ValidateRule(sig, test.rule) != nil)
+			require.Equal(t, test.fails, ValidateRule(&sig, test.rule) != nil)
 		})
 	}
 }
