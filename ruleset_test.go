@@ -1,7 +1,6 @@
 package regula
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/heetch/regula/errors"
@@ -55,23 +54,6 @@ func TestRulesetEval(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "default", res.Data)
 	})
-}
-
-func TestRulesetEncDec(t *testing.T) {
-	r1 := NewRuleset(
-		rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("first")),
-		rule.New(rule.Eq(rule.StringValue("bar"), rule.StringParam("foo")), rule.StringValue("second")),
-		rule.New(rule.True(), rule.StringValue("default")),
-	)
-
-	raw, err := json.Marshal(r1)
-	require.NoError(t, err)
-
-	var r2 Ruleset
-	err = json.Unmarshal(raw, &r2)
-	require.NoError(t, err)
-
-	require.Equal(t, r1, &r2)
 }
 
 func TestRulesetParams(t *testing.T) {
