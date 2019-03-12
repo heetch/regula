@@ -562,7 +562,7 @@ func TestToProtobufRuleset(t *testing.T) {
 func TestToProtobufSignature(t *testing.T) {
 	sig := &regula.Signature{
 		ReturnType: "bool",
-		ParamTypes: map[string]string{
+		Params: map[string]string{
 			"1st": "bool",
 			"2nd": "string",
 			"3rd": "int64",
@@ -573,7 +573,7 @@ func TestToProtobufSignature(t *testing.T) {
 
 	exp := &pb.Signature{
 		ReturnType: "bool",
-		ParamTypes: map[string]string{
+		Params: map[string]string{
 			"1st": "bool",
 			"2nd": "string",
 			"3rd": "int64",
@@ -586,7 +586,7 @@ func TestToProtobufSignature(t *testing.T) {
 func TestFromProtobufSignature(t *testing.T) {
 	pbsig := &pb.Signature{
 		ReturnType: "bool",
-		ParamTypes: map[string]string{
+		Params: map[string]string{
 			"1st": "bool",
 			"2nd": "string",
 			"3rd": "int64",
@@ -597,7 +597,7 @@ func TestFromProtobufSignature(t *testing.T) {
 
 	exp := &regula.Signature{
 		ReturnType: "bool",
-		ParamTypes: map[string]string{
+		Params: map[string]string{
 			"1st": "bool",
 			"2nd": "string",
 			"3rd": "int64",

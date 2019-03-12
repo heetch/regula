@@ -37,7 +37,7 @@ message Operator {
 
 message Signature {
     string returnType = 1;
-    map<string, string> paramTypes = 2;
+    map<string, string> params = 2;
 }
 
 message Versions {

@@ -56,7 +56,7 @@ func ValidateSignature(sig *regula.Signature) error {
 			}
 		}
 
-		data, err := json.Marshal(sig.ParamTypes)
+		data, err := json.Marshal(sig.Params)
 		if err != nil {
 			return errors.Wrap(err, "failed to encode param types")
 		}
@@ -68,7 +68,7 @@ func ValidateSignature(sig *regula.Signature) error {
 		}
 	}
 
-	for name := range sig.ParamTypes {
+	for name := range sig.Params {
 		err := ValidateParamName(name)
 		if err != nil {
 			return err
@@ -126,7 +126,7 @@ func ValidateRule(signature *regula.Signature, r *rule.Rule) error {
 				Reason: "param kind must be equal to 'param'",
 			}
 		}
-		typ, ok := signature.ParamTypes[p.Name]
+		typ, ok := signature.Params[p.Name]
 		if !ok {
 			return &ValidationError{
 				Field:  "param.name",

@@ -167,7 +167,7 @@ func valueFromProtobuf(v *pb.Value) *rule.Value {
 func signatureToProtobuf(sig *regula.Signature) *pb.Signature {
 	return &pb.Signature{
 		ReturnType: sig.ReturnType,
-		ParamTypes: sig.ParamTypes,
+		Params:     sig.Params,
 	}
 }
 
@@ -175,11 +175,11 @@ func signatureToProtobuf(sig *regula.Signature) *pb.Signature {
 func signatureFromProtobuf(s *pb.Signature) *regula.Signature {
 	sig := regula.Signature{
 		ReturnType: s.ReturnType,
-		ParamTypes: s.ParamTypes,
+		Params:     s.Params,
 	}
 
-	if sig.ParamTypes == nil {
-		sig.ParamTypes = make(map[string]string)
+	if sig.Params == nil {
+		sig.Params = make(map[string]string)
 	}
 
 	return &sig
