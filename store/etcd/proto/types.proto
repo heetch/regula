@@ -1,7 +1,7 @@
 syntax = "proto3";
 package proto;
 
-message Ruleset {
+message Rules {
     repeated Rule rules = 1;
 }
 
