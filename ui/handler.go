@@ -85,7 +85,7 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 	// router for the internal API
 	router.HandlerFunc("GET", "/rulesets/", h.handleListRequest)
 	router.HandlerFunc("POST", "/rulesets/", h.handleNewRulesetRequest)
-	router.Handle("PUT", "/rulesets/:path", h.handleNewRulesetVersionRequest)
+	router.Handle("PUT", "/rulesets/*path", h.handleNewRulesetVersionRequest)
 
 	return router
 }
@@ -93,27 +93,37 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 // handleNewRulesetRequest consumes a POST to the ruleset endpoint and
 // attempts to create a new Ruleset from that data.
 func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http.Request) {
-	nrr := &newRulesetRequest{}
+	type payload struct {
+		Path      string           `json:"path"`
+		Signature regula.Signature `json:"signature"`
+	}
 
-	err := json.NewDecoder(r.Body).Decode(nrr)
+	var p payload
+
+	err := json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
-	err = h.service.Create(r.Context(), nrr.Path, &nrr.Signature)
+	err = h.service.Create(r.Context(), p.Path, &p.Signature)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
+
 	reghttp.EncodeJSON(w, r, nil, http.StatusCreated)
 }
 
 // handleNewRulesetVersionRequest consumes a PUT to the ruleset endpoint and
 // attempts to create a new Ruleset version from that data.
 func (h *internalHandler) handleNewRulesetVersionRequest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	nrr := &newRulesetVersionRequest{}
-	err := json.NewDecoder(r.Body).Decode(nrr)
+	type payload struct {
+		Rules []rule `json:"rules"`
+	}
+
+	var p payload
+	err := json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
@@ -132,19 +142,23 @@ func (h *internalHandler) handleNewRulesetVersionRequest(w http.ResponseWriter, 
 		return
 	}
 
-	rules, err := newRulesFromRequest(rs.Signature, nrr)
+	rules, err := newRulesFromRequest(rs.Signature, p.Rules)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	_, err = h.service.Put(r.Context(), path, rules)
+	if err == store.ErrRulesetNotModified {
+		reghttp.EncodeJSON(w, r, nil, http.StatusNotModified)
+		return
+	}
 	if err != nil {
-		writeError(w, r, err, http.StatusBadRequest)
+		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, nil, http.StatusCreated)
+	reghttp.EncodeJSON(w, r, nil, http.StatusOK)
 }
 
 // handleListRequest attempts to return a list of Rulesets based on the data provided in a GET request to the ruleset endpoint.
@@ -172,7 +186,7 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 		}
 
 		opt.ContinueToken = list.Continue
-		for _, rs := range list.Entries {
+		for _, rs := range list.Rulesets {
 			resp.Rulesets = append(resp.Rulesets, ruleset{Path: rs.Path})
 		}
 	}
@@ -186,28 +200,22 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 	reghttp.EncodeJSON(w, r, &resp, http.StatusOK)
 }
 
-type param map[string]string
-
 type rule struct {
 	SExpr       string `json:"sExpr"`
 	ReturnValue string `json:"returnValue"`
-}
-
-// newRulesetRequest is the unmarshaled form a new ruleset request.
-type newRulesetRequest struct {
-	Path      string           `json:"path"`
-	Signature regula.Signature `json:"signature"`
-}
-
-// newRulesetVersionRequest is the unmarshaled form of a new ruleset version request.
-type newRulesetVersionRequest struct {
-	Rules []rule `json:"rules"`
 }
 
 // convertParams takes a map of params and returns an equivalent sexpr.Parameters map.
 func convertParams(input map[string]string) (sexpr.Parameters, error) {
 	parm := make(sexpr.Parameters)
 	for name, v := range input {
+		if name == "" {
+			return nil, errors.New("parameter has no name")
+		}
+		if v == "" {
+			return nil, fmt.Errorf("parameter (%s) has no type", name)
+		}
+
 		t, err := regrule.TypeFromName(v)
 		if err != nil {
 			return nil, err
@@ -219,14 +227,14 @@ func convertParams(input map[string]string) (sexpr.Parameters, error) {
 
 // newRulesFromRequest takes a newRulesetVersionRequest and returns the
 // equivalent []*rule.Rule.
-func newRulesFromRequest(sig *regula.Signature, req *newRulesetVersionRequest) ([]*rule.Rule, error) {
+func newRulesFromRequest(sig *regula.Signature, rawRules []rule) ([]*regrule.Rule, error) {
 	var rules []*regrule.Rule
 	parm, err := convertParams(sig.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	for n, rule := range req.Rules {
+	for n, rule := range rawRules {
 		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
 		expr, err := p.Parse(parm)
 		if err != nil {
