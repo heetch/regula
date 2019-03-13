@@ -171,7 +171,7 @@ func newValue(typ, data string) *Value {
 	}
 }
 
-// Compares a Value with a ComparableExpression, without evaluating
+// Same compares a Value with a ComparableExpression, without evaluating
 // either.  This is required by the ComparableExpression interface.
 func (v *Value) Same(c ComparableExpression) bool {
 	if v.Kind == c.GetKind() {
@@ -231,6 +231,26 @@ func (v *Value) Eval(Params) (*Value, error) {
 // Equal reports whether v and other represent the same value.
 func (v *Value) Equal(other *Value) bool {
 	return *v == *other
+}
+
+// ToString decodes the value as a string.
+func (v *Value) ToString() (string, error) {
+	return v.Data, nil
+}
+
+// ToInt64 decodes the value as an int64.
+func (v *Value) ToInt64() (int64, error) {
+	return strconv.ParseInt(v.Data, 10, 64)
+}
+
+// ToFloat64 decodes the value as a float64.
+func (v *Value) ToFloat64() (float64, error) {
+	return strconv.ParseFloat(v.Data, 64)
+}
+
+// ToBool decodes the value as a bool.
+func (v *Value) ToBool() (bool, error) {
+	return strconv.ParseBool(v.Data)
 }
 
 // Operander is an interface for managing the operands of an
