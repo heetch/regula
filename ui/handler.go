@@ -91,6 +91,25 @@ func newInternalHandler(service store.RulesetService) http.Handler {
 // attempts to create a new Ruleset from that data.
 func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http.Request) {
 	nrr := &newRulesetRequest{}
+
+	err := json.NewDecoder(r.Body).Decode(nrr)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.Create(r.Context(), nrr.Path, &nrr.Signature)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+	reghttp.EncodeJSON(w, r, nil, http.StatusCreated)
+}
+
+// handleNewRulesetRequest consumes a POST to the ruleset endpoint and
+// attempts to create a new Ruleset from that data.
+func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http.Request) {
+	nrr := &newRulesetRequest{}
 	err := json.NewDecoder(r.Body).Decode(nrr)
 	if err != nil {
 		writeError(w, r, err, http.StatusBadRequest)
@@ -163,11 +182,6 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 
 type param map[string]string
 
-type signature struct {
-	Params     []param `json:"params"`
-	ReturnType string
-}
-
 type rule struct {
 	SExpr       string `json:"sExpr"`
 	ReturnValue string `json:"returnValue"`
@@ -175,9 +189,13 @@ type rule struct {
 
 // newRulesetRequest is the unmarshaled form a new ruleset request.
 type newRulesetRequest struct {
-	Path      string    `json:"path"`
-	Signature signature `json:"signature"`
-	Rules     []rule    `json:"rules"`
+	Path      string           `json:"path"`
+	Signature regula.Signature `json:"signature"`
+}
+
+// newRulesetVersionRequest is the unmarshaled form of a new ruleset version request.
+type newRulesetVersionRequest struct {
+	Rules []rule `json:"rules"`
 }
 
 // convertParams takes a slice of param, unmarshalled from a
