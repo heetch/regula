@@ -19,7 +19,7 @@ type RulesetService struct {
 	Namespace string
 }
 
-// rulesPath returns the path where the rulesets are stored in etcd.
+// rulesPath returns the path where the rules of rulesets are stored in etcd.
 // Key: <namespace>/rulesets/rules/<path>/<version>
 // Value: rules
 func (s *RulesetService) rulesPath(p, v string) string {
