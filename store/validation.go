@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
@@ -185,13 +184,13 @@ func ValidateValueData(v *rule.Value) error {
 	case "string":
 		return nil
 	case "int64":
-		_, err := strconv.ParseInt(v.Data, 10, 64)
+		_, err := v.ToInt64()
 		return err
 	case "float64":
-		_, err := strconv.ParseFloat(v.Data, 64)
+		_, err := v.ToFloat64()
 		return err
 	case "bool":
-		_, err := strconv.ParseBool(v.Data)
+		_, err := v.ToBool()
 		return err
 	}
 
