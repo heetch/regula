@@ -55,6 +55,12 @@
   version = "v0.5.1"
 
 [[projects]]
+  name = "github.com/julienschmidt/httprouter"
+  packages = ["."]
+  revision = "348b672cd90d8190f8240323e372ecd1e66b59dc"
+  version = "v1.2.0"
+
+[[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
   revision = "369ecd8cea9851e459abb67eb171853e3986591e"
@@ -219,6 +225,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6edba8e824deefa38b7ed70871c8f26ec49d6918d3e81531e6ede23b21871a7b"
+  inputs-digest = "3b54e9e0ff7479ff59951c1f81bcd713a3041d747fbd8187c10e31edd5796660"
   solver-name = "gps-cdcl"
   solver-version = 1
