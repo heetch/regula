@@ -49,6 +49,9 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		s.get(w, r, path)
 		return
+	case "POST":
+		s.create(w, r, path)
+		return
 	case "PUT":
 		if path != "" {
 			s.put(w, r, path)
@@ -59,12 +62,43 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
+func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string) {
+	var sig regula.Signature
+
+	err := json.NewDecoder(r.Body).Decode(&sig)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	err = s.rulesets.Create(r.Context(), path, &sig)
+	if err != nil {
+		if err == store.ErrAlreadyExists {
+			writeError(w, r, err, http.StatusConflict)
+			return
+		}
+
+		if store.IsValidationError(err) {
+			writeError(w, r, err, http.StatusBadRequest)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
+	reghttp.EncodeJSON(w, r, &api.Ruleset{
+		Path:      path,
+		Signature: &sig,
+	}, http.StatusCreated)
+}
+
 func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 	v := r.URL.Query().Get("version")
 
 	entry, err := s.rulesets.Get(r.Context(), path, v)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return
 		}
@@ -101,9 +135,8 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 	}
 
 	entries, err := s.rulesets.List(r.Context(), prefix, &opt)
-
 	if err != nil {
-		if err == store.ErrNotFound {
+		if err == store.ErrRulesetNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return
 		}
@@ -177,7 +210,7 @@ func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string
 			fallthrough
 		case context.DeadlineExceeded:
 			ae.Timeout = true
-		case store.ErrNotFound:
+		case store.ErrRulesetNotFound:
 			w.WriteHeader(http.StatusNotFound)
 			return
 		default:
@@ -209,7 +242,7 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 	}
 
 	entry, err := s.rulesets.Put(r.Context(), path, &rs)
-	if err != nil && err != store.ErrNotModified {
+	if err != nil && err != store.ErrRulesetNotModified {
 		if store.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
 			return

@@ -78,26 +78,7 @@ func ExampleRulesetService_Eval() {
 		log.Fatal(err)
 	}
 
-	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
-		"foo": "bar",
-		"baz": int64(42),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(resp.Value.Data)
-	fmt.Println(resp.Value.Type)
-	fmt.Println(resp.Version)
-}
-
-func ExampleRulesetService_EvalVersion() {
-	c, err := client.New("http://127.0.0.1:5331")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	resp, err := c.Rulesets.EvalVersion(context.Background(), "path/to/ruleset", "xyzabc", regula.Params{
+	resp, err := c.Rulesets.Eval(context.Background(), "path/to/ruleset", "version", regula.Params{
 		"foo": "bar",
 		"baz": int64(42),
 	})
@@ -257,7 +238,7 @@ func TestRulesetService(t *testing.T) {
 
 		exp := regula.EvalResult{Value: rule.StringValue("baz"), Version: "1234"}
 
-		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", regula.Params{
+		resp, err := cli.Rulesets.Eval(context.Background(), "path/to/ruleset", "", regula.Params{
 			"foo": "bar",
 		})
 		require.NoError(t, err)
@@ -284,6 +265,29 @@ func TestRulesetService(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "a", ars.Path)
 		require.Equal(t, "v", ars.Version)
+	})
+
+	t.Run("CreateRuleset", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.NotEmpty(t, r.Header.Get("User-Agent"))
+			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+			assert.Equal(t, "/rulesets/a", r.URL.Path)
+			assert.Equal(t, "POST", r.Method)
+			fmt.Fprintf(w, `{"path": "a", "signature": {"returnType": "bool", "paramTypes":{"foo": "bool"} }}`)
+		}))
+		defer ts.Close()
+
+		cli, err := client.New(ts.URL)
+		require.NoError(t, err)
+		cli.Logger = zerolog.New(ioutil.Discard)
+
+		sig := regula.NewSignature().ReturnsBool().BoolP("foo")
+
+		rs, err := cli.Rulesets.Create(context.Background(), "a", sig)
+		require.NoError(t, err)
+		require.Equal(t, "a", rs.Path)
+		require.Equal(t, sig, rs.Signature)
 	})
 
 	t.Run("WatchRuleset", func(t *testing.T) {

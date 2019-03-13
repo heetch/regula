@@ -13,12 +13,7 @@ import (
 )
 
 // Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
-	return s.EvalVersion(ctx, path, "", params)
-}
-
-// EvalVersion evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	var res *clientv3.GetResponse
 	var err error
 

@@ -25,6 +25,7 @@ func TestValidation(t *testing.T) {
 
 	t.Run("NOK - ruleset name", func(t *testing.T) {
 		names := []string{
+			"",
 			"PATH/TO/MY-RULESET",
 			"/path/to/my-ruleset",
 			"path/to/my-ruleset/",

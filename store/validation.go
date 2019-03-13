@@ -105,7 +105,7 @@ func ValidateParamName(name string) error {
 
 // ValidatePath verifies if the given path matches the path regex.
 func ValidatePath(path string) error {
-	if !rgxRuleset.MatchString(path) {
+	if path == "" || !rgxRuleset.MatchString(path) {
 		return &ValidationError{
 			Field:  "path",
 			Value:  path,

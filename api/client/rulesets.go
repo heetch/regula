@@ -58,13 +58,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *ListOptio
 
 // Eval evaluates the given ruleset with the given params.
 // It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
-func (s *RulesetService) Eval(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error) {
-	return s.EvalVersion(ctx, path, "", params)
-}
-
-// EvalVersion evaluates the given ruleset version with the given params.
-// It implements the regula.Evaluator interface and thus can be passed to the regula.Engine.
-func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+func (s *RulesetService) Eval(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 	req, err := s.client.newRequest("GET", s.joinPath(path), nil)
 	if err != nil {
 		return nil, err
@@ -101,6 +95,19 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 // Put creates a ruleset version on the given path.
 func (s *RulesetService) Put(ctx context.Context, path string, rs *regula.Ruleset) (*api.Ruleset, error) {
 	req, err := s.client.newRequest("PUT", s.joinPath(path), rs)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp api.Ruleset
+
+	_, err = s.client.try(ctx, req, &resp)
+	return &resp, err
+}
+
+// Create creates a ruleset at the given path using the given signature.
+func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Signature) (*api.Ruleset, error) {
+	req, err := s.client.newRequest("POST", s.joinPath(path), sig)
 	if err != nil {
 		return nil, err
 	}
