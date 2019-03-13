@@ -108,7 +108,14 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 	err = h.service.Create(r.Context(), p.Path, &p.Signature)
 	if err != nil {
-		writeError(w, r, err, http.StatusBadRequest)
+		switch {
+		case store.IsValidationError(err):
+			writeError(w, r, err, http.StatusBadRequest)
+		case err == store.ErrAlreadyExists:
+			writeError(w, r, err, http.StatusConflict)
+		default:
+			writeError(w, r, err, http.StatusInternalServerError)
+		}
 		return
 	}
 

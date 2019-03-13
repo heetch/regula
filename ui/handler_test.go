@@ -25,6 +25,61 @@ func doRequest(h http.Handler, method, path string, body io.Reader) *httptest.Re
 	return w
 }
 
+func TestPostNewRuleset(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s := new(mock.RulesetService)
+		rec := doRequest(NewHandler(s, ""), "POST", "/i/rulesets/",
+			strings.NewReader(`{
+			"path": "some-path",
+			"signature": {
+				"returnType": "string",
+				"params": {
+					"foo": "string",
+					"bar": "int64"
+				}
+			}
+}`))
+		require.Equal(t, http.StatusCreated, rec.Code)
+		require.Equal(t, 1, s.CreateCount)
+	})
+
+	t.Run("Errors", func(t *testing.T) {
+		tests := []struct {
+			name string
+			err  error
+			code int
+		}{
+			{"already exists", store.ErrAlreadyExists, http.StatusConflict},
+			{"validation error", new(store.ValidationError), http.StatusBadRequest},
+			{"unexpected error", errors.New("some error"), http.StatusInternalServerError},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				s := new(mock.RulesetService)
+				s.CreateFn = func(_ context.Context, path string, _ *regula.Signature) error {
+					return test.err
+				}
+
+				rec := doRequest(NewHandler(s, ""), "POST", "/i/rulesets/",
+					strings.NewReader(`{
+						"path": "some-path",
+						"signature": {
+							"returnType": "string",
+							"params": {
+								"foo": "string",
+								"bar": "int64"
+							}
+						}
+					}`))
+				require.Equal(t, test.code, rec.Code)
+				require.Equal(t, 1, s.CreateCount)
+			})
+		}
+
+	})
+}
+
 func TestPUTNewRulesetVersionWithParserError(t *testing.T) {
 	s := new(mock.RulesetService)
 	s.GetFn = func(_ context.Context, path, _ string) (*regula.Ruleset, error) {
