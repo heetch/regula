@@ -2,7 +2,6 @@ package regula
 
 import (
 	"context"
-	"strconv"
 	"sync"
 
 	"github.com/heetch/confita"
@@ -61,7 +60,7 @@ func (e *Engine) GetString(ctx context.Context, path string, params rule.Params,
 		return "", err
 	}
 
-	return res.ToString()
+	return res.Value.ToString()
 }
 
 // GetBool evaluates a ruleset and returns the result as a bool.
@@ -71,7 +70,7 @@ func (e *Engine) GetBool(ctx context.Context, path string, params rule.Params, o
 		return false, err
 	}
 
-	return res.ToBool()
+	return res.Value.ToBool()
 }
 
 // GetInt64 evaluates a ruleset and returns the result as an int64.
@@ -81,7 +80,7 @@ func (e *Engine) GetInt64(ctx context.Context, path string, params rule.Params, 
 		return 0, err
 	}
 
-	return res.ToInt64()
+	return res.Value.ToInt64()
 }
 
 // GetFloat64 evaluates a ruleset and returns the result as a float64.
@@ -91,7 +90,7 @@ func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params
 		return 0, err
 	}
 
-	return res.ToFloat64()
+	return res.Value.ToFloat64()
 }
 
 // LoadStruct takes a pointer to struct and params and loads rulesets into fields
@@ -145,26 +144,6 @@ type EvalResult struct {
 	Value *rule.Value
 	// Version of the ruleset that generated this value
 	Version string
-}
-
-// ToString decodes the value as a string.
-func (e *EvalResult) ToString() (string, error) {
-	return e.Value.Data, nil
-}
-
-// ToInt64 decodes the value as an int64.
-func (e *EvalResult) ToInt64() (int64, error) {
-	return strconv.ParseInt(e.Value.Data, 10, 64)
-}
-
-// ToFloat64 decodes the value as a float64.
-func (e *EvalResult) ToFloat64() (float64, error) {
-	return strconv.ParseFloat(e.Value.Data, 64)
-}
-
-// ToBool decodes the value as a bool.
-func (e *EvalResult) ToBool() (bool, error) {
-	return strconv.ParseBool(e.Value.Data)
 }
 
 // RulesetBuffer can hold a group of rulesets in memory and can be used as an evaluator.

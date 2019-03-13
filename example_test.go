@@ -112,7 +112,7 @@ func ExampleEngine() {
 		}
 	}
 
-	str, err := res.ToString()
+	str, err := res.Value.ToString()
 	if err != nil {
 		panic(err)
 	}
