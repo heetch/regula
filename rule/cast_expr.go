@@ -1,9 +1,5 @@
 package rule
 
-import (
-	"strconv"
-)
-
 func init() {
 	Operators["intToFloat"] = func() Operator { return newExprIntToFloat() }
 	Operators["floatToInt"] = func() Operator { return newExprFloatToInt() }
@@ -50,7 +46,7 @@ func (n *exprIntToFloat) Eval(params Params) (*Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	iVal, err := strconv.ParseInt(val.Data, 10, 64)
+	iVal, err := val.ToInt64()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +95,7 @@ func (n *exprFloatToInt) Eval(params Params) (*Value, error) {
 		return nil, err
 	}
 	// Handily this will just give us the int we want ;-)
-	fVal, err := strconv.ParseFloat(val.Data, 64)
+	fVal, err := val.ToFloat64()
 	if err != nil {
 		return nil, err
 	}

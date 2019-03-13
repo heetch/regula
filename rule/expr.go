@@ -290,11 +290,8 @@ func exprToInt64(e Expr, params Params) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	i, err := strconv.ParseInt(v.Data, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return i, err
+
+	return v.ToInt64()
 }
 
 // exprToFloat64 returns the go-native float64 value of an expression
@@ -304,11 +301,8 @@ func exprToFloat64(e Expr, params Params) (float64, error) {
 	if err != nil {
 		return 0.0, err
 	}
-	f, err := strconv.ParseFloat(v.Data, 64)
-	if err != nil {
-		return 0.0, err
-	}
-	return f, nil
+
+	return v.ToFloat64()
 }
 
 // exprToBool returns the go-native bool value of an expression
@@ -318,11 +312,8 @@ func exprToBool(e Expr, params Params) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	b, err := strconv.ParseBool(v.Data)
-	if err != nil {
-		return false, err
-	}
-	return b, nil
+
+	return v.ToBool()
 }
 
 // exprToString returns the string value of an expression
@@ -332,5 +323,6 @@ func exprToString(e Expr, params Params) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return v.Data, nil
+
+	return v.ToString()
 }
