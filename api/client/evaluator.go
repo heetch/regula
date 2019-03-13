@@ -31,9 +31,8 @@ func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool
 
 	buf := regula.NewRulesetBuffer()
 
-	for _, re := range ls.Rulesets {
-		rs := (regula.Ruleset)(re)
-		buf.Add(re.Path, re.Version, &rs)
+	for _, rs := range ls.Rulesets {
+		buf.Add(rs.Path, rs.Version, &rs)
 	}
 
 	for ls.Continue != "" {
@@ -45,9 +44,8 @@ func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool
 			return nil, err
 		}
 
-		for _, re := range ls.Rulesets {
-			rs := (regula.Ruleset)(re)
-			buf.Add(re.Path, re.Version, &rs)
+		for _, rs := range ls.Rulesets {
+			buf.Add(rs.Path, rs.Version, &rs)
 		}
 	}
 
