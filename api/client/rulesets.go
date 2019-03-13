@@ -92,7 +92,7 @@ func (s *RulesetService) Eval(ctx context.Context, path, version string, params 
 	}, nil
 }
 
-// Put creates a ruleset version on the given path.
+// Put adds rules to a ruleset on the given path. It creates a new version of this ruleset.
 func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error) {
 	req, err := s.client.newRequest("PUT", s.joinPath(path), rules)
 	if err != nil {
