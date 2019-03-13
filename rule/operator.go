@@ -103,7 +103,7 @@ func (o *operator) Finalise() error {
 
 //
 func (o *operator) checkAndPromoteBodyTypes() error {
-	var bodyType Type = ANY
+	var bodyType = ANY
 	for pos, arg := range o.operands {
 		term, err := o.contract.GetTerm(pos)
 		if err != nil {
@@ -260,7 +260,7 @@ func (o *operator) homogenise() error {
 			// This starts at ANY, the most generic type,
 			// so we can move towards something more
 			// specific.
-			var t Type = ANY
+			var t = ANY
 			var isFloat bool
 			var isInt bool
 

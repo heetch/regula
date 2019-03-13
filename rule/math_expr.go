@@ -193,7 +193,7 @@ func Mult(vN ...Expr) Expr {
 
 // Perform multiplication of Float64Value types.
 func (n *exprMult) float64Mult(params Params) (*Value, error) {
-	var product float64 = 1.0
+	var product = 1.0
 	for _, o := range n.operands {
 		f, err := exprToFloat64(o, params)
 		if err != nil {
