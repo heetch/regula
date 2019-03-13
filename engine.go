@@ -34,16 +34,7 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 		opt(&cfg)
 	}
 
-	var (
-		result *EvalResult
-		err    error
-	)
-
-	if cfg.Version != "" {
-		result, err = e.evaluator.EvalVersion(ctx, path, cfg.Version, params)
-	} else {
-		result, err = e.evaluator.Eval(ctx, path, params)
-	}
+	result, err := e.evaluator.Eval(ctx, path, cfg.Version, params)
 	if err != nil {
 		if err == rerrors.ErrRulesetNotFound || err == rerrors.ErrNoMatch {
 			return nil, err
@@ -107,7 +98,7 @@ func (e *Engine) GetFloat64(ctx context.Context, path string, params rule.Params
 // tagged with the "ruleset" struct tag.
 func (e *Engine) LoadStruct(ctx context.Context, to interface{}, params rule.Params) error {
 	b := backend.Func("regula", func(ctx context.Context, path string) ([]byte, error) {
-		res, err := e.evaluator.Eval(ctx, path, params)
+		res, err := e.evaluator.Eval(ctx, path, "", params)
 		if err != nil {
 			if err == rerrors.ErrRulesetNotFound {
 				return nil, backend.ErrNotFound
@@ -139,15 +130,13 @@ func Version(version string) Option {
 	}
 }
 
-// An Evaluator provides methods to evaluate rulesets from any location.
+// An Evaluator provides a method to evaluate rulesets from any location.
 // Long running implementations must listen to the given context for timeout and cancelation.
 type Evaluator interface {
-	// Eval evaluates a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
-	Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error)
-	// EvalVersion evaluates a specific version of a ruleset using the given params.
-	// If no ruleset is found for a given path, the implementation must return rerrors.ErrRulesetNotFound.
-	EvalVersion(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
+	// Eval evaluates a ruleset using the given params. If the version is not empty, the selected version
+	// will be used for evaluation. If it's empty, the latest version will be used.
+	// If no ruleset is found for a given path, the implementation must return errors.ErrRulesetNotFound.
+	Eval(ctx context.Context, path string, version string, params rule.Params) (*EvalResult, error)
 }
 
 // EvalResult is the product of an evaluation. It contains the value generated as long as some metadata.
@@ -231,17 +220,28 @@ func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
 	return ri.r, nil
 }
 
-// Eval evaluates the latest added ruleset or returns rerrors.ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) Eval(ctx context.Context, path string, params rule.Params) (*EvalResult, error) {
+// Eval evaluates the selected ruleset version, or the latest one if the version is empty, and returns errors.ErrRulesetNotFound if not found.
+func (b *RulesetBuffer) Eval(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
-	l, ok := b.rulesets[path]
-	if !ok || len(l) == 0 {
-		return nil, rerrors.ErrRulesetNotFound
+	var ri *rulesetInfo
+	var err error
+
+	if version == "" {
+		l, ok := b.rulesets[path]
+		if !ok || len(l) == 0 {
+			return nil, rerrors.ErrRulesetNotFound
+		}
+
+		ri = l[len(l)-1]
+	} else {
+		ri, err = b.getVersion(path, version)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	ri := l[len(l)-1]
 	v, err := ri.r.Eval(params)
 	if err != nil {
 		return nil, err
@@ -266,25 +266,4 @@ func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
 	}
 
 	return nil, rerrors.ErrRulesetNotFound
-}
-
-// EvalVersion evaluates the selected ruleset version or returns rerrors.ErrRulesetNotFound if not found.
-func (b *RulesetBuffer) EvalVersion(ctx context.Context, path, version string, params rule.Params) (*EvalResult, error) {
-	b.rw.RLock()
-	defer b.rw.RUnlock()
-
-	ri, err := b.getVersion(path, version)
-	if err != nil {
-		return nil, err
-	}
-
-	v, err := ri.r.Eval(params)
-	if err != nil {
-		return nil, err
-	}
-
-	return &EvalResult{
-		Value:   v,
-		Version: ri.version,
-	}, nil
 }
