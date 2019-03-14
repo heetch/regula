@@ -14,9 +14,9 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	rerrors "github.com/heetch/regula/errors"
+	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/mock"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,7 +90,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/b", http.StatusNotFound, &e1, store.ErrRulesetNotFound)
+			call(t, "/rulesets/b", http.StatusNotFound, &e1, api.ErrRulesetNotFound)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
@@ -103,7 +103,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		l := store.Rulesets{
+		l := api.Rulesets{
 			Rulesets: []regula.Ruleset{
 				{Path: "aa", Rules: r1},
 				{Path: "bb", Rules: r2},
@@ -112,7 +112,7 @@ func TestAPI(t *testing.T) {
 			Continue: "sometoken",
 		}
 
-		call := func(t *testing.T, u string, code int, l *store.Rulesets, lopt *store.ListOptions, err error) {
+		call := func(t *testing.T, u string, code int, l *api.Rulesets, lopt *api.ListOptions, err error) {
 			t.Helper()
 
 			uu, uerr := url.Parse(u)
@@ -123,7 +123,7 @@ func TestAPI(t *testing.T) {
 			}
 			token := uu.Query().Get("continue")
 
-			s.ListFn = func(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
+			s.ListFn = func(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
 				assert.Equal(t, token, opt.ContinueToken)
 				assert.Equal(t, lopt, opt)
@@ -152,15 +152,15 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, &store.ListOptions{}, nil)
+			call(t, "/rulesets/?list", http.StatusOK, &l, &api.ListOptions{}, nil)
 		})
 
 		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, &store.ListOptions{}, nil)
+			call(t, "/rulesets/a?list", http.StatusOK, &l, &api.ListOptions{}, nil)
 		})
 
 		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			opt := store.ListOptions{
+			opt := api.ListOptions{
 				Limit:         10,
 				ContinueToken: "abc123",
 			}
@@ -168,52 +168,52 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(store.Rulesets), &store.ListOptions{}, nil)
+			call(t, "/rulesets/?list", http.StatusOK, new(api.Rulesets), &api.ListOptions{}, nil)
 		})
 
 		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(store.Rulesets), &store.ListOptions{}, store.ErrRulesetNotFound)
+			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(api.Rulesets), &api.ListOptions{}, api.ErrRulesetNotFound)
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(store.Rulesets), &store.ListOptions{}, store.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), &api.ListOptions{}, api.ErrInvalidContinueToken)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(store.Rulesets), &store.ListOptions{}, errors.New("unexpected error"))
+			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), &api.ListOptions{}, errors.New("unexpected error"))
 		})
 
 		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
+			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
 		})
 
 		t.Run("PathsParameter", func(t *testing.T) {
-			opt := store.ListOptions{
+			opt := api.ListOptions{
 				PathsOnly: true,
 			}
 			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("VersionsParameter", func(t *testing.T) {
-			opt := store.ListOptions{
+			opt := api.ListOptions{
 				AllVersions: true,
 			}
 			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("InvalidParametersCombination", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &store.ListOptions{}, nil)
+			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
 		})
 	})
 
 	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, result *api.EvalResult, testParamsFn func(params rule.Params)) {
+		call := func(t *testing.T, url string, code int, result *regula.EvalResult, testParamsFn func(params rule.Params)) {
 			t.Helper()
 			resetStore(s)
 
 			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				testParamsFn(params)
-				return (*regula.EvalResult)(result), nil
+				return result, nil
 			}
 
 			w := httptest.NewRecorder()
@@ -223,7 +223,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res api.EvalResult
+				var res regula.EvalResult
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				require.EqualValues(t, result, &res)
@@ -231,7 +231,7 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("OK", func(t *testing.T) {
-			exp := api.EvalResult{
+			exp := regula.EvalResult{
 				Value: rule.StringValue("success"),
 			}
 
@@ -250,7 +250,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("OK With version", func(t *testing.T) {
-			exp := api.EvalResult{
+			exp := regula.EvalResult{
 				Value:   rule.StringValue("success"),
 				Version: "123",
 			}
@@ -272,11 +272,11 @@ func TestAPI(t *testing.T) {
 			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
 			h.ServeHTTP(w, r)
 
-			exp := api.Error{
+			exp := reghttp.Error{
 				Err: "the path 'path/to/my/ruleset' doesn't exist",
 			}
 
-			var resp api.Error
+			var resp reghttp.Error
 			err := json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusNotFound, w.Code)
@@ -305,19 +305,19 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
-		l := store.RulesetEvents{
-			Events: []store.RulesetEvent{
-				{Type: store.RulesetPutEvent, Path: "a", Rules: r1},
-				{Type: store.RulesetPutEvent, Path: "b", Rules: r2},
-				{Type: store.RulesetPutEvent, Path: "a", Rules: r2},
+		l := api.RulesetEvents{
+			Events: []api.RulesetEvent{
+				{Type: api.RulesetPutEvent, Path: "a", Rules: r1},
+				{Type: api.RulesetPutEvent, Path: "b", Rules: r2},
+				{Type: api.RulesetPutEvent, Path: "a", Rules: r2},
 			},
 			Revision: "rev",
 		}
 
-		call := func(t *testing.T, url string, code int, es *store.RulesetEvents, err error) {
+		call := func(t *testing.T, url string, code int, es *api.RulesetEvents, err error) {
 			t.Helper()
 
-			s.WatchFn = func(context.Context, string, string) (*store.RulesetEvents, error) {
+			s.WatchFn = func(context.Context, string, string) (*api.RulesetEvents, error) {
 				return es, err
 			}
 			defer func() { s.WatchFn = nil }()
@@ -329,7 +329,7 @@ func TestAPI(t *testing.T) {
 			require.Equal(t, code, w.Code)
 
 			if code == http.StatusOK {
-				var res store.RulesetEvents
+				var res api.RulesetEvents
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
 				if es != nil {
@@ -350,13 +350,13 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, store.ErrRulesetNotFound)
+			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound)
 		})
 
 		t.Run("WithRevision", func(t *testing.T) {
 			t.Helper()
 
-			s.WatchFn = func(ctx context.Context, prefix string, revision string) (*store.RulesetEvents, error) {
+			s.WatchFn = func(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
 				require.Equal(t, "a", prefix)
 				require.Equal(t, "somerev", revision)
 				return &l, nil
@@ -369,7 +369,7 @@ func TestAPI(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, w.Code)
 
-			var res store.RulesetEvents
+			var res api.RulesetEvents
 			err := json.NewDecoder(w.Body).Decode(&res)
 			require.NoError(t, err)
 			require.Equal(t, len(l.Events), len(res.Events))
@@ -425,7 +425,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("NotModified", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, store.ErrRulesetNotModified)
+			call(t, "/rulesets/a", http.StatusOK, &e1, api.ErrRulesetNotModified)
 		})
 
 		t.Run("EmptyPath", func(t *testing.T) {
@@ -437,11 +437,11 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("Bad ruleset name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
 		})
 
 		t.Run("Bad param name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
 		})
 	})
 
@@ -488,7 +488,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("Validation error", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(store.ValidationError))
+			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
 		})
 	})
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/heetch/regula/api"
 	reghttp "github.com/heetch/regula/http"
-	"github.com/heetch/regula/store"
 	"github.com/pkg/errors"
 )
 
@@ -24,7 +23,7 @@ type Config struct {
 }
 
 // NewHandler creates an http handler to serve the rules engine API.
-func NewHandler(rsService store.RulesetService, cfg Config) http.Handler {
+func NewHandler(rsService api.RulesetService, cfg Config) http.Handler {
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 5 * time.Second
 	}
@@ -73,5 +72,5 @@ func writeError(w http.ResponseWriter, r *http.Request, err error, code int) {
 		logger.Debug().Msg("http error")
 	}
 
-	reghttp.EncodeJSON(w, r, &api.Error{Err: err.Error()}, code)
+	reghttp.EncodeJSON(w, r, &reghttp.Error{Err: err.Error()}, code)
 }
