@@ -207,7 +207,7 @@ func TestList(t *testing.T) {
 		require.Equal(t, rs1, entries.Rulesets[1].Rules)
 		require.NotEmpty(t, entries.Revision)
 
-		opt.ContinueToken = entries.Continue
+		opt.Cursor = entries.Cursor
 		entries, err = s.List(context.Background(), prefix+"", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, opt.Limit)
@@ -266,40 +266,40 @@ func TestList(t *testing.T) {
 		require.Len(t, entries.Rulesets, 2)
 		require.Equal(t, prefix+"y", entries.Rulesets[0].Path)
 		require.Equal(t, prefix+"y/1", entries.Rulesets[1].Path)
-		require.NotEmpty(t, entries.Continue)
+		require.NotEmpty(t, entries.Cursor)
 
-		opt.ContinueToken = entries.Continue
-		token := entries.Continue
+		opt.Cursor = entries.Cursor
+		token := entries.Cursor
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 2)
 		require.Equal(t, prefix+"y/2", entries.Rulesets[0].Path)
 		require.Equal(t, prefix+"y/3", entries.Rulesets[1].Path)
-		require.NotEmpty(t, entries.Continue)
+		require.NotEmpty(t, entries.Cursor)
 
-		opt.ContinueToken = entries.Continue
+		opt.Cursor = entries.Cursor
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 1)
 		require.Equal(t, prefix+"yy", entries.Rulesets[0].Path)
-		require.Empty(t, entries.Continue)
+		require.Empty(t, entries.Cursor)
 
 		opt.Limit = 3
-		opt.ContinueToken = token
+		opt.Cursor = token
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 3)
 		require.Equal(t, prefix+"y/2", entries.Rulesets[0].Path)
 		require.Equal(t, prefix+"y/3", entries.Rulesets[1].Path)
 		require.Equal(t, prefix+"yy", entries.Rulesets[2].Path)
-		require.Empty(t, entries.Continue)
+		require.Empty(t, entries.Cursor)
 
-		opt.ContinueToken = "some token"
+		opt.Cursor = "some token"
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
-		require.Equal(t, api.ErrInvalidContinueToken, err)
+		require.Equal(t, api.ErrInvalidCursor, err)
 
 		opt.Limit = -10
-		opt.ContinueToken = ""
+		opt.Cursor = ""
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 5)
@@ -341,7 +341,7 @@ func TestListPaths(t *testing.T) {
 			require.Zero(t, e.Version)
 		}
 		require.NotEmpty(t, entries.Revision)
-		require.Zero(t, entries.Continue)
+		require.Zero(t, entries.Cursor)
 	})
 
 	// Prefix tests List with a given prefix with pathsOnly parameter set to true.
@@ -367,7 +367,7 @@ func TestListPaths(t *testing.T) {
 			require.Zero(t, e.Version)
 		}
 		require.NotEmpty(t, entries.Revision)
-		require.Zero(t, entries.Continue)
+		require.Zero(t, entries.Cursor)
 	})
 
 	// NotFound tests List with a prefix which doesn't exist with pathsOnly parameter set to true.
@@ -399,9 +399,9 @@ func TestListPaths(t *testing.T) {
 			require.Zero(t, e.Version)
 		}
 		require.NotEmpty(t, entries.Revision)
-		require.NotEmpty(t, entries.Continue)
+		require.NotEmpty(t, entries.Cursor)
 
-		opt.ContinueToken = entries.Continue
+		opt.Cursor = entries.Cursor
 		entries, err = s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
 		paths = []string{prefix + "foo/bar", prefix + "foo/bar/baz"}
@@ -412,14 +412,14 @@ func TestListPaths(t *testing.T) {
 			require.Zero(t, e.Version)
 		}
 		require.NotEmpty(t, entries.Revision)
-		require.Zero(t, entries.Continue)
+		require.Zero(t, entries.Cursor)
 
-		opt.ContinueToken = "bad token"
+		opt.Cursor = "bad token"
 		_, err = s.List(context.Background(), prefix+"f", &opt)
-		require.Equal(t, api.ErrInvalidContinueToken, err)
+		require.Equal(t, api.ErrInvalidCursor, err)
 
 		opt.Limit = -10
-		opt.ContinueToken = ""
+		opt.Cursor = ""
 		entries, err = s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
 		paths = []string{prefix + "foo", prefix + "foo/babar", prefix + "foo/bar", prefix + "foo/bar/baz"}
@@ -430,7 +430,7 @@ func TestListPaths(t *testing.T) {
 			require.Zero(t, e.Version)
 		}
 		require.NotEmpty(t, entries.Revision)
-		require.Zero(t, entries.Continue)
+		require.Zero(t, entries.Cursor)
 	})
 }
 

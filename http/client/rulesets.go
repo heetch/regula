@@ -30,7 +30,7 @@ func (s *RulesetService) joinPath(path string) string {
 }
 
 // List fetches all the rulesets starting with the given prefix.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *ListOptions) (*api.Rulesets, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 	req, err := s.client.newRequest("GET", s.joinPath(prefix), nil)
 	if err != nil {
 		return nil, err
@@ -44,8 +44,8 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *ListOptio
 			q.Add("limit", strconv.Itoa(opt.Limit))
 		}
 
-		if opt.Continue != "" {
-			q.Add("continue", opt.Continue)
+		if opt.Cursor != "" {
+			q.Add("cursor", opt.Cursor)
 		}
 	}
 

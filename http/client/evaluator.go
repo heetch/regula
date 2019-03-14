@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/heetch/regula/api"
-
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
 )
 
 // Evaluator can cache rulesets in memory and can be passed to a regula.Engine to evaluate rulesets without
@@ -23,7 +22,7 @@ type Evaluator struct {
 // the underlying RulesetBuffer.
 // If watch is set to true, the Close method must always be called to gracefully close the watcher.
 func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool) (*Evaluator, error) {
-	ls, err := client.Rulesets.List(ctx, prefix, &ListOptions{
+	ls, err := client.Rulesets.List(ctx, prefix, &api.ListOptions{
 		Limit: 100, // TODO(asdine): make it configurable in future releases
 	})
 	if err != nil {
@@ -36,10 +35,10 @@ func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool
 		buf.Add(rs.Path, rs.Version, &rs)
 	}
 
-	for ls.Continue != "" {
-		ls, err = client.Rulesets.List(ctx, prefix, &ListOptions{
-			Limit:    100, // TODO(asdine): make it configurable in future releases
-			Continue: ls.Continue,
+	for ls.Cursor != "" {
+		ls, err = client.Rulesets.List(ctx, prefix, &api.ListOptions{
+			Limit:  100, // TODO(asdine): make it configurable in future releases
+			Cursor: ls.Cursor,
 		})
 		if err != nil {
 			return nil, err

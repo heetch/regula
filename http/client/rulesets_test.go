@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
 	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/http/client"
 	"github.com/heetch/regula/rule"
@@ -46,7 +47,7 @@ func ExampleRulesetService_List_withPagination() {
 		log.Fatal(err)
 	}
 
-	list, err := c.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
+	list, err := c.Rulesets.List(context.Background(), "prefix", &api.ListOptions{
 		Limit: 20,
 	})
 	if err != nil {
@@ -57,10 +58,10 @@ func ExampleRulesetService_List_withPagination() {
 		e.Eval(nil)
 	}
 
-	for list.Continue != "" {
-		list, err = c.Rulesets.List(context.Background(), "prefix", &client.ListOptions{
-			Limit:    20,
-			Continue: list.Continue,
+	for list.Cursor != "" {
+		list, err = c.Rulesets.List(context.Background(), "prefix", &api.ListOptions{
+			Limit:  20,
+			Cursor: list.Cursor,
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -193,7 +194,7 @@ func TestRulesetService(t *testing.T) {
 					assert.Equal(t, "hv1", r.Header.Get("hk1"))
 					assert.Equal(t, "hv2", r.Header.Get("hk2"))
 					assert.Contains(t, r.URL.Query(), "list")
-					assert.Equal(t, "some-token", r.URL.Query().Get("continue"))
+					assert.Equal(t, "some-token", r.URL.Query().Get("cursor"))
 					assert.Equal(t, "10", r.URL.Query().Get("limit"))
 					assert.Equal(t, tc.url, r.URL.Path)
 					fmt.Fprintf(w, `{"revision": "rev", "rulesets": [{"path": "a"}]}`)
@@ -205,9 +206,9 @@ func TestRulesetService(t *testing.T) {
 				cli.Logger = zerolog.New(ioutil.Discard)
 				cli.Headers["hk2"] = "hv2"
 
-				rs, err := cli.Rulesets.List(context.Background(), tc.path, &client.ListOptions{
-					Limit:    10,
-					Continue: "some-token",
+				rs, err := cli.Rulesets.List(context.Background(), tc.path, &api.ListOptions{
+					Limit:  10,
+					Cursor: "some-token",
 				})
 				require.NoError(t, err)
 				require.Len(t, rs.Rulesets, 1)

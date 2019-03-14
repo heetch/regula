@@ -229,9 +229,3 @@ func Header(k, v string) Option {
 		return nil
 	}
 }
-
-// ListOptions contains pagination options.
-type ListOptions struct {
-	Limit    int
-	Continue string
-}

@@ -126,7 +126,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 		}
 	}
 
-	opt.ContinueToken = r.URL.Query().Get("continue")
+	opt.Cursor = r.URL.Query().Get("cursor")
 	_, opt.PathsOnly = r.URL.Query()["paths"]
 	_, opt.AllVersions = r.URL.Query()["versions"]
 	if opt.PathsOnly && opt.AllVersions {
@@ -141,7 +141,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 			return
 		}
 
-		if err == api.ErrInvalidContinueToken {
+		if err == api.ErrInvalidCursor {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}

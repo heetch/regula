@@ -109,7 +109,7 @@ func TestAPI(t *testing.T) {
 				{Path: "bb", Rules: r2},
 			},
 			Revision: "somerev",
-			Continue: "sometoken",
+			Cursor:   "sometoken",
 		}
 
 		call := func(t *testing.T, u string, code int, l *api.Rulesets, lopt *api.ListOptions, err error) {
@@ -121,11 +121,11 @@ func TestAPI(t *testing.T) {
 			if limit == "" {
 				limit = "0"
 			}
-			token := uu.Query().Get("continue")
+			token := uu.Query().Get("cursor")
 
 			s.ListFn = func(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
-				assert.Equal(t, token, opt.ContinueToken)
+				assert.Equal(t, token, opt.Cursor)
 				assert.Equal(t, lopt, opt)
 				return l, err
 			}
@@ -146,7 +146,7 @@ func TestAPI(t *testing.T) {
 					require.EqualValues(t, l.Rulesets[i], res.Rulesets[i])
 				}
 				if len(l.Rulesets) > 0 {
-					require.Equal(t, "sometoken", res.Continue)
+					require.Equal(t, "sometoken", res.Cursor)
 				}
 			}
 		}
@@ -159,12 +159,12 @@ func TestAPI(t *testing.T) {
 			call(t, "/rulesets/a?list", http.StatusOK, &l, &api.ListOptions{}, nil)
 		})
 
-		t.Run("WithLimitAndContinue", func(t *testing.T) {
+		t.Run("WithLimitAndCursor", func(t *testing.T) {
 			opt := api.ListOptions{
-				Limit:         10,
-				ContinueToken: "abc123",
+				Limit:  10,
+				Cursor: "abc123",
 			}
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, &opt, nil)
+			call(t, "/rulesets/a?list&limit=10&cursor=abc123", http.StatusOK, &l, &opt, nil)
 		})
 
 		t.Run("NoResultOnRoot", func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), &api.ListOptions{}, api.ErrInvalidContinueToken)
+			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), &api.ListOptions{}, api.ErrInvalidCursor)
 		})
 
 		t.Run("UnexpectedError", func(t *testing.T) {

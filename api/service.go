@@ -11,11 +11,11 @@ import (
 
 // API errors.
 var (
-	ErrRulesetNotFound      = errors.New("ruleset not found")
-	ErrRulesetNotModified   = errors.New("not modified")
-	ErrSignatureNotFound    = errors.New("signature not found")
-	ErrInvalidContinueToken = errors.New("invalid continue token")
-	ErrAlreadyExists        = errors.New("already exists")
+	ErrRulesetNotFound    = errors.New("ruleset not found")
+	ErrRulesetNotModified = errors.New("not modified")
+	ErrSignatureNotFound  = errors.New("signature not found")
+	ErrInvalidCursor      = errors.New("invalid cursor")
+	ErrAlreadyExists      = errors.New("already exists")
 )
 
 // RulesetService is a service managing rulesets.
@@ -40,17 +40,17 @@ type RulesetService interface {
 // ListOptions contains list options.
 // If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
 type ListOptions struct {
-	Limit         int
-	ContinueToken string
-	PathsOnly     bool // return only the paths of the rulesets
-	AllVersions   bool // return all versions of each rulesets
+	Limit       int
+	Cursor      string
+	PathsOnly   bool // return only the paths of the rulesets
+	AllVersions bool // return all versions of each rulesets
 }
 
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
 	Rulesets []regula.Ruleset `json:"rulesets"`
-	Revision string           `json:"revision"`           // revision when the request was applied
-	Continue string           `json:"continue,omitempty"` // token of the next page, if any
+	Revision string           `json:"revision"`         // revision when the request was applied
+	Cursor   string           `json:"cursor,omitempty"` // cursor indicating the position in the list
 }
 
 // List of possible events executed against a ruleset.

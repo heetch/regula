@@ -20,13 +20,13 @@ func TestEvaluator(t *testing.T) {
 	t.Run("Watch disabled", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if _, ok := r.URL.Query()["list"]; ok {
-				if continueToken := r.URL.Query().Get("continue"); continueToken != "" {
-					assert.Equal(t, "some-token", continueToken)
+				if cursor := r.URL.Query().Get("cursor"); cursor != "" {
+					assert.Equal(t, "some-token", cursor)
 					fmt.Fprintf(w, `{"revision": "revB", "rulesets": [{"path": "a", "version":"2"}]}`)
 					return
 				}
 
-				fmt.Fprintf(w, `{"revision": "revA", "rulesets": [{"path": "a", "version":"1"}], "continue": "some-token"}`)
+				fmt.Fprintf(w, `{"revision": "revA", "rulesets": [{"path": "a", "version":"1"}], "cursor": "some-token"}`)
 				return
 			}
 

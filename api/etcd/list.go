@@ -31,10 +31,10 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 
 	limit := computeLimit(opt.Limit)
 
-	if opt.ContinueToken != "" {
-		lastPath, err := base64.URLEncoding.DecodeString(opt.ContinueToken)
+	if opt.Cursor != "" {
+		lastPath, err := base64.URLEncoding.DecodeString(opt.Cursor)
 		if err != nil {
-			return nil, api.ErrInvalidContinueToken
+			return nil, api.ErrInvalidCursor
 		}
 
 		key = string(lastPath)
@@ -93,7 +93,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+	rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
 	return &rulesets, nil
 }
@@ -152,7 +152,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
+	rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + "\x00"))
 
 	return &rulesets, nil
 }
@@ -197,7 +197,7 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	lastEntry := rulesets.Rulesets[len(rulesets.Rulesets)-1]
 
 	// we want to start immediately after the last key
-	rulesets.Continue = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
+	rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastEntry.Path + versionSeparator + lastEntry.Version + "\x00"))
 
 	return &rulesets, nil
 }
