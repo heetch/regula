@@ -23,6 +23,10 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 		opts = append(opts, clientv3.WithRev(i+1))
 	}
 
+	events := api.RulesetEvents{
+		Revision: revision,
+	}
+
 	wc := s.Client.Watch(ctx, s.rulesPath(prefix, ""), opts...)
 	for {
 		select {
@@ -35,11 +39,11 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				continue
 			}
 
-			events := make([]api.RulesetEvent, len(wresp.Events))
+			list := make([]api.RulesetEvent, len(wresp.Events))
 			for i, ev := range wresp.Events {
 				switch ev.Type {
 				case mvccpb.PUT:
-					events[i].Type = api.RulesetPutEvent
+					list[i].Type = api.RulesetPutEvent
 				default:
 					s.Logger.Debug().Str("type", string(ev.Type)).Msg("watch: ignoring event type")
 					continue
@@ -52,18 +56,17 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
 				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
-				events[i].Path = path
-				events[i].Rules = rulesFromProtobuf(&pbrs)
-				events[i].Version = version
+				list[i].Path = path
+				list[i].Rules = rulesFromProtobuf(&pbrs)
+				list[i].Version = version
 			}
 
-			return &api.RulesetEvents{
-				Events:   events,
-				Revision: strconv.FormatInt(wresp.Header.Revision, 10),
-			}, nil
+			events.Events = list
+			events.Revision = strconv.FormatInt(wresp.Header.Revision, 10)
+			return &events, nil
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			events.Timeout = true
+			return &events, ctx.Err()
 		}
 	}
-
 }

@@ -47,9 +47,9 @@ type ListOptions struct {
 
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
-	Rulesets []regula.Ruleset
-	Revision string // revision when the request was applied
-	Continue string // token of the next page, if any
+	Rulesets []regula.Ruleset `json:"rulesets"`
+	Revision string           `json:"revision"`           // revision when the request was applied
+	Continue string           `json:"continue,omitempty"` // token of the next page, if any
 }
 
 // List of possible events executed against a ruleset.
@@ -59,14 +59,15 @@ const (
 
 // RulesetEvent describes an event that occured on a ruleset.
 type RulesetEvent struct {
-	Type    string
-	Path    string
-	Version string
-	Rules   []*rule.Rule
+	Type    string       `json:"type"`
+	Path    string       `json:"path"`
+	Version string       `json:"version"`
+	Rules   []*rule.Rule `json:"rules"`
 }
 
 // RulesetEvents holds a list of events occured on a group of rulesets.
 type RulesetEvents struct {
 	Events   []RulesetEvent
 	Revision string
+	Timeout  bool // indicates if the watch did timeout
 }

@@ -660,6 +660,14 @@ func TestWatch(t *testing.T) {
 	require.Equal(t, "ab", events.Events[0].Path)
 	require.Equal(t, api.RulesetPutEvent, events.Events[1].Type)
 	require.Equal(t, "a/1", events.Events[1].Path)
+
+	t.Run("timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		events, err := s.Watch(ctx, "", "")
+		require.Equal(t, context.DeadlineExceeded, err)
+		require.True(t, events.Timeout)
+	})
 }
 
 func TestEval(t *testing.T) {
