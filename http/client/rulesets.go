@@ -9,6 +9,7 @@ import (
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
 )
@@ -79,7 +80,7 @@ func (s *RulesetService) Eval(ctx context.Context, path, version string, params 
 	}
 	req.URL.RawQuery = q.Encode()
 
-	var resp api.EvalResult
+	var resp regula.EvalResult
 
 	_, err = s.client.try(ctx, req, &resp)
 	if err != nil {
@@ -121,7 +122,7 @@ func (s *RulesetService) Create(ctx context.Context, path string, sig *regula.Si
 // WatchResponse contains a list of events occured on a group of rulesets.
 // If an error occurs during the watching, the Err field will be populated.
 type WatchResponse struct {
-	Events *api.Events
+	Events *api.RulesetEvents
 	Err    error
 }
 
@@ -155,10 +156,10 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 			}
 			req.URL.RawQuery = q.Encode()
 
-			var events api.Events
+			var events api.RulesetEvents
 			_, err = s.client.do(ctx, req, &events)
 			if err != nil {
-				if e, ok := err.(*api.Error); ok {
+				if e, ok := err.(*reghttp.Error); ok {
 					switch e.Response.StatusCode {
 					case http.StatusNotFound:
 						ch <- WatchResponse{Err: err}

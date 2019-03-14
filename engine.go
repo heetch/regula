@@ -141,9 +141,9 @@ type Evaluator interface {
 // EvalResult is the product of an evaluation. It contains the value generated as long as some metadata.
 type EvalResult struct {
 	// Result of the evaluation
-	Value *rule.Value
+	Value *rule.Value `json:"value"`
 	// Version of the ruleset that generated this value
-	Version string
+	Version string `json:"version"`
 }
 
 // RulesetBuffer can hold a group of rulesets in memory and can be used as an evaluator.

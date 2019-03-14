@@ -4,8 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
+
+	"github.com/heetch/regula"
 )
 
 // Evaluator can cache rulesets in memory and can be passed to a regula.Engine to evaluate rulesets without
@@ -69,7 +70,7 @@ func NewEvaluator(ctx context.Context, client *Client, prefix string, watch bool
 
 				for _, ev := range wr.Events.Events {
 					switch ev.Type {
-					case api.PutEvent:
+					case api.RulesetPutEvent:
 						buf.Add(ev.Path, ev.Version, &regula.Ruleset{
 							Path:    ev.Path,
 							Version: ev.Version,
