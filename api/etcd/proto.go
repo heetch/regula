@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/heetch/regula"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/heetch/regula/rule"
-	pb "github.com/heetch/regula/store/etcd/proto"
 )
 
 // rulesToProtobuf transforms rules into a pb.Rules.

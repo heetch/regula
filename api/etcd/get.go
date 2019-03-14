@@ -6,8 +6,8 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/store"
-	pb "github.com/heetch/regula/store/etcd/proto"
+	"github.com/heetch/regula/api"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +15,7 @@ import (
 // It returns the related ruleset version if it's specified.
 func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula.Ruleset, error) {
 	if path == "" {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 
 	ops := []clientv3.Op{
@@ -35,14 +35,14 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 	}
 
 	if len(resp.Responses) != 3 {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 
 	// decode signature
 	var sig pb.Signature
 	gresp := resp.Responses[0].GetResponseRange()
 	if gresp.Count == 0 {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 	err = proto.Unmarshal(gresp.Kvs[0].Value, &sig)
 	if err != nil {

@@ -7,13 +7,13 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/gogo/protobuf/proto"
-	"github.com/heetch/regula/store"
-	pb "github.com/heetch/regula/store/etcd/proto"
+	"github.com/heetch/regula/api"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/pkg/errors"
 )
 
 // Watch the given prefix for anything new.
-func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) (*store.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -35,11 +35,11 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				continue
 			}
 
-			events := make([]store.RulesetEvent, len(wresp.Events))
+			events := make([]api.RulesetEvent, len(wresp.Events))
 			for i, ev := range wresp.Events {
 				switch ev.Type {
 				case mvccpb.PUT:
-					events[i].Type = store.RulesetPutEvent
+					events[i].Type = api.RulesetPutEvent
 				default:
 					s.Logger.Debug().Str("type", string(ev.Type)).Msg("watch: ignoring event type")
 					continue
@@ -57,7 +57,7 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				events[i].Version = version
 			}
 
-			return &store.RulesetEvents{
+			return &api.RulesetEvents{
 				Events:   events,
 				Revision: strconv.FormatInt(wresp.Header.Revision, 10),
 			}, nil
