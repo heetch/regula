@@ -1,3 +1,4 @@
+// Package api provides types and interfaces that define how the Regula API is working.
 package api
 
 import (
@@ -8,7 +9,7 @@ import (
 	"github.com/heetch/regula/rule"
 )
 
-// Common errors.
+// API errors.
 var (
 	ErrRulesetNotFound      = errors.New("ruleset not found")
 	ErrRulesetNotModified   = errors.New("not modified")
@@ -17,9 +18,9 @@ var (
 	ErrAlreadyExists        = errors.New("already exists")
 )
 
-// RulesetService manages rulesets.
+// RulesetService is a service managing rulesets.
 type RulesetService interface {
-	// Create a ruleset entry using a signature.
+	// Create a ruleset using a signature.
 	Create(ctx context.Context, path string, signature *regula.Signature) error
 	// Put is used to add rules to a ruleset. It creates a new version of the ruleset.
 	Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error)
