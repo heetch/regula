@@ -6,17 +6,17 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/store"
+	"github.com/heetch/regula/api"
 	"github.com/pkg/errors"
 )
 
 // Create stores a signature in the signature tree. A signature represents a ruleset return type and parameters.
 func (s *RulesetService) Create(ctx context.Context, path string, signature *regula.Signature) error {
-	if err := store.ValidatePath(path); err != nil {
+	if err := api.ValidatePath(path); err != nil {
 		return err
 	}
 
-	if err := store.ValidateSignature(signature); err != nil {
+	if err := api.ValidateSignature(signature); err != nil {
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (s *RulesetService) Create(ctx context.Context, path string, signature *reg
 
 	// if the If condition failed, it means the signature already exists
 	if !resp.Succeeded {
-		return store.ErrAlreadyExists
+		return api.ErrAlreadyExists
 	}
 
 	return nil

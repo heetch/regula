@@ -1,4 +1,5 @@
-package store
+// Package api provides types and interfaces that define how the Regula API is working.
+package api
 
 import (
 	"context"
@@ -8,7 +9,7 @@ import (
 	"github.com/heetch/regula/rule"
 )
 
-// Common errors.
+// API errors.
 var (
 	ErrRulesetNotFound      = errors.New("ruleset not found")
 	ErrRulesetNotModified   = errors.New("not modified")
@@ -17,9 +18,9 @@ var (
 	ErrAlreadyExists        = errors.New("already exists")
 )
 
-// RulesetService manages rulesets.
+// RulesetService is a service managing rulesets.
 type RulesetService interface {
-	// Create a ruleset entry using a signature.
+	// Create a ruleset using a signature.
 	Create(ctx context.Context, path string, signature *regula.Signature) error
 	// Put is used to add rules to a ruleset. It creates a new version of the ruleset.
 	Put(ctx context.Context, path string, rules []*rule.Rule) (*regula.Ruleset, error)
@@ -47,9 +48,9 @@ type ListOptions struct {
 
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
-	Rulesets []regula.Ruleset
-	Revision string // revision when the request was applied
-	Continue string // token of the next page, if any
+	Rulesets []regula.Ruleset `json:"rulesets"`
+	Revision string           `json:"revision"`           // revision when the request was applied
+	Continue string           `json:"continue,omitempty"` // token of the next page, if any
 }
 
 // List of possible events executed against a ruleset.
@@ -59,14 +60,15 @@ const (
 
 // RulesetEvent describes an event that occured on a ruleset.
 type RulesetEvent struct {
-	Type    string
-	Path    string
-	Version string
-	Rules   []*rule.Rule
+	Type    string       `json:"type"`
+	Path    string       `json:"path"`
+	Version string       `json:"version"`
+	Rules   []*rule.Rule `json:"rules"`
 }
 
 // RulesetEvents holds a list of events occured on a group of rulesets.
 type RulesetEvents struct {
 	Events   []RulesetEvent
 	Revision string
+	Timeout  bool // indicates if the watch did timeout
 }

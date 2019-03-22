@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/heetch/regula/api"
+	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/version"
 	"github.com/rs/zerolog"
 	"golang.org/x/net/context/ctxhttp"
@@ -124,7 +124,7 @@ func isRetriableError(err error) bool {
 		return true
 	}
 
-	if aerr, ok := err.(*api.Error); ok {
+	if aerr, ok := err.(*reghttp.Error); ok {
 		return aerr.Response.StatusCode == http.StatusInternalServerError ||
 			aerr.Response.StatusCode == http.StatusRequestTimeout
 	}
@@ -194,7 +194,7 @@ func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	dec := json.NewDecoder(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		var apiErr api.Error
+		var apiErr reghttp.Error
 
 		_ = dec.Decode(&apiErr)
 

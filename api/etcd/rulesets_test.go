@@ -13,17 +13,17 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
+	"github.com/heetch/regula/api/etcd"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
-	"github.com/heetch/regula/store/etcd"
-	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	_ store.RulesetService = new(etcd.RulesetService)
-	_ regula.Evaluator     = new(etcd.RulesetService)
+	_ api.RulesetService = new(etcd.RulesetService)
+	_ regula.Evaluator   = new(etcd.RulesetService)
 )
 
 var (
@@ -57,7 +57,7 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 
 func createRuleset(t *testing.T, s *etcd.RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
 	e, err := s.Put(context.Background(), path, rules)
-	if err != nil && err != store.ErrRulesetNotModified {
+	if err != nil && err != api.ErrRulesetNotModified {
 		require.NoError(t, err)
 	}
 	return e
@@ -65,7 +65,7 @@ func createRuleset(t *testing.T, s *etcd.RulesetService, path string, rules ...*
 
 func createBoolRuleset(t *testing.T, s *etcd.RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
 	err := s.Create(context.Background(), path, &regula.Signature{ReturnType: "bool"})
-	require.False(t, err != nil && err != store.ErrAlreadyExists)
+	require.False(t, err != nil && err != api.ErrAlreadyExists)
 	return createRuleset(t, s, path, rules...)
 }
 
@@ -117,7 +117,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("Not found", func(t *testing.T) {
 		_, err := s.Get(context.Background(), "doesntexist", "")
-		require.Equal(t, err, store.ErrRulesetNotFound)
+		require.Equal(t, err, api.ErrRulesetNotFound)
 	})
 }
 
@@ -142,7 +142,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{prefix + "a", prefix + "a/1", prefix + "b", prefix + "c"}
 
-		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
+		entries, err := s.List(context.Background(), prefix+"", &api.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, len(paths))
 		for i, e := range entries.Rulesets {
@@ -162,7 +162,7 @@ func TestList(t *testing.T) {
 		createBoolRuleset(t, s, prefix+"a", rs1...)
 		createBoolRuleset(t, s, prefix+"a", rs2...)
 
-		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{})
+		entries, err := s.List(context.Background(), prefix+"", &api.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 2)
 		a := entries.Rulesets[0]
@@ -185,7 +185,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{prefix + "a", prefix + "a", prefix + "a", prefix + "a/1"}
 
-		entries, err := s.List(context.Background(), prefix+"", &store.ListOptions{AllVersions: true})
+		entries, err := s.List(context.Background(), prefix+"", &api.ListOptions{AllVersions: true})
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, len(paths))
 		for i, e := range entries.Rulesets {
@@ -194,7 +194,7 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 
 		// Assert that pagination is working well.
-		opt := store.ListOptions{
+		opt := api.ListOptions{
 			AllVersions: true,
 			Limit:       2,
 		}
@@ -218,8 +218,8 @@ func TestList(t *testing.T) {
 		require.NotEmpty(t, entries.Revision)
 
 		t.Run("NotFound", func(t *testing.T) {
-			_, err = s.List(context.Background(), prefix+"doesntexist", &store.ListOptions{AllVersions: true})
-			require.Equal(t, err, store.ErrRulesetNotFound)
+			_, err = s.List(context.Background(), prefix+"doesntexist", &api.ListOptions{AllVersions: true})
+			require.Equal(t, err, api.ErrRulesetNotFound)
 		})
 
 	})
@@ -235,7 +235,7 @@ func TestList(t *testing.T) {
 
 		paths := []string{prefix + "x", prefix + "x/1", prefix + "x/2", prefix + "xx"}
 
-		entries, err := s.List(context.Background(), prefix+"x", &store.ListOptions{})
+		entries, err := s.List(context.Background(), prefix+"x", &api.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, len(paths))
 		for i, e := range entries.Rulesets {
@@ -246,8 +246,8 @@ func TestList(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist.
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.List(context.Background(), "doesntexist", &store.ListOptions{})
-		require.Equal(t, err, store.ErrRulesetNotFound)
+		_, err := s.List(context.Background(), "doesntexist", &api.ListOptions{})
+		require.Equal(t, err, api.ErrRulesetNotFound)
 	})
 
 	// Paging tests List with pagination.
@@ -260,7 +260,7 @@ func TestList(t *testing.T) {
 		createBoolRuleset(t, s, prefix+"y/2", rs...)
 		createBoolRuleset(t, s, prefix+"y/3", rs...)
 
-		opt := store.ListOptions{Limit: 2}
+		opt := api.ListOptions{Limit: 2}
 		entries, err := s.List(context.Background(), prefix+"y", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 2)
@@ -296,7 +296,7 @@ func TestList(t *testing.T) {
 
 		opt.ContinueToken = "some token"
 		entries, err = s.List(context.Background(), prefix+"y", &opt)
-		require.Equal(t, store.ErrInvalidContinueToken, err)
+		require.Equal(t, api.ErrInvalidContinueToken, err)
 
 		opt.Limit = -10
 		opt.ContinueToken = ""
@@ -331,7 +331,7 @@ func TestListPaths(t *testing.T) {
 
 		paths := []string{prefix + "a", prefix + "a/1", prefix + "a/2", prefix + "b", prefix + "c", prefix + "d"}
 
-		opt := store.ListOptions{PathsOnly: true}
+		opt := api.ListOptions{PathsOnly: true}
 		entries, err := s.List(context.Background(), prefix+"", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, len(paths))
@@ -357,7 +357,7 @@ func TestListPaths(t *testing.T) {
 
 		paths := []string{prefix + "xy", prefix + "xy/ab", prefix + "xyz"}
 
-		opt := store.ListOptions{PathsOnly: true}
+		opt := api.ListOptions{PathsOnly: true}
 		entries, err := s.List(context.Background(), prefix+"xy", &opt)
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, len(paths))
@@ -372,9 +372,9 @@ func TestListPaths(t *testing.T) {
 
 	// NotFound tests List with a prefix which doesn't exist with pathsOnly parameter set to true.
 	t.Run("NotFound", func(t *testing.T) {
-		opt := store.ListOptions{PathsOnly: true}
+		opt := api.ListOptions{PathsOnly: true}
 		_, err := s.List(context.Background(), "doesntexist", &opt)
-		require.Equal(t, err, store.ErrRulesetNotFound)
+		require.Equal(t, err, api.ErrRulesetNotFound)
 	})
 
 	// Paging tests List with pagination with pathsOnly parameter set to true.
@@ -388,7 +388,7 @@ func TestListPaths(t *testing.T) {
 		createBoolRuleset(t, s, prefix+"foo/babar", rs...)
 		createBoolRuleset(t, s, prefix+"foo", rs...)
 
-		opt := store.ListOptions{Limit: 2, PathsOnly: true}
+		opt := api.ListOptions{Limit: 2, PathsOnly: true}
 		entries, err := s.List(context.Background(), prefix+"f", &opt)
 		require.NoError(t, err)
 		paths := []string{prefix + "foo", prefix + "foo/babar"}
@@ -416,7 +416,7 @@ func TestListPaths(t *testing.T) {
 
 		opt.ContinueToken = "bad token"
 		_, err = s.List(context.Background(), prefix+"f", &opt)
-		require.Equal(t, store.ErrInvalidContinueToken, err)
+		require.Equal(t, api.ErrInvalidContinueToken, err)
 
 		opt.Limit = -10
 		opt.ContinueToken = ""
@@ -484,7 +484,7 @@ func TestPut(t *testing.T) {
 
 		// create new version with same ruleset
 		entry2, err := s.Put(context.Background(), path, rs)
-		require.Equal(t, store.ErrRulesetNotModified, err)
+		require.Equal(t, api.ErrRulesetNotModified, err)
 		require.Equal(t, entry, entry2)
 
 		// create new version with different ruleset
@@ -537,7 +537,7 @@ func TestPut(t *testing.T) {
 		}
 
 		_, err = s.Put(context.Background(), path, rs2)
-		require.True(t, store.IsValidationError(err))
+		require.True(t, api.IsValidationError(err))
 
 		// adding new params
 		rs3 := []*rule.Rule{
@@ -553,7 +553,7 @@ func TestPut(t *testing.T) {
 		}
 
 		_, err = s.Put(context.Background(), path, rs3)
-		require.True(t, store.IsValidationError(err))
+		require.True(t, api.IsValidationError(err))
 
 		// changing param types
 		rs4 := []*rule.Rule{
@@ -569,7 +569,7 @@ func TestPut(t *testing.T) {
 		}
 
 		_, err = s.Put(context.Background(), path, rs4)
-		require.True(t, store.IsValidationError(err))
+		require.True(t, api.IsValidationError(err))
 
 		// adding new rule with different param types
 		rs5 := []*rule.Rule{
@@ -594,7 +594,7 @@ func TestPut(t *testing.T) {
 		}
 
 		_, err = s.Put(context.Background(), path, rs5)
-		require.True(t, store.IsValidationError(err))
+		require.True(t, api.IsValidationError(err))
 
 		// adding new rule with correct param types but less
 		rs6 := []*rule.Rule{
@@ -648,7 +648,7 @@ func TestWatch(t *testing.T) {
 	require.Len(t, events.Events, 1)
 	require.NotEmpty(t, events.Revision)
 	require.Equal(t, "aa", events.Events[0].Path)
-	require.Equal(t, store.RulesetPutEvent, events.Events[0].Type)
+	require.Equal(t, api.RulesetPutEvent, events.Events[0].Type)
 
 	wg.Wait()
 
@@ -656,10 +656,18 @@ func TestWatch(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, events.Events, 2)
 	require.NotEmpty(t, events.Revision)
-	require.Equal(t, store.RulesetPutEvent, events.Events[0].Type)
+	require.Equal(t, api.RulesetPutEvent, events.Events[0].Type)
 	require.Equal(t, "ab", events.Events[0].Path)
-	require.Equal(t, store.RulesetPutEvent, events.Events[1].Type)
+	require.Equal(t, api.RulesetPutEvent, events.Events[1].Type)
 	require.Equal(t, "a/1", events.Events[1].Path)
+
+	t.Run("timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		events, err := s.Watch(ctx, "", "")
+		require.Equal(t, context.DeadlineExceeded, err)
+		require.True(t, events.Timeout)
+	})
 }
 
 func TestEval(t *testing.T) {

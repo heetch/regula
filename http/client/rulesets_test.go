@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/api"
-	"github.com/heetch/regula/api/client"
+	reghttp "github.com/heetch/regula/http"
+	"github.com/heetch/regula/http/client"
 	"github.com/heetch/regula/rule"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -104,7 +104,7 @@ func TestRulesetService(t *testing.T) {
 		cli.Logger = zerolog.New(ioutil.Discard)
 
 		_, err = cli.Rulesets.List(context.Background(), "", nil)
-		aerr := err.(*api.Error)
+		aerr := err.(*reghttp.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
 
@@ -137,7 +137,7 @@ func TestRulesetService(t *testing.T) {
 		cli.RetryDelay = 10 * time.Millisecond
 
 		_, err = cli.Rulesets.Put(context.Background(), "path", rules)
-		aerr := err.(*api.Error)
+		aerr := err.(*reghttp.Error)
 		require.Equal(t, "some err", aerr.Err)
 	})
 
@@ -153,7 +153,7 @@ func TestRulesetService(t *testing.T) {
 		cli.RetryDelay = 10 * time.Millisecond
 
 		_, err = cli.Rulesets.Put(context.Background(), "path", rules)
-		aerr := err.(*api.Error)
+		aerr := err.(*reghttp.Error)
 		require.Equal(t, http.StatusInternalServerError, aerr.Response.StatusCode)
 	})
 

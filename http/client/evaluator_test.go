@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/api/client"
+	"github.com/heetch/regula/http/client"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

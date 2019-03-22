@@ -7,13 +7,13 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/gogo/protobuf/proto"
-	"github.com/heetch/regula/store"
-	pb "github.com/heetch/regula/store/etcd/proto"
+	"github.com/heetch/regula/api"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/pkg/errors"
 )
 
 // Watch the given prefix for anything new.
-func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) (*store.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -21,6 +21,10 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 	if i, _ := strconv.ParseInt(revision, 10, 64); i > 0 {
 		// watch from the next revision
 		opts = append(opts, clientv3.WithRev(i+1))
+	}
+
+	events := api.RulesetEvents{
+		Revision: revision,
 	}
 
 	wc := s.Client.Watch(ctx, s.rulesPath(prefix, ""), opts...)
@@ -35,11 +39,11 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 				continue
 			}
 
-			events := make([]store.RulesetEvent, len(wresp.Events))
+			list := make([]api.RulesetEvent, len(wresp.Events))
 			for i, ev := range wresp.Events {
 				switch ev.Type {
 				case mvccpb.PUT:
-					events[i].Type = store.RulesetPutEvent
+					list[i].Type = api.RulesetPutEvent
 				default:
 					s.Logger.Debug().Str("type", string(ev.Type)).Msg("watch: ignoring event type")
 					continue
@@ -52,18 +56,17 @@ func (s *RulesetService) Watch(ctx context.Context, prefix string, revision stri
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
 				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
-				events[i].Path = path
-				events[i].Rules = rulesFromProtobuf(&pbrs)
-				events[i].Version = version
+				list[i].Path = path
+				list[i].Rules = rulesFromProtobuf(&pbrs)
+				list[i].Version = version
 			}
 
-			return &store.RulesetEvents{
-				Events:   events,
-				Revision: strconv.FormatInt(wresp.Header.Revision, 10),
-			}, nil
+			events.Events = list
+			events.Revision = strconv.FormatInt(wresp.Header.Revision, 10)
+			return &events, nil
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			events.Timeout = true
+			return &events, ctx.Err()
 		}
 	}
-
 }

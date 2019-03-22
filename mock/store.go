@@ -4,23 +4,23 @@ import (
 	"context"
 
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
-	"github.com/heetch/regula/store"
 )
 
-// Ensure RulesetService implements store.RulesetService.
-var _ store.RulesetService = new(RulesetService)
+// Ensure RulesetService implements api.RulesetService.
+var _ api.RulesetService = new(RulesetService)
 
-// RulesetService mocks the store.RulesetService interface.
+// RulesetService mocks the api.RulesetService interface.
 type RulesetService struct {
 	CreateCount int
 	CreateFn    func(ctx context.Context, path string, signature *regula.Signature) error
 	GetCount    int
 	GetFn       func(ctx context.Context, path, version string) (*regula.Ruleset, error)
 	ListCount   int
-	ListFn      func(context.Context, string, *store.ListOptions) (*store.Rulesets, error)
+	ListFn      func(context.Context, string, *api.ListOptions) (*api.Rulesets, error)
 	WatchCount  int
-	WatchFn     func(context.Context, string, string) (*store.RulesetEvents, error)
+	WatchFn     func(context.Context, string, string) (*api.RulesetEvents, error)
 	PutCount    int
 	PutFn       func(context.Context, string, []*rule.Rule) (*regula.Ruleset, error)
 	EvalCount   int
@@ -50,7 +50,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 }
 
 // List runs ListFn if provided and increments ListCount when invoked.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 	s.ListCount++
 
 	if s.ListFn != nil {
@@ -61,7 +61,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 }
 
 // Watch runs WatchFn if provided and increments WatchCount when invoked.
-func (s *RulesetService) Watch(ctx context.Context, prefix, revision string) (*store.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, prefix, revision string) (*api.RulesetEvents, error) {
 	s.WatchCount++
 
 	if s.WatchFn != nil {

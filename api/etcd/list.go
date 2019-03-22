@@ -9,8 +9,8 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
-	"github.com/heetch/regula/store"
-	pb "github.com/heetch/regula/store/etcd/proto"
+	"github.com/heetch/regula/api"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/pkg/errors"
 )
 
@@ -24,7 +24,7 @@ func computeLimit(l int) int {
 // List returns the latest version of each ruleset under the given prefix.
 // If the prefix is empty, it returns rulesets from the beginning following the lexical order.
 // The listing can be customised using the ListOptions type.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.ListOptions) (*store.Rulesets, error) {
+func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 	options := make([]clientv3.OpOption, 0, 3)
 
 	var key string
@@ -34,7 +34,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 	if opt.ContinueToken != "" {
 		lastPath, err := base64.URLEncoding.DecodeString(opt.ContinueToken)
 		if err != nil {
-			return nil, store.ErrInvalidContinueToken
+			return nil, api.ErrInvalidContinueToken
 		}
 
 		key = string(lastPath)
@@ -64,7 +64,7 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *store.Lis
 }
 
 // listPathsOnly returns only the path for each ruleset.
-func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
+func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*api.Rulesets, error) {
 	opts = append(opts, clientv3.WithKeysOnly())
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
@@ -74,10 +74,10 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 
-	rulesets := store.Rulesets{
+	rulesets := api.Rulesets{
 		Rulesets: make([]regula.Ruleset, len(resp.Kvs)),
 	}
 	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
@@ -99,7 +99,7 @@ func (s *RulesetService) listPathsOnly(ctx context.Context, key, prefix string, 
 }
 
 // listLastVersion returns only the latest version for each ruleset.
-func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
+func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*api.Rulesets, error) {
 	resp, err := s.Client.KV.Get(ctx, s.latestVersionPath(key), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch latest keys")
@@ -108,7 +108,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 
 	ops := make([]clientv3.Op, 0, resp.Count)
@@ -121,7 +121,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 		return nil, errors.Wrap(err, "transaction failed to fetch selected rulesets")
 	}
 
-	var rulesets store.Rulesets
+	var rulesets api.Rulesets
 	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	rulesets.Rulesets = make([]regula.Ruleset, len(resp.Kvs))
 
@@ -158,7 +158,7 @@ func (s *RulesetService) listLastVersion(ctx context.Context, key, prefix string
 }
 
 // listAllVersions returns all available versions for each ruleset.
-func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*store.Rulesets, error) {
+func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string, limit int, opts []clientv3.OpOption) (*api.Rulesets, error) {
 	resp, err := s.Client.KV.Get(ctx, s.rulesPath(key, ""), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch all rulesets")
@@ -167,10 +167,10 @@ func (s *RulesetService) listAllVersions(ctx context.Context, key, prefix string
 	// if a prefix is provided it must always return results
 	// otherwise it doesn't exist.
 	if resp.Count == 0 && prefix != "" {
-		return nil, store.ErrRulesetNotFound
+		return nil, api.ErrRulesetNotFound
 	}
 
-	var rulesets store.Rulesets
+	var rulesets api.Rulesets
 	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 	rulesets.Rulesets = make([]regula.Ruleset, len(resp.Kvs))
 	for i, pair := range resp.Kvs {

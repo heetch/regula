@@ -6,9 +6,9 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/heetch/regula"
+	pb "github.com/heetch/regula/api/etcd/proto"
 	rerrors "github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
-	pb "github.com/heetch/regula/store/etcd/proto"
 	"github.com/pkg/errors"
 )
 
