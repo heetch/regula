@@ -55,16 +55,3 @@ func TestRulesetEval(t *testing.T) {
 		require.Equal(t, "default", res.Data)
 	})
 }
-
-func TestRulesetParams(t *testing.T) {
-	r1 := NewRuleset(
-		rule.New(rule.Eq(rule.StringParam("foo"), rule.Int64Param("bar")), rule.StringValue("first")),
-		rule.New(rule.Eq(rule.StringParam("foo"), rule.Float64Param("baz")), rule.StringValue("second")),
-		rule.New(rule.True(), rule.StringValue("default")),
-	)
-	require.Equal(t, []rule.Param{
-		*rule.StringParam("foo"),
-		*rule.Int64Param("bar"),
-		*rule.Float64Param("baz"),
-	}, r1.Params())
-}
