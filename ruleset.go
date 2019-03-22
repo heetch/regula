@@ -102,3 +102,9 @@ func (s *Signature) Validate() error {
 
 	return nil
 }
+
+// A RulesetVersion describes a version of a list of rules.
+type RulesetVersion struct {
+	Version string
+	Rules   []*rule.Rule
+}
