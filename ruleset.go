@@ -8,18 +8,19 @@ import (
 
 // A Ruleset is a list of rules and their metadata.
 type Ruleset struct {
-	Path      string       `json:"path"`
-	Version   string       `json:"version,omitempty"`
-	Rules     []*rule.Rule `json:"rules,omitempty"`
-	Signature *Signature   `json:"signature,omitempty"`
-	Versions  []string     `json:"versions,omitempty"`
+	Path      string           `json:"path"`
+	Signature *Signature       `json:"signature,omitempty"`
+	Versions  []RulesetVersion `json:"versions,omitempty"`
 }
 
 // NewRuleset creates a ruleset.
 func NewRuleset(rules ...*rule.Rule) *Ruleset {
-	rs := Ruleset{
-		Rules: rules,
-	}
+	var rs Ruleset
+
+	rs.Versions = append(rs.Versions, RulesetVersion{
+		Version: "latest",
+		Rules:   rules,
+	})
 
 	return &rs
 }
