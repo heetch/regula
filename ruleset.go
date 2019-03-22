@@ -28,7 +28,11 @@ func NewRuleset(rules ...*rule.Rule) *Ruleset {
 // Eval evaluates every rule of the ruleset until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
 func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
-	for _, rl := range r.Rules {
+	if len(r.Versions) == 0 {
+		return nil, rerrors.ErrNoMatch
+	}
+
+	for _, rl := range r.Versions[len(r.Versions)-1].Rules {
 		res, err := rl.Eval(params)
 		if err != rerrors.ErrNoMatch {
 			return res, err
