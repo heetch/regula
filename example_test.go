@@ -54,10 +54,10 @@ func init() {
 	buf := regula.NewRulesetBuffer()
 	ev = buf
 
-	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/a/b/c", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.StringValue("some-string")),
 				},
@@ -65,10 +65,10 @@ func init() {
 		},
 	})
 
-	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/path/to/string/key", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.StringValue("some-string")),
 				},
@@ -76,10 +76,10 @@ func init() {
 		},
 	})
 
-	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/path/to/int64/key", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.Int64Value(10)),
 				},
@@ -87,10 +87,10 @@ func init() {
 		},
 	})
 
-	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/path/to/float64/key", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.Float64Value(3.14)),
 				},
@@ -98,10 +98,10 @@ func init() {
 		},
 	})
 
-	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/path/to/bool/key", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.BoolValue(true)),
 				},
@@ -109,10 +109,10 @@ func init() {
 		},
 	})
 
-	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+	buf.Set("/path/to/duration/key", &regula.Ruleset{
 		Versions: []regula.RulesetVersion{
 			{
-				Version: "latest",
+				Version: "5b4cbdf307bb5346a6c42ac3",
 				Rules: []*rule.Rule{
 					rule.New(rule.True(), rule.StringValue("3s")),
 				},
