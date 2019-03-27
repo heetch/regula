@@ -17,9 +17,6 @@ const (
 	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
 	ErrParamTypeMismatch = Error("parameter type mismatches")
 
-	// ErrSignatureMismatch is returned when a rule doesn't respect a given signature.
-	ErrSignatureMismatch = Error("signature mismatch")
-
 	// ErrParamNotFound is returned when a parameter is not defined.
 	ErrParamNotFound = Error("parameter not found")
 
