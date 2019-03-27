@@ -3,11 +3,11 @@ package errors
 import "errors"
 
 var (
-	// ErrTypeMismatch is returned when the evaluated rule doesn't return the expected result type.
-	ErrTypeMismatch = errors.New("type returned by rule doesn't match")
-
 	// ErrRulesetNotFound must be returned when no ruleset is found for a given key.
 	ErrRulesetNotFound = errors.New("ruleset not found")
+
+	// ErrRulesetVersionNotFound must be returned when a version of a ruleset is not found for a given key.
+	ErrRulesetVersionNotFound = errors.New("ruleset version not found")
 
 	// ErrParamTypeMismatch is returned when a parameter type is different from expected.
 	ErrParamTypeMismatch = errors.New("parameter type mismatches")

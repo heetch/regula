@@ -55,38 +55,68 @@ func init() {
 	ev = buf
 
 	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.StringValue("some-string")),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.StringValue("some-string")),
+				},
+			},
 		},
 	})
 
 	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.StringValue("some-string")),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.StringValue("some-string")),
+				},
+			},
 		},
 	})
 
 	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.Int64Value(10)),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.Int64Value(10)),
+				},
+			},
 		},
 	})
 
 	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.Float64Value(3.14)),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.Float64Value(3.14)),
+				},
+			},
 		},
 	})
 
 	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.BoolValue(true)),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.BoolValue(true)),
+				},
+			},
 		},
 	})
 
 	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
-		Rules: []*rule.Rule{
-			rule.New(rule.True(), rule.StringValue("3s")),
+		Versions: []regula.RulesetVersion{
+			{
+				Version: "latest",
+				Rules: []*rule.Rule{
+					rule.New(rule.True(), rule.StringValue("3s")),
+				},
+			},
 		},
 	})
 }
@@ -101,10 +131,6 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
-		case errors.ErrRulesetNotFound:
-			// when the ruleset doesn't exist
-		case errors.ErrTypeMismatch:
-			// when the ruleset returns the bad type
 		case errors.ErrNoMatch:
 			// when the ruleset doesn't match
 		default:
