@@ -3,19 +3,19 @@ package api
 
 import (
 	"context"
-	"errors"
 
 	"github.com/heetch/regula"
+	"github.com/heetch/regula/errors"
 	"github.com/heetch/regula/rule"
 )
 
 // API errors.
-var (
-	ErrRulesetNotFound      = errors.New("ruleset not found")
-	ErrRulesetNotModified   = errors.New("not modified")
-	ErrSignatureNotFound    = errors.New("signature not found")
-	ErrInvalidContinueToken = errors.New("invalid continue token")
-	ErrAlreadyExists        = errors.New("already exists")
+const (
+	ErrRulesetNotFound      = errors.Error("ruleset not found")
+	ErrRulesetNotModified   = errors.Error("not modified")
+	ErrSignatureNotFound    = errors.Error("signature not found")
+	ErrInvalidContinueToken = errors.Error("invalid continue token")
+	ErrAlreadyExists        = errors.Error("already exists")
 )
 
 // RulesetService is a service managing rulesets.

@@ -96,10 +96,10 @@ func TestEngine(t *testing.T) {
 		require.Equal(t, -3.14, f)
 
 		_, err = e.GetString(ctx, "match-bool", nil)
-		require.Equal(t, errors.ErrTypeMismatch, err)
+		require.Error(t, err)
 
 		_, err = e.GetString(ctx, "type-mismatch", nil)
-		require.Equal(t, errors.ErrTypeMismatch, err)
+		require.Error(t, err)
 
 		_, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, errors.ErrNoMatch, err)
