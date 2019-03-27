@@ -42,6 +42,27 @@ func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
 	return nil, rerrors.ErrNoMatch
 }
 
+// EvalVersion evaluates a version of the ruleset, evaluating every rule until one matches.
+// It returns rule.ErrNoMatch if no rule matches the given context.
+func (r *Ruleset) EvalVersion(version string, params rule.Params) (*rule.Value, error) {
+	if len(r.Versions) == 0 {
+		return nil, rerrors.ErrNoMatch
+	}
+
+	for _, rv := range r.Versions {
+		if rv.Version == version {
+			for _, rl := range rv.Rules {
+				res, err := rl.Eval(params)
+				if err != rerrors.ErrNoMatch {
+					return res, err
+				}
+			}
+		}
+	}
+
+	return nil, rerrors.ErrNoMatch
+}
+
 // Signature represents the signature of a ruleset.
 type Signature struct {
 	ReturnType string            `json:"returnType"`
