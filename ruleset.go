@@ -39,7 +39,7 @@ func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
 		}
 	}
 
-	return nil, rerrors.ErrNoMatch
+	return nil, rerrors.ErrRulesetVersionNotFound
 }
 
 // EvalVersion evaluates a version of the ruleset, evaluating every rule until one matches.
