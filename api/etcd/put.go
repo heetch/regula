@@ -15,9 +15,12 @@ import (
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
 func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) error {
+	var version string
 	txfn := func(stm concurrency.STM) error {
 		p := rulesPutter{s, stm}
-		return p.put(ctx, path, rules)
+		var err error
+		version, err = p.put(ctx, path, rules)
+		return err
 	}
 
 	_, err := concurrency.NewSTM(s.Client, txfn, concurrency.WithAbortContext(ctx))
@@ -35,27 +38,27 @@ type rulesPutter struct {
 	stm concurrency.STM
 }
 
-func (p *rulesPutter) put(ctx context.Context, path string, rules []*rule.Rule) error {
+func (p *rulesPutter) put(ctx context.Context, path string, rules []*rule.Rule) (string, error) {
 	// validate the rules
 	err := p.validateRules(p.stm, path, rules)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// encode rules
 	data, err := proto.Marshal(rulesToProtobuf(rules))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// update checksum if rules have changed
 	changed, err := p.updateChecksum(p.stm, path, data)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if !changed {
-		return api.ErrRulesetNotModified
+		return "", api.ErrRulesetNotModified
 	}
 
 	// create a new version of the rules
@@ -108,14 +111,15 @@ func (p *rulesPutter) updateChecksum(stm concurrency.STM, path string, data []by
 }
 
 // createNewVersion adds a new entry under <namespace>/rulesets/rules/<path>/<version>.
-func (p *rulesPutter) createNewVersion(stm concurrency.STM, path string, data []byte) error {
+func (p *rulesPutter) createNewVersion(stm concurrency.STM, path string, data []byte) (string, error) {
 	// create a new ruleset version
 	k, err := ksuid.NewRandom()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate rules version")
+		return "", errors.Wrap(err, "failed to generate rules version")
 	}
 
-	stm.Put(p.s.rulesPath(path, k.String()), string(data))
+	v := k.String()
+	stm.Put(p.s.rulesPath(path, v), string(data))
 
-	return nil
+	return v, nil
 }

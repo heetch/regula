@@ -23,7 +23,7 @@ type RulesetService interface {
 	// Create a ruleset using a signature.
 	Create(ctx context.Context, path string, signature *regula.Signature) error
 	// Put is used to add a new version of the rules to a ruleset.
-	Put(ctx context.Context, path string, rules []*rule.Rule) error
+	Put(ctx context.Context, path string, rules []*rule.Rule) (string, error)
 	// Get returns a ruleset alongside its metadata.
 	Get(ctx context.Context, path string) (*regula.Ruleset, error)
 	// List returns the latest version of each ruleset whose path starts by the given prefix.
