@@ -56,11 +56,14 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 }
 
 func createRuleset(t *testing.T, s *etcd.RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
-	e, err := s.Put(context.Background(), path, rules)
+	_, err := s.Put(context.Background(), path, rules)
 	if err != nil && err != api.ErrRulesetNotModified {
 		require.NoError(t, err)
 	}
-	return e
+
+	rs, err := s.Get(context.Background(), path)
+	require.NoError(t, err)
+	return rs
 }
 
 func createBoolRuleset(t *testing.T, s *etcd.RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
@@ -79,44 +82,36 @@ func TestGet(t *testing.T) {
 	sig := &regula.Signature{ReturnType: "bool", Params: make(map[string]string)}
 
 	t.Run("Root", func(t *testing.T) {
-		rs1 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
-		createBoolRuleset(t, s, path, rs1...)
+		rules1 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+		createBoolRuleset(t, s, path, rules1...)
 
-		entry1, err := s.Get(context.Background(), path, "")
+		ruleset1, err := s.Get(context.Background(), path)
 		require.NoError(t, err)
-		require.Equal(t, path, entry1.Path)
-		require.Equal(t, rs1, entry1.Rules)
-		require.Equal(t, sig, entry1.Signature)
-		require.NotEmpty(t, entry1.Version)
-		require.Len(t, entry1.Versions, 1)
+		require.Equal(t, path, ruleset1.Path)
+		require.Len(t, ruleset1.Versions, 1)
+		require.Equal(t, rules1, ruleset1.Versions[0].Rules)
+		require.NotEmpty(t, rules1, ruleset1.Versions[0].Version)
+		require.Equal(t, sig, ruleset1.Signature)
+		require.Len(t, ruleset1.Versions, 1)
 
 		// we are waiting 1 second here to avoid creating the new version in the same second as the previous one
 		// ksuid gives a sorting with a one second precision
 		time.Sleep(time.Second)
-		rs2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true))}
-		createBoolRuleset(t, s, path, rs2...)
+		rules2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("foo")), rule.BoolValue(true))}
+		createBoolRuleset(t, s, path, rules2...)
 
-		// by default, it should return the latest version
-		entry2, err := s.Get(context.Background(), path, "")
+		// it should return two versions, in ascending order
+		ruleset2, err := s.Get(context.Background(), path)
 		require.NoError(t, err)
-		require.Equal(t, path, entry2.Path)
-		require.Equal(t, rs2, entry2.Rules)
-		require.Equal(t, sig, entry2.Signature)
-		require.NotEmpty(t, entry2.Version)
-		require.Len(t, entry2.Versions, 2)
-
-		// get a specific version
-		entry3, err := s.Get(context.Background(), path, entry1.Version)
-		require.NoError(t, err)
-		require.Equal(t, entry1.Path, entry3.Path)
-		require.Equal(t, entry1.Rules, entry3.Rules)
-		require.Equal(t, entry1.Signature, entry3.Signature)
-		require.Equal(t, entry1.Version, entry3.Version)
-		require.Len(t, entry3.Versions, 2)
+		require.Equal(t, path, ruleset2.Path)
+		require.Len(t, ruleset1.Versions, 2)
+		require.Equal(t, rules1, ruleset1.Versions[0].Rules)
+		require.Equal(t, rules2, ruleset1.Versions[1].Rules)
+		require.Equal(t, sig, ruleset2.Signature)
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		_, err := s.Get(context.Background(), "doesntexist", "")
+		_, err := s.Get(context.Background(), "doesntexist")
 		require.Equal(t, err, api.ErrRulesetNotFound)
 	})
 }
@@ -154,33 +149,33 @@ func TestList(t *testing.T) {
 	// Assert that only latest version for each ruleset is returned by default.
 	t.Run("Last version only", func(t *testing.T) {
 		prefix := "list/last/version/"
-		rs1 := []*rule.Rule{rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true))}
-		rs2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true))}
+		rules1 := []*rule.Rule{rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true))}
+		rules2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true))}
 
 		createBoolRuleset(t, s, prefix+"a", rs...)
 		createBoolRuleset(t, s, prefix+"a/1", rs...)
-		createBoolRuleset(t, s, prefix+"a", rs1...)
-		createBoolRuleset(t, s, prefix+"a", rs2...)
+		createBoolRuleset(t, s, prefix+"a", rules1...)
+		createBoolRuleset(t, s, prefix+"a", rules2...)
 
 		entries, err := s.List(context.Background(), prefix+"", &api.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, 2)
 		a := entries.Rulesets[0]
-		require.Equal(t, rs2, a.Rules)
+		require.Equal(t, rules2, a.Rules)
 		require.NotEmpty(t, entries.Revision)
 	})
 
 	// Assert that all versions are returned when passing the AllVersions option.
 	t.Run("All versions", func(t *testing.T) {
 		prefix := "list/all/version/"
-		rs1 := []*rule.Rule{rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true))}
-		rs2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true))}
+		rules1 := []*rule.Rule{rule.New(rule.Eq(rule.BoolValue(true), rule.BoolValue(true)), rule.BoolValue(true))}
+		rules2 := []*rule.Rule{rule.New(rule.Eq(rule.StringValue("true"), rule.StringValue("true")), rule.BoolValue(true))}
 
 		createBoolRuleset(t, s, prefix+"a", rs...)
 		time.Sleep(time.Second)
-		createBoolRuleset(t, s, prefix+"a", rs1...)
+		createBoolRuleset(t, s, prefix+"a", rules1...)
 		time.Sleep(time.Second)
-		createBoolRuleset(t, s, prefix+"a", rs2...)
+		createBoolRuleset(t, s, prefix+"a", rules2...)
 		createBoolRuleset(t, s, prefix+"a/1", rs...)
 
 		paths := []string{prefix + "a", prefix + "a", prefix + "a", prefix + "a/1"}
@@ -204,7 +199,7 @@ func TestList(t *testing.T) {
 		require.Equal(t, prefix+"a", entries.Rulesets[0].Path)
 		require.Equal(t, rs, entries.Rulesets[0].Rules)
 		require.Equal(t, prefix+"a", entries.Rulesets[1].Path)
-		require.Equal(t, rs1, entries.Rulesets[1].Rules)
+		require.Equal(t, rules1, entries.Rulesets[1].Rules)
 		require.NotEmpty(t, entries.Revision)
 
 		opt.ContinueToken = entries.Continue
@@ -212,7 +207,7 @@ func TestList(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, entries.Rulesets, opt.Limit)
 		require.Equal(t, prefix+"a", entries.Rulesets[0].Path)
-		require.Equal(t, rs2, entries.Rulesets[0].Rules)
+		require.Equal(t, rules2, entries.Rulesets[0].Rules)
 		require.Equal(t, prefix+"a/1", entries.Rulesets[1].Path)
 		require.Equal(t, rs, entries.Rulesets[1].Rules)
 		require.NotEmpty(t, entries.Revision)
@@ -448,18 +443,18 @@ func TestPut(t *testing.T) {
 		path := "a"
 		rs := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
 
-		entry, err := s.Put(context.Background(), path, rs)
+		ruleset, err := s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
-		require.Equal(t, path, entry.Path)
-		require.NotEmpty(t, entry.Version)
-		require.Equal(t, rs, entry.Rules)
+		require.Equal(t, path, ruleset.Path)
+		require.NotEmpty(t, ruleset.Version)
+		require.Equal(t, rs, ruleset.Rules)
 
 		// verify ruleset creation
 		resp, err := s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "rules", path), clientv3.WithPrefix())
 		require.NoError(t, err)
 		require.EqualValues(t, 1, resp.Count)
 		// verify if the path contains the right ruleset version
-		require.Equal(t, entry.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "rules", "a")+"!"))
+		require.Equal(t, ruleset.Version, strings.TrimPrefix(string(resp.Kvs[0].Key), ppath.Join(s.Namespace, "rulesets", "rules", "a")+"!"))
 
 		// verify checksum creation
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "checksums", path), clientv3.WithPrefix())
@@ -480,19 +475,19 @@ func TestPut(t *testing.T) {
 		err = proto.Unmarshal(resp.Kvs[0].Value, &v)
 		require.NoError(t, err)
 		require.Len(t, v.Versions, 1)
-		require.EqualValues(t, entry.Version, v.Versions[0])
+		require.EqualValues(t, ruleset.Version, v.Versions[0])
 
 		// create new version with same ruleset
-		entry2, err := s.Put(context.Background(), path, rs)
+		ruleset2, err := s.Put(context.Background(), path, rs)
 		require.Equal(t, api.ErrRulesetNotModified, err)
-		require.Equal(t, entry, entry2)
+		require.Equal(t, ruleset, ruleset2)
 
 		// create new version with different ruleset
 		rs = []*rule.Rule{rule.New(rule.True(), rule.BoolValue(false))}
 
-		entry2, err = s.Put(context.Background(), path, rs)
+		ruleset2, err = s.Put(context.Background(), path, rs)
 		require.NoError(t, err)
-		require.NotEqual(t, entry.Version, entry2.Version)
+		require.NotEqual(t, ruleset.Version, ruleset2.Version)
 
 		// verify versions list append
 		resp, err = s.Client.Get(context.Background(), ppath.Join(s.Namespace, "rulesets", "versions", path), clientv3.WithPrefix())
@@ -502,15 +497,15 @@ func TestPut(t *testing.T) {
 		err = proto.Unmarshal(resp.Kvs[0].Value, &v)
 		require.NoError(t, err)
 		require.Len(t, v.Versions, 2)
-		require.EqualValues(t, entry.Version, v.Versions[0])
-		require.EqualValues(t, entry2.Version, v.Versions[1])
+		require.EqualValues(t, ruleset.Version, v.Versions[0])
+		require.EqualValues(t, ruleset2.Version, v.Versions[1])
 	})
 
 	t.Run("Signatures", func(t *testing.T) {
 		path := "b"
 		require.NoError(t, s.Create(context.Background(), path, &regula.Signature{ReturnType: "bool", Params: map[string]string{"a": "string", "b": "bool", "c": "int64"}}))
 
-		rs1 := []*rule.Rule{
+		rules1 := []*rule.Rule{
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -521,11 +516,11 @@ func TestPut(t *testing.T) {
 			),
 		}
 
-		_, err := s.Put(context.Background(), path, rs1)
+		_, err := s.Put(context.Background(), path, rules1)
 		require.NoError(t, err)
 
 		// same params, different return type
-		rs2 := []*rule.Rule{
+		rules2 := []*rule.Rule{
 			rule.New(
 				rule.Eq(
 					rule.StringParam("a"),
@@ -536,7 +531,7 @@ func TestPut(t *testing.T) {
 			),
 		}
 
-		_, err = s.Put(context.Background(), path, rs2)
+		_, err = s.Put(context.Background(), path, rules2)
 		require.True(t, api.IsValidationError(err))
 
 		// adding new params
@@ -687,14 +682,14 @@ func TestEval(t *testing.T) {
 		rule.BoolValue(true),
 	)
 
-	entry := createRuleset(t, s, "a", r)
+	ruleset := createRuleset(t, s, "a", r)
 
 	t.Run("OK", func(t *testing.T) {
-		res, err := s.Eval(context.Background(), "a", entry.Version, regula.Params{
+		res, err := s.Eval(context.Background(), "a", ruleset.Version, regula.Params{
 			"id": "123",
 		})
 		require.NoError(t, err)
-		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, ruleset.Version, res.Version)
 		require.Equal(t, rule.BoolValue(true), res.Value)
 	})
 
@@ -703,12 +698,12 @@ func TestEval(t *testing.T) {
 			"id": "123",
 		})
 		require.NoError(t, err)
-		require.Equal(t, entry.Version, res.Version)
+		require.Equal(t, ruleset.Version, res.Version)
 		require.Equal(t, rule.BoolValue(true), res.Value)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		_, err := s.Eval(context.Background(), "b", entry.Version, regula.Params{
+		_, err := s.Eval(context.Background(), "b", ruleset.Version, regula.Params{
 			"id": "123",
 		})
 		require.Equal(t, errors.ErrRulesetNotFound, err)

@@ -14,7 +14,7 @@ import (
 )
 
 // Put stores the given rules under the rules tree. If no signature is found for the given path it returns an error.
-func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) error {
+func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rule) (string, error) {
 	var version string
 	txfn := func(stm concurrency.STM) error {
 		p := rulesPutter{s, stm}
@@ -25,10 +25,10 @@ func (s *RulesetService) Put(ctx context.Context, path string, rules []*rule.Rul
 
 	_, err := concurrency.NewSTM(s.Client, txfn, concurrency.WithAbortContext(ctx))
 	if err != nil && err != api.ErrRulesetNotModified && !api.IsValidationError(err) {
-		return errors.Wrap(err, "failed to put ruleset")
+		return "", errors.Wrap(err, "failed to put ruleset")
 	}
 
-	return err
+	return version, err
 }
 
 // rulesPutter is responsible for validating and storing rules, updating checksums and other actions
