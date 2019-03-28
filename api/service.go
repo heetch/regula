@@ -11,11 +11,11 @@ import (
 
 // API errors.
 const (
-	ErrRulesetNotFound      = errors.Error("ruleset not found")
-	ErrRulesetNotModified   = errors.Error("not modified")
-	ErrSignatureNotFound    = errors.Error("signature not found")
-	ErrInvalidContinueToken = errors.Error("invalid continue token")
-	ErrAlreadyExists        = errors.Error("already exists")
+	ErrRulesetNotFound    = errors.Error("ruleset not found")
+	ErrRulesetNotModified = errors.Error("not modified")
+	ErrSignatureNotFound  = errors.Error("signature not found")
+	ErrInvalidCursor      = errors.Error("invalid cursor")
+	ErrAlreadyExists      = errors.Error("already exists")
 )
 
 // RulesetService is a service managing rulesets.
@@ -26,8 +26,7 @@ type RulesetService interface {
 	Put(ctx context.Context, path string, rules []*rule.Rule) (string, error)
 	// Get returns a ruleset alongside its metadata.
 	Get(ctx context.Context, path string) (*regula.Ruleset, error)
-	// List returns the latest version of each ruleset whose path starts by the given prefix.
-	// If the prefix is empty, it returns all the entries following the lexical order.
+	// List returns rulesets whose path starts by the given prefix.
 	// The listing is paginated and can be customised using the ListOptions type.
 	List(ctx context.Context, prefix string, opt *ListOptions) (*Rulesets, error)
 	// Watch a prefix for changes and return a list of events.
@@ -36,20 +35,27 @@ type RulesetService interface {
 	Eval(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
 
-// ListOptions contains list options.
-// If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
+// ListOptions is used to customize the List output.
 type ListOptions struct {
-	Limit         int
-	ContinueToken string
-	PathsOnly     bool // return only the paths of the rulesets
-	AllVersions   bool // return all versions of each rulesets
+	Limit               int    // If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
+	Cursor              string // pagination cursor
+	LatestVersionsLimit int    // limit the number of versions to return.
+}
+
+// GetLimit returns a limit that is withing the 0 - 100 boundries.
+// If the limit is incorrect, it returns 50.
+func (l *ListOptions) GetLimit() int {
+	if l.Limit <= 0 || l.Limit > 100 {
+		return 50 // TODO: make this one configurable
+	}
+	return l.Limit
 }
 
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
 	Rulesets []regula.Ruleset `json:"rulesets"`
-	Revision string           `json:"revision"`           // revision when the request was applied
-	Continue string           `json:"continue,omitempty"` // token of the next page, if any
+	Revision string           `json:"revision"`         // revision when the request was applied
+	Cursor   string           `json:"cursor,omitempty"` // cursor of the next page, if any
 }
 
 // List of possible events executed against a ruleset.
