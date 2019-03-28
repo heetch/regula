@@ -11,18 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Limit should be set to 50 if the given one is <= 0 or > 100.
-func TestComputeLimit(t *testing.T) {
-	l := computeLimit(0)
-	require.Equal(t, 50, l)
-	l = computeLimit(-10)
-	require.Equal(t, 50, l)
-	l = computeLimit(110)
-	require.Equal(t, 50, l)
-	l = computeLimit(70)
-	require.Equal(t, 70, l)
-}
-
 // TestPathMethods ensures that the correct path are returned by each method.
 func TestPathMethods(t *testing.T) {
 	s := &RulesetService{

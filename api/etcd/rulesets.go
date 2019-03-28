@@ -44,22 +44,12 @@ func (s *RulesetService) signaturesPath(p string) string {
 	return path.Join(s.Namespace, "rulesets", "signatures", p)
 }
 
-// latestVersionPath returns the path where the latest version string of each ruleset is stored in etcd.
-// Key: <namespace>/rulesets/latest/<path>
-// Value: version string
-func (s *RulesetService) latestVersionPath(p string) string {
-	return path.Join(s.Namespace, "rulesets", "latest", p)
-}
-
-// versionsPath returns the path where the versions of each rulesets are stored in etcd.
-// Key: <namespace>/rulesets/versions/<path>
-// Value: [version string, ]
-func (s *RulesetService) versionsPath(p string) string {
-	return path.Join(s.Namespace, "rulesets", "versions", p)
-}
-
 func (s *RulesetService) pathVersionFromKey(key string) (string, string) {
 	key = strings.TrimPrefix(key, path.Join(s.Namespace, "rulesets", "rules")+"/")
 	chunks := strings.Split(key, versionSeparator)
 	return chunks[0], chunks[1]
+}
+
+func (s *RulesetService) pathFromKey(collection, key string) string {
+	return strings.TrimPrefix(key, path.Join(s.Namespace, "rulesets", collection)+"/")
 }
