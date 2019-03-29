@@ -32,7 +32,7 @@ func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
 		return nil, rerrors.ErrNoMatch
 	}
 
-	for _, rl := range r.Versions[len(r.Versions)-1].Rules {
+	for _, rl := range r.LatestVersion().Rules {
 		res, err := rl.Eval(params)
 		if err != rerrors.ErrNoMatch {
 			return res, err
@@ -61,6 +61,16 @@ func (r *Ruleset) EvalVersion(version string, params rule.Params) (*rule.Value, 
 	}
 
 	return nil, rerrors.ErrNoMatch
+}
+
+// LatestVersion returns the latest RuleserVersion stored in the ruleset
+// or nil if there are none.
+func (r *Ruleset) LatestVersion() *RulesetVersion {
+	if len(r.Versions) == 0 {
+		return nil
+	}
+
+	return &r.Versions[len(r.Versions)-1]
 }
 
 // Signature represents the signature of a ruleset.
