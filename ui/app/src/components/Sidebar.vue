@@ -58,7 +58,7 @@ export default {
     },
 
     navigateToLatestRulesetPage(item) {
-      this.$router.push(`/rulesets/${item.path}/latest`);
+      this.$router.push({ name: 'latest-ruleset', params: { path: `${item.path}` }});
     },
   },
 };

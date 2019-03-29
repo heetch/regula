@@ -62,7 +62,7 @@
             class="text-sm-center"
           >
             <v-btn
-              v-if="index == 0"
+              v-if="index == 0 && editMode"
               small
               fab
               color="error"
@@ -71,7 +71,7 @@
               <v-icon dark>mdi-minus</v-icon>
             </v-btn>
             <v-btn
-              v-if="index > 0"
+              v-if="index > 0 && editMode"
               small
               fab
               color="error"
@@ -108,21 +108,28 @@ export default {
 
   props: {
     value: Ruleset,
+    editMode: {
+      type: Boolean,
+      default: true,
+    },
   },
 
-  data: () => ({
-    // validation rules for S-Expressions. Only check if they're not empty.
-    codeRules: [v => !!v || 'Code is required'],
-    // validation rules for return values. Only check if thery're not empty.
-    resultsRules: [v => !!v || 'Result is required'],
-    // editor customization
-    editorOptions: {
-      showGutter: false,
-      showLineNumbers: false,
-      highlightActiveLine: false,
-      fontSize: '1.5em',
-    },
-  }),
+  data() {
+    return {
+      // validation rules for S-Expressions. Only check if they're not empty.
+      codeRules: [v => !!v || 'Code is required'],
+      // validation rules for return values. Only check if thery're not empty.
+      resultsRules: [v => !!v || 'Result is required'],
+      // editor customization
+      editorOptions: {
+        readOnly: !this.editMode, // true: disable the edit when used from the LatestRuleset component
+        showGutter: false,
+        showLineNumbers: false,
+        highlightActiveLine: false,
+        fontSize: '1.5em',
+      },
+    }
+  },
 
   computed: {
     // select the right input type based on the selected ruleset return type. JSON is handled separately in the component html.

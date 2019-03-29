@@ -25,6 +25,7 @@ export default new Router({
     {
       path: '/rulesets/:path/latest',
       name: 'latest-ruleset',
+      props: true,
       // route level code-splitting
       // this generates a separate chunk (latestRuleset.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
