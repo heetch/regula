@@ -46,6 +46,7 @@
               label="Result"
               required
               v-model="rule.returnValue"
+              :disabled="editorOptions.readOnly"
             ></v-text-field>
             <v-textarea
               box
@@ -54,6 +55,7 @@
               label="Result"
               required
               v-model="rule.returnValue"
+              :disabled="editorOptions.readOnly"
             ></v-textarea>
           </v-flex>
           <v-flex
