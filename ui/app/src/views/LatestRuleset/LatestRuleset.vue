@@ -35,12 +35,7 @@
       <v-flex md3 mt-5>
         <!-- change the link to edit page -->
         <router-link to="/rulesets/new">
-          <v-btn
-            dark
-            color="primary"
-          >
-            Edit
-          </v-btn>
+          <v-btn dark color="primary">Edit</v-btn>
         </router-link>
       </v-flex>
 
@@ -69,20 +64,7 @@ export default {
 
   data() {
     return {
-      ruleset: new Ruleset({}),
-    }
-  },
-
-  mounted() {
-    this.fetchRuleset();
-  },
-
-  methods: {
-    fetchRuleset() {
-      axios
-        .get('/ui/i/rulesets/'+this.path)
-        .then(({ data = {} }) => {
-          this.ruleset = new Ruleset({
+      ruleset: new Ruleset({
             path: this.path,
             signature: new Signature(
               "string",
@@ -109,11 +91,9 @@ export default {
               'ghi123',
               'xyz123',
             ]
-          })
-        })
-        .catch(console.error);
+          }),
     }
-  }
+  },
 }
 </script>
 
