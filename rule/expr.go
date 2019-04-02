@@ -428,6 +428,46 @@ func (n *exprLT) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+type exprLTE struct {
+	operator
+}
+
+// LTE creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a lower or equal value
+// compared to the next.
+func LTE(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprLTE{
+		operator: operator{
+			kind:     "lte",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprLTE) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in LTE func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		if !vA.LTE(vB) {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
 	Kind string `json:"kind"`
@@ -677,6 +717,39 @@ func (v *Value) LT(other *Value) bool {
 		v1, _ := strconv.ParseFloat(v.Data, 64)
 		v2, _ := strconv.ParseFloat(other.Data, 64)
 		if v1 >= v2 {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// LTE reports whether v is less or equal than other.
+func (v *Value) LTE(other *Value) bool {
+	switch v.Type {
+	case "bool":
+		v1, _ := strconv.ParseBool(v.Data)
+		v2, _ := strconv.ParseBool(other.Data)
+		if v1 && !v2 {
+			return false
+		}
+		return true
+	case "string":
+		if v.Data > other.Data {
+			return false
+		}
+		return true
+	case "int64":
+		v1, _ := strconv.ParseInt(v.Data, 10, 64)
+		v2, _ := strconv.ParseInt(other.Data, 10, 64)
+		if v1 > v2 {
+			return false
+		}
+		return true
+	case "float64":
+		v1, _ := strconv.ParseFloat(v.Data, 64)
+		v2, _ := strconv.ParseFloat(other.Data, 64)
+		if v1 > v2 {
 			return false
 		}
 		return true

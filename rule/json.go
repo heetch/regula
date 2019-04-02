@@ -125,6 +125,10 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		var lt exprLT
 		e = &lt
 		err = lt.UnmarshalJSON(data)
+	case "lte":
+		var lte exprLTE
+		e = &lte
+		err = lte.UnmarshalJSON(data)
 	default:
 		err = errors.New("unknown expression kind " + kind)
 	}
