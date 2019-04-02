@@ -408,6 +408,79 @@ func TestFNV(t *testing.T) {
 	}
 }
 
+func TestLT(t *testing.T) {
+	cases := []struct {
+		name     string
+		m1       mockExpr
+		m2       mockExpr
+		expected *rule.Value
+	}{
+		{
+			name:     "String: true",
+			m1:       mockExpr{val: rule.StringValue("abc")},
+			m2:       mockExpr{val: rule.StringValue("abd")},
+			expected: rule.BoolValue(true),
+		},
+		{
+			name:     "String: false",
+			m1:       mockExpr{val: rule.StringValue("abd")},
+			m2:       mockExpr{val: rule.StringValue("abc")},
+			expected: rule.BoolValue(false),
+		},
+		{
+			name:     "Bool: true",
+			m1:       mockExpr{val: rule.BoolValue(false)},
+			m2:       mockExpr{val: rule.BoolValue(true)},
+			expected: rule.BoolValue(true),
+		},
+		{
+			name:     "Bool: false#1",
+			m1:       mockExpr{val: rule.BoolValue(false)},
+			m2:       mockExpr{val: rule.BoolValue(false)},
+			expected: rule.BoolValue(false),
+		},
+		{
+			name:     "Bool: false#2",
+			m1:       mockExpr{val: rule.BoolValue(true)},
+			m2:       mockExpr{val: rule.BoolValue(false)},
+			expected: rule.BoolValue(false),
+		},
+		{
+			name:     "Int64: true",
+			m1:       mockExpr{val: rule.Int64Value(11)},
+			m2:       mockExpr{val: rule.Int64Value(12)},
+			expected: rule.BoolValue(true),
+		},
+		{
+			name:     "Int64: false",
+			m1:       mockExpr{val: rule.Int64Value(12)},
+			m2:       mockExpr{val: rule.Int64Value(12)},
+			expected: rule.BoolValue(false),
+		},
+		{
+			name:     "Float64: true",
+			m1:       mockExpr{val: rule.Float64Value(12.0)},
+			m2:       mockExpr{val: rule.Float64Value(12.1)},
+			expected: rule.BoolValue(true),
+		},
+		{
+			name:     "Float64: false",
+			m1:       mockExpr{val: rule.Float64Value(12.1)},
+			m2:       mockExpr{val: rule.Float64Value(12.0)},
+			expected: rule.BoolValue(false),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			lt := rule.LT(&tc.m1, &tc.m2)
+			val, err := lt.Eval(nil)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, val)
+		})
+	}
+}
+
 func TestPercentile(t *testing.T) {
 	// "Bob Dylan" is in the 96th percentile, so this is true
 	v1 := rule.StringValue("Bob Dylan")

@@ -334,6 +334,22 @@ func FNV(v Expr) Expr {
 	}
 }
 
+type exprLT struct {
+	operator
+}
+
+// LT creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a lower value
+// compared to the next.
+func LT(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprLT{
+		operator: operator{
+			kind:     "lt",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
 func (n *exprFNV) Eval(params Params) (*Value, error) {
 	if len(n.operands) != 1 {
 		return nil, errors.New("invalid number of operands in FNV func")
@@ -386,6 +402,30 @@ func (n *exprPercentile) Eval(params Params) (*Value, error) {
 		return BoolValue(true), nil
 	}
 	return BoolValue(false), nil
+}
+
+func (n *exprLT) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in LT func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		if !vA.LT(vB) {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
 }
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
@@ -598,6 +638,45 @@ func (v *Value) GTE(other *Value) bool {
 		v1, _ := strconv.ParseFloat(v.Data, 64)
 		v2, _ := strconv.ParseFloat(other.Data, 64)
 		if v1 < v2 {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// LT reports whether v is less than other.
+func (v *Value) LT(other *Value) bool {
+	switch v.Type {
+	case "bool":
+		v1, _ := strconv.ParseBool(v.Data)
+		if v1 {
+			// If v1 is True then it's not less than v2, and we can be done already.
+			return false
+		}
+
+		v2, _ := strconv.ParseBool(other.Data)
+		if !v2 {
+			// If v2 is False then v1 can't be less than it..
+			return false
+		}
+		return true
+	case "string":
+		if v.Data >= other.Data {
+			return false
+		}
+		return true
+	case "int64":
+		v1, _ := strconv.ParseInt(v.Data, 10, 64)
+		v2, _ := strconv.ParseInt(other.Data, 10, 64)
+		if v1 >= v2 {
+			return false
+		}
+		return true
+	case "float64":
+		v1, _ := strconv.ParseFloat(v.Data, 64)
+		v2, _ := strconv.ParseFloat(other.Data, 64)
+		if v1 >= v2 {
 			return false
 		}
 		return true
