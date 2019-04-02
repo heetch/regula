@@ -241,10 +241,10 @@ type exprGT struct {
 	operator
 }
 
-// Gt creates an expression that takes at least two operands and
+// GT creates an expression that takes at least two operands and
 // evaluates to true if each successive operand has a higher value than
 // the next.
-func Gt(v1, v2 Expr, vN ...Expr) Expr {
+func GT(v1, v2 Expr, vN ...Expr) Expr {
 	return &exprGT{
 		operator: operator{
 			kind:     "gt",
@@ -255,7 +255,7 @@ func Gt(v1, v2 Expr, vN ...Expr) Expr {
 
 func (n *exprGT) Eval(params Params) (*Value, error) {
 	if len(n.operands) < 2 {
-		return nil, errors.New("invalid number of operands in Gt func")
+		return nil, errors.New("invalid number of operands in GT func")
 	}
 
 	vA, err := n.operands[0].Eval(params)
@@ -269,7 +269,7 @@ func (n *exprGT) Eval(params Params) (*Value, error) {
 			return nil, err
 		}
 
-		if !vA.Gt(vB) {
+		if !vA.GT(vB) {
 			return BoolValue(false), nil
 		}
 	}
@@ -422,8 +422,8 @@ func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
 }
 
-// Gt reports whether v is greater than other.
-func (v *Value) Gt(other *Value) bool {
+// GT reports whether v is greater than other.
+func (v *Value) GT(other *Value) bool {
 	switch v.Type {
 	case "bool":
 		v1, _ := strconv.ParseBool(v.Data)
