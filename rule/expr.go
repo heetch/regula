@@ -279,6 +279,46 @@ func (n *exprGT) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+type exprGTE struct {
+	operator
+}
+
+// GTE creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a greater or equal value
+// compared to the next.
+func GTE(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprGTE{
+		operator: operator{
+			kind:     "gte",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprGTE) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in GTE func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		if !vA.GTE(vB) {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
 type exprFNV struct {
 	operator
 }
@@ -311,7 +351,6 @@ func (n *exprFNV) Eval(params Params) (*Value, error) {
 	}
 	return Int64Value(int64(h32.Sum32())), nil
 }
-
 
 type exprPercentile struct {
 	operator
@@ -348,7 +387,6 @@ func (n *exprPercentile) Eval(params Params) (*Value, error) {
 	}
 	return BoolValue(false), nil
 }
-
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
@@ -534,6 +572,39 @@ func (v *Value) GT(other *Value) bool {
 	return false
 }
 
+// GTE reports whether v is greater or equal than other.
+func (v *Value) GTE(other *Value) bool {
+	switch v.Type {
+	case "bool":
+		v1, _ := strconv.ParseBool(v.Data)
+		v2, _ := strconv.ParseBool(other.Data)
+		if !v1 && v2 {
+			return false
+		}
+		return true
+	case "string":
+		if v.Data < other.Data {
+			return false
+		}
+		return true
+	case "int64":
+		v1, _ := strconv.ParseInt(v.Data, 10, 64)
+		v2, _ := strconv.ParseInt(other.Data, 10, 64)
+		if v1 < v2 {
+			return false
+		}
+		return true
+	case "float64":
+		v1, _ := strconv.ParseFloat(v.Data, 64)
+		v2, _ := strconv.ParseFloat(other.Data, 64)
+		if v1 < v2 {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
 type operander interface {
 	Operands() []Expr
 }
@@ -556,7 +627,6 @@ func walk(expr Expr, fn func(Expr) error) error {
 
 	return nil
 }
-
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.

@@ -109,6 +109,10 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		var gt exprGT
 		e = &gt
 		err = gt.UnmarshalJSON(data)
+	case "gte":
+		var gte exprGTE
+		e = &gte
+		err = gte.UnmarshalJSON(data)
 	case "percentile":
 		var percentile exprPercentile
 		e = &percentile
