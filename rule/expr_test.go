@@ -260,7 +260,7 @@ func TestGt(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			gt := rule.Gt(&tc.m1, &tc.m2)
+			gt := rule.GT(&tc.m1, &tc.m2)
 			val, err := gt.Eval(nil)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, val)
