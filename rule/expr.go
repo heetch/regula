@@ -237,7 +237,7 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
-type exprGt struct {
+type exprGT struct {
 	operator
 }
 
@@ -245,7 +245,7 @@ type exprGt struct {
 // evaluates to true if each successive operand has a higher value than
 // the next.
 func Gt(v1, v2 Expr, vN ...Expr) Expr {
-	return &exprGt{
+	return &exprGT{
 		operator: operator{
 			kind:     "gt",
 			operands: append([]Expr{v1, v2}, vN...),
@@ -253,7 +253,7 @@ func Gt(v1, v2 Expr, vN ...Expr) Expr {
 	}
 }
 
-func (n *exprGt) Eval(params Params) (*Value, error) {
+func (n *exprGT) Eval(params Params) (*Value, error) {
 	if len(n.operands) < 2 {
 		return nil, errors.New("invalid number of operands in Gt func")
 	}

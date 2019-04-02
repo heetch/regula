@@ -106,7 +106,7 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		e = &or
 		err = or.UnmarshalJSON(data)
 	case "gt":
-		var gt exprGt
+		var gt exprGT
 		e = &gt
 		err = gt.UnmarshalJSON(data)
 	default:
