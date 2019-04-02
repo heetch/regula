@@ -54,6 +54,7 @@ func TestUnmarshalExpr(t *testing.T) {
 			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprNot)},
 			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprAnd)},
 			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprOr)},
+			{"or", []byte(`{"kind":"percentile","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprOr)},
 			{"param", []byte(`{"kind":"param"}`), new(Param)},
 			{"value", []byte(`{"kind":"value"}`), new(Value)},
 		}
@@ -130,6 +131,16 @@ func TestRuleUnmarshalling(t *testing.T) {
 					),
 					Not(
 						BoolValue(true),
+					),
+					Percentile(
+						StringValue("Bob Dylan"),
+						Int64Value(96),
+					),
+					Not(
+						Eq(
+							FNV(StringValue("Bob Dylan")),
+							StringValue("Bob Dylan"),
+						),
 					),
 				),
 				True(),
