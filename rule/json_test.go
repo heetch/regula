@@ -54,7 +54,11 @@ func TestUnmarshalExpr(t *testing.T) {
 			{"not", []byte(`{"kind":"not","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprNot)},
 			{"and", []byte(`{"kind":"and","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprAnd)},
 			{"or", []byte(`{"kind":"or","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprOr)},
-			{"or", []byte(`{"kind":"percentile","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprOr)},
+			{"percentile", []byte(`{"kind":"percentile","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprPercentile)},
+			{"gt", []byte(`{"kind":"gt","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprGT)},
+			{"gte", []byte(`{"kind":"gte","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprGTE)},
+			{"lt", []byte(`{"kind":"lt","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprLT)},
+			{"lte", []byte(`{"kind":"lte","operands": [{"kind": "value"}, {"kind": "param"}]}`), new(exprLTE)},
 			{"param", []byte(`{"kind":"param"}`), new(Param)},
 			{"value", []byte(`{"kind":"value"}`), new(Value)},
 		}
@@ -141,6 +145,22 @@ func TestRuleUnmarshalling(t *testing.T) {
 							FNV(StringValue("Bob Dylan")),
 							StringValue("Bob Dylan"),
 						),
+					),
+					GT(
+						Int64Value(11),
+						Int64Value(10),
+					),
+					GTE(
+						Int64Value(11),
+						Int64Value(11),
+					),
+					LT(
+						Int64Value(10),
+						Int64Value(11),
+					),
+					LTE(
+						Int64Value(10),
+						Int64Value(10),
 					),
 				),
 				True(),
