@@ -240,7 +240,7 @@ func TestFNV(t *testing.T) {
 }
 
 func TestPercentile(t *testing.T) {
-	// "Bob Dylan" is in the 56th percentile, so this is true
+	// "Bob Dylan" is in the 96th percentile, so this is true
 	v1 := rule.StringValue("Bob Dylan")
 	p := rule.Int64Value(96)
 	perc := rule.Percentile(v1, p)
