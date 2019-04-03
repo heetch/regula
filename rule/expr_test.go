@@ -195,7 +195,6 @@ func TestIn(t *testing.T) {
 	})
 }
 
-
 func TestGt(t *testing.T) {
 	cases := []struct {
 		name     string
