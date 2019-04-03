@@ -268,6 +268,67 @@ func TestGt(t *testing.T) {
 	}
 }
 
+func TestFNV(t *testing.T) {
+	cases := []struct {
+		name   string
+		val    rule.Expr
+		result int64
+	}{
+		{
+			name:   "Int64Value",
+			val:    rule.Int64Value(1234),
+			result: 2179869525,
+		},
+		{
+			name:   "Float64Value",
+			val:    rule.Float64Value(1234.1234),
+			result: 566939793,
+		},
+		{
+			name:   "StringValue",
+			val:    rule.StringValue("travelling in style"),
+			result: 536463009,
+		},
+		{
+			name:   "BoolValue (true)",
+			val:    rule.BoolValue(true),
+			result: 3053630529,
+		},
+		{
+			name:   "BoolValue (false)",
+			val:    rule.BoolValue(false),
+			result: 2452206122,
+		},
+	}
+	params := regula.Params{}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			hash := rule.FNV(tc.val)
+			result, err := hash.Eval(params)
+			require.NoError(t, err)
+			require.Equal(t, rule.Int64Value(tc.result), result)
+		})
+	}
+}
+
+func TestPercentile(t *testing.T) {
+	// "Bob Dylan" is in the 96th percentile, so this is true
+	v1 := rule.StringValue("Bob Dylan")
+	p := rule.Int64Value(96)
+	perc := rule.Percentile(v1, p)
+	res, err := perc.Eval(nil)
+	require.NoError(t, err)
+	require.Equal(t, rule.BoolValue(true), res)
+
+	// "Joni Mitchell" is in the 97th percentile, so this is false
+	v2 := rule.StringValue("Joni Mitchell")
+	perc = rule.Percentile(v2, p)
+	res, err = perc.Eval(nil)
+	require.NoError(t, err)
+	require.Equal(t, rule.BoolValue(false), res)
+}
+
+
 func TestParam(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		v := rule.StringParam("foo")
