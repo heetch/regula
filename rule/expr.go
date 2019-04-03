@@ -4,6 +4,8 @@ import (
 	"errors"
 	"go/token"
 	"strconv"
+
+	"hash/fnv"
 )
 
 // An Expr is a logical expression that can be evaluated to a value.
@@ -277,6 +279,77 @@ func (n *exprGT) Eval(params Params) (*Value, error) {
 	return BoolValue(true), nil
 }
 
+type exprFNV struct {
+	operator
+}
+
+// FNV returns an Integer hash of any value it is provided.  It uses
+// the Fowler-Noll-Vo non-cryptographic hash function.
+func FNV(v Expr) Expr {
+	return &exprFNV{
+		operator: operator{
+			kind:     "FNV",
+			operands: []Expr{v},
+		},
+	}
+}
+
+func (n *exprFNV) Eval(params Params) (*Value, error) {
+	if len(n.operands) != 1 {
+		return nil, errors.New("invalid number of operands in FNV func")
+	}
+
+	h32 := fnv.New32()
+	op := n.operands[0]
+	v, err := op.Eval(params)
+	if err != nil {
+		return nil, err
+	}
+	_, err = h32.Write([]byte(v.Data))
+	if err != nil {
+		return nil, err
+	}
+	return Int64Value(int64(h32.Sum32())), nil
+}
+
+
+type exprPercentile struct {
+	operator
+}
+
+// Percentile indicates whether the provided value is within a given
+// percentile of the group of all such values.  It is intended to be
+// used to assign values to groups for experimentation.
+func Percentile(v, p Expr) Expr {
+	return &exprPercentile{
+		operator: operator{
+			kind:     "percentile",
+			operands: []Expr{v, p},
+		},
+	}
+}
+
+func (n *exprPercentile) Eval(params Params) (*Value, error) {
+	if len(n.operands) != 2 {
+		return nil, errors.New("invalid number of operands in Percentile func")
+	}
+
+	hash := FNV(n.operands[0])
+	v, err := exprToInt64(hash, params)
+	if err != nil {
+		return nil, err
+	}
+	p, err := exprToInt64(n.operands[1], params)
+	if err != nil {
+		return nil, err
+	}
+	if (v % 100) <= p {
+		return BoolValue(true), nil
+	}
+	return BoolValue(false), nil
+}
+
+
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
 	Kind string `json:"kind"`
@@ -482,4 +555,19 @@ func walk(expr Expr, fn func(Expr) error) error {
 	}
 
 	return nil
+}
+
+
+// exprToInt64 returns the go-native int64 value of an expression
+// evaluated with params.
+func exprToInt64(e Expr, params Params) (int64, error) {
+	v, err := e.Eval(params)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(v.Data, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return i, err
 }
