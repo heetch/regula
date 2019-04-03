@@ -288,7 +288,7 @@ type exprFNV struct {
 func FNV(v Expr) Expr {
 	return &exprFNV{
 		operator: operator{
-			kind:     "FNV",
+			kind:     "fnv",
 			operands: []Expr{v},
 		},
 	}
