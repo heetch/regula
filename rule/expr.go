@@ -237,6 +237,46 @@ func (n *exprIn) Eval(params Params) (*Value, error) {
 	return BoolValue(false), nil
 }
 
+type exprGT struct {
+	operator
+}
+
+// GT creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a higher value than
+// the next.
+func GT(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprGT{
+		operator: operator{
+			kind:     "gt",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprGT) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in GT func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		if !vA.GT(vB) {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
 	Kind string `json:"kind"`
@@ -380,6 +420,45 @@ func (v *Value) compare(op token.Token, other *Value) bool {
 // Equal reports whether v and other represent the same value.
 func (v *Value) Equal(other *Value) bool {
 	return v.compare(token.EQL, other)
+}
+
+// GT reports whether v is greater than other.
+func (v *Value) GT(other *Value) bool {
+	switch v.Type {
+	case "bool":
+		v1, _ := strconv.ParseBool(v.Data)
+		if !v1 {
+			// If v1 is False then it's not greater than v2, and we can be done already.
+			return false
+		}
+
+		v2, _ := strconv.ParseBool(other.Data)
+		if v2 {
+			// If v2 is True then v1 can't be greater than it..
+			return false
+		}
+		return true
+	case "string":
+		if v.Data <= other.Data {
+			return false
+		}
+		return true
+	case "int64":
+		v1, _ := strconv.ParseInt(v.Data, 10, 64)
+		v2, _ := strconv.ParseInt(other.Data, 10, 64)
+		if v1 <= v2 {
+			return false
+		}
+		return true
+	case "float64":
+		v1, _ := strconv.ParseFloat(v.Data, 64)
+		v2, _ := strconv.ParseFloat(other.Data, 64)
+		if v1 <= v2 {
+			return false
+		}
+		return true
+	}
+	return false
 }
 
 type operander interface {
