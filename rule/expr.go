@@ -816,9 +816,7 @@ func parseBoolValues(v1, v2 *Value) (b1, b2 bool, err error) {
 	if b1, err = strconv.ParseBool(v1.Data); err != nil {
 		return
 	}
-	if b2, err = strconv.ParseBool(v2.Data); err != nil {
-		return
-	}
+	b2, err = strconv.ParseBool(v2.Data)
 	return
 }
 
@@ -826,9 +824,7 @@ func parseInt64Values(v1, v2 *Value) (i1, i2 int64, err error) {
 	if i1, err = strconv.ParseInt(v1.Data, 10, 64); err != nil {
 		return
 	}
-	if i2, err = strconv.ParseInt(v2.Data, 10, 64); err != nil {
-		return
-	}
+	i2, err = strconv.ParseInt(v2.Data, 10, 64)
 	return
 }
 
@@ -836,9 +832,7 @@ func parseFloat64Values(v1, v2 *Value) (f1, f2 float64, err error) {
 	if f1, err = strconv.ParseFloat(v1.Data, 64); err != nil {
 		return
 	}
-	if f2, err = strconv.ParseFloat(v2.Data, 64); err != nil {
-		return
-	}
+	f2, err = strconv.ParseFloat(v2.Data, 64)
 	return
 }
 
