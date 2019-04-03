@@ -109,7 +109,7 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		var percentile exprPercentile
 		e = &percentile
 		err = percentile.UnmarshalJSON(data)
-	case "FNV":
+	case "fnv":
 		var fnv exprFNV
 		e = &fnv
 		err = fnv.UnmarshalJSON(data)
