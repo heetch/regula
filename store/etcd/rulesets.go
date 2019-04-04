@@ -96,14 +96,19 @@ func (s *RulesetService) Latest(ctx context.Context, path string) (*store.Rulese
 		return nil, store.ErrNotFound
 	}
 
-	resp, err := s.Client.KV.Get(ctx, s.rulesetsPath(path, "")+"/", clientv3.WithLastKey()...)
+	resp, err := s.Client.KV.Get(ctx, s.latestRulesetPath(path))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
+		return nil, errors.Wrapf(err, "failed to fetch latest version: %s", path)
 	}
 
 	// Count will be 0 if the path doesn't exist or if it's not a ruleset.
 	if resp.Count == 0 {
 		return nil, store.ErrNotFound
+	}
+
+	resp, err = s.Client.KV.Get(ctx, string(resp.Kvs[0].Value))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch the entry: %s", path)
 	}
 
 	var entry store.RulesetEntry
