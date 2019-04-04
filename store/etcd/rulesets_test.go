@@ -179,10 +179,12 @@ func TestLatest(t *testing.T) {
 	createRuleset(t, s, "a", newRse)
 
 	rs, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(true)))
+	rs2, _ := regula.NewBoolRuleset(rule.New(rule.True(), rule.BoolValue(false)))
 	createRuleset(t, s, "b", rs)
 	createRuleset(t, s, "c", rs)
 	createRuleset(t, s, "abc", rs)
 	createRuleset(t, s, "abcd", rs)
+	createRuleset(t, s, "abcd/e", rs2)
 
 	t.Run("OK - several versions of a ruleset", func(t *testing.T) {
 		path := "a"
@@ -222,6 +224,16 @@ func TestLatest(t *testing.T) {
 		_, err := s.Latest(context.Background(), path)
 		require.Error(t, err)
 		require.Equal(t, err, store.ErrNotFound)
+	})
+
+	t.Run("OK - ruleset with sub ruleset", func(t *testing.T) {
+		entry, err := s.Latest(context.Background(), "abcd")
+		require.NoError(t, err)
+		require.Equal(t, rs, entry.Ruleset)
+
+		entry, err = s.Latest(context.Background(), "abcd/e")
+		require.NoError(t, err)
+		require.Equal(t, rs2, entry.Ruleset)
 	})
 }
 
