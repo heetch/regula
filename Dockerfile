@@ -1,4 +1,4 @@
-FROM golang:1.11-alpine as builder
+FROM golang:1.12-alpine as builder
 
 ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
 RUN chmod +x /usr/bin/dep
