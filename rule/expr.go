@@ -2,6 +2,7 @@ package rule
 
 import (
 	"errors"
+	"fmt"
 	"go/token"
 	"strconv"
 
@@ -271,7 +272,147 @@ func (n *exprGT) Eval(params Params) (*Value, error) {
 			return nil, err
 		}
 
-		if !vA.GT(vB) {
+		res, err := vA.GT(vB)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
+type exprGTE struct {
+	operator
+}
+
+// GTE creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a greater or equal value
+// compared to the next.
+func GTE(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprGTE{
+		operator: operator{
+			kind:     "gte",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprGTE) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in GTE func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := vA.GTE(vB)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
+type exprLT struct {
+	operator
+}
+
+// LT creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a lower value
+// compared to the next.
+func LT(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprLT{
+		operator: operator{
+			kind:     "lt",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprLT) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in LT func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := vA.LT(vB)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res {
+			return BoolValue(false), nil
+		}
+	}
+
+	return BoolValue(true), nil
+}
+
+type exprLTE struct {
+	operator
+}
+
+// LTE creates an expression that takes at least two operands and
+// evaluates to true if each successive operand has a lower or equal value
+// compared to the next.
+func LTE(v1, v2 Expr, vN ...Expr) Expr {
+	return &exprLTE{
+		operator: operator{
+			kind:     "lte",
+			operands: append([]Expr{v1, v2}, vN...),
+		},
+	}
+}
+
+func (n *exprLTE) Eval(params Params) (*Value, error) {
+	if len(n.operands) < 2 {
+		return nil, errors.New("invalid number of operands in LTE func")
+	}
+
+	vA, err := n.operands[0].Eval(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(n.operands); i++ {
+		vB, err := n.operands[i].Eval(params)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := vA.LTE(vB)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res {
 			return BoolValue(false), nil
 		}
 	}
@@ -312,7 +453,6 @@ func (n *exprFNV) Eval(params Params) (*Value, error) {
 	return Int64Value(int64(h32.Sum32())), nil
 }
 
-
 type exprPercentile struct {
 	operator
 }
@@ -348,7 +488,6 @@ func (n *exprPercentile) Eval(params Params) (*Value, error) {
 	}
 	return BoolValue(false), nil
 }
-
 
 // Param is an expression used to select a parameter passed during evaluation and return its corresponding value.
 type Param struct {
@@ -496,42 +635,205 @@ func (v *Value) Equal(other *Value) bool {
 }
 
 // GT reports whether v is greater than other.
-func (v *Value) GT(other *Value) bool {
+func (v *Value) GT(other *Value) (bool, error) {
 	switch v.Type {
 	case "bool":
-		v1, _ := strconv.ParseBool(v.Data)
-		if !v1 {
-			// If v1 is False then it's not greater than v2, and we can be done already.
-			return false
+		v1, v2, err := parseBoolValues(v, other)
+		if err != nil {
+			return false, err
 		}
 
-		v2, _ := strconv.ParseBool(other.Data)
+		if !v1 {
+			// If v1 is False then it's not greater than v2, and we can be done already.
+			return false, nil
+		}
 		if v2 {
 			// If v2 is True then v1 can't be greater than it..
-			return false
+			return false, nil
 		}
-		return true
+		return true, nil
 	case "string":
 		if v.Data <= other.Data {
-			return false
+			return false, nil
 		}
-		return true
+		return true, nil
 	case "int64":
-		v1, _ := strconv.ParseInt(v.Data, 10, 64)
-		v2, _ := strconv.ParseInt(other.Data, 10, 64)
-		if v1 <= v2 {
-			return false
+		v1, v2, err := parseInt64Values(v, other)
+		if err != nil {
+			return false, err
 		}
-		return true
+
+		if v1 <= v2 {
+			return false, nil
+		}
+		return true, nil
 	case "float64":
-		v1, _ := strconv.ParseFloat(v.Data, 64)
-		v2, _ := strconv.ParseFloat(other.Data, 64)
-		if v1 <= v2 {
-			return false
+		v1, v2, err := parseFloat64Values(v, other)
+		if err != nil {
+			return false, err
 		}
-		return true
+
+		if v1 <= v2 {
+			return false, nil
+		}
+		return true, nil
 	}
-	return false
+	return false, fmt.Errorf("unknown Value type: %s", v.Type)
+}
+
+// GTE reports whether v is greater or equal than other.
+func (v *Value) GTE(other *Value) (bool, error) {
+	switch v.Type {
+	case "bool":
+		v1, v2, err := parseBoolValues(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if !v1 && v2 {
+			return false, nil
+		}
+		return true, nil
+	case "string":
+		if v.Data < other.Data {
+			return false, nil
+		}
+		return true, nil
+	case "int64":
+		v1, v2, err := parseInt64Values(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 < v2 {
+			return false, nil
+		}
+		return true, nil
+	case "float64":
+		v1, v2, err := parseFloat64Values(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 < v2 {
+			return false, nil
+		}
+		return true, nil
+	}
+	return false, fmt.Errorf("unknown Value type: %s", v.Type)
+}
+
+// LT reports whether v is less than other.
+func (v *Value) LT(other *Value) (bool, error) {
+	switch v.Type {
+	case "bool":
+		v1, v2, err := parseBoolValues(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 {
+			// If v1 is True then it's not less than v2, and we can be done already.
+			return false, nil
+		}
+		if !v2 {
+			// If v2 is False then v1 can't be less than it..
+			return false, nil
+		}
+		return true, nil
+	case "string":
+		if v.Data >= other.Data {
+			return false, nil
+		}
+		return true, nil
+	case "int64":
+		v1, v2, err := parseInt64Values(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 >= v2 {
+			return false, nil
+		}
+		return true, nil
+	case "float64":
+		v1, v2, err := parseFloat64Values(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 >= v2 {
+			return false, nil
+		}
+		return true, nil
+	}
+	return false, fmt.Errorf("unknown Value type: %s", v.Type)
+}
+
+// LTE reports whether v is less or equal than other.
+func (v *Value) LTE(other *Value) (bool, error) {
+	switch v.Type {
+	case "bool":
+		v1, v2, err := parseBoolValues(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 && !v2 {
+			return false, nil
+		}
+		return true, nil
+	case "string":
+		if v.Data > other.Data {
+			return false, nil
+		}
+		return true, nil
+	case "int64":
+		v1, v2, err := parseInt64Values(v, other)
+		if err != nil {
+			return false, nil
+		}
+
+		if v1 > v2 {
+			return false, nil
+		}
+		return true, nil
+	case "float64":
+		v1, v2, err := parseFloat64Values(v, other)
+		if err != nil {
+			return false, err
+		}
+
+		if v1 > v2 {
+			return false, nil
+		}
+		return true, nil
+	}
+	return false, fmt.Errorf("unknown Value type: %s", v.Type)
+}
+
+func parseBoolValues(v1, v2 *Value) (b1, b2 bool, err error) {
+	if b1, err = strconv.ParseBool(v1.Data); err != nil {
+		return
+	}
+	b2, err = strconv.ParseBool(v2.Data)
+	return
+}
+
+func parseInt64Values(v1, v2 *Value) (i1, i2 int64, err error) {
+	if i1, err = strconv.ParseInt(v1.Data, 10, 64); err != nil {
+		return
+	}
+	i2, err = strconv.ParseInt(v2.Data, 10, 64)
+	return
+}
+
+func parseFloat64Values(v1, v2 *Value) (f1, f2 float64, err error) {
+	if f1, err = strconv.ParseFloat(v1.Data, 64); err != nil {
+		return
+	}
+	f2, err = strconv.ParseFloat(v2.Data, 64)
+	return
 }
 
 type operander interface {
@@ -556,7 +858,6 @@ func walk(expr Expr, fn func(Expr) error) error {
 
 	return nil
 }
-
 
 // exprToInt64 returns the go-native int64 value of an expression
 // evaluated with params.

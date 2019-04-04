@@ -109,6 +109,10 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		var gt exprGT
 		e = &gt
 		err = gt.UnmarshalJSON(data)
+	case "gte":
+		var gte exprGTE
+		e = &gte
+		err = gte.UnmarshalJSON(data)
 	case "percentile":
 		var percentile exprPercentile
 		e = &percentile
@@ -117,6 +121,14 @@ func unmarshalExpr(kind string, data []byte) (Expr, error) {
 		var fnv exprFNV
 		e = &fnv
 		err = fnv.UnmarshalJSON(data)
+	case "lt":
+		var lt exprLT
+		e = &lt
+		err = lt.UnmarshalJSON(data)
+	case "lte":
+		var lte exprLTE
+		e = &lte
+		err = lte.UnmarshalJSON(data)
 	default:
 		err = errors.New("unknown expression kind " + kind)
 	}
