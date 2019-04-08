@@ -19,6 +19,10 @@ import (
 func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
 	opts := make([]clientv3.OpOption, 0, 3)
 
+	if opt == nil {
+		opt = new(api.ListOptions)
+	}
+
 	var key string
 
 	// if a cursor is specified, decode the key from it and start the request from that key
@@ -51,13 +55,12 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 		return nil, api.ErrRulesetNotFound
 	}
 
-	var (
-		ops      []clientv3.Op
-		rulesets api.Rulesets
-	)
+	var ops []clientv3.Op
 
-	rulesets.Revision = strconv.FormatInt(resp.Header.Revision, 10)
-	rulesets.Rulesets = make([]regula.Ruleset, len(resp.Kvs))
+	rulesets := api.Rulesets{
+		Revision: strconv.FormatInt(resp.Header.Revision, 10),
+		Rulesets: make([]regula.Ruleset, len(resp.Kvs)),
+	}
 
 	for i, pair := range resp.Kvs {
 		var sig pb.Signature
@@ -69,31 +72,16 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 
 		rulesets.Rulesets[i].Path = s.pathFromKey("signatures", string(pair.Key))
 		rulesets.Rulesets[i].Signature = signatureFromProtobuf(&sig)
-		ops = append(ops, clientv3.OpGet(s.rulesPath(rulesets.Rulesets[i].Path, ""), clientv3.WithLimit(int64(opt.LatestVersionsLimit))))
-	}
 
-	// running all the requests within a single transaction so only one network round trip is performed.
-	rulesResp, err := s.Client.KV.Txn(ctx).Then(ops...).Commit()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch rules")
-	}
-
-	for i, rop := range rulesResp.Responses {
-		respRange := rop.GetResponseRange()
-		if respRange.Count == 0 {
-			continue
+		if opt.LatestVersionsLimit > 0 {
+			ops = append(ops, clientv3.OpGet(s.rulesPath(rulesets.Rulesets[i].Path, ""), clientv3.WithLimit(int64(opt.LatestVersionsLimit))))
 		}
+	}
 
-		rulesets.Rulesets[i].Versions = make([]regula.RulesetVersion, int(respRange.Count))
-		for j, kv := range respRange.Kvs {
-			var pbr pb.Rules
-			err = proto.Unmarshal(kv.Value, &pbr)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal rules")
-			}
-
-			_, rulesets.Rulesets[i].Versions[j].Version = s.pathVersionFromKey(string(kv.Key))
-			rulesets.Rulesets[i].Versions[j].Rules = rulesFromProtobuf(&pbr)
+	if len(ops) > 0 {
+		err = s.fetchRulesVersions(ctx, &rulesets, ops)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -107,4 +95,33 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 	rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastRuleset.Path + "\x00"))
 
 	return &rulesets, nil
+}
+
+func (s *RulesetService) fetchRulesVersions(ctx context.Context, rulesets *api.Rulesets, ops []clientv3.Op) error {
+	// running all the requests within a single transaction so only one network round trip is performed.
+	rulesResp, err := s.Client.KV.Txn(ctx).Then(ops...).Commit()
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch rules")
+	}
+
+	for i, rop := range rulesResp.Responses {
+		respRange := rop.GetResponseRange()
+		if respRange.Count == 0 {
+			continue
+		}
+
+		rulesets.Rulesets[i].Versions = make([]regula.RulesetVersion, int(respRange.Count))
+		for j, kv := range respRange.Kvs {
+			var pbr pb.Rules
+			err = proto.Unmarshal(kv.Value, &pbr)
+			if err != nil {
+				return errors.Wrap(err, "failed to unmarshal rules")
+			}
+
+			_, rulesets.Rulesets[i].Versions[j].Version = s.pathVersionFromKey(string(kv.Key))
+			rulesets.Rulesets[i].Versions[j].Rules = rulesFromProtobuf(&pbr)
+		}
+	}
+
+	return nil
 }
