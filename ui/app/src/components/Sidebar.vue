@@ -1,15 +1,7 @@
 <template>
   <div id="sidebar">
-    <v-treeview
-      v-model="tree"
-      :items="items"
-      item-key="name"
-      open-on-click
-    >
-      <template
-        slot="label"
-        slot-scope="{ item }"
-      >
+    <v-treeview v-model="tree" :items="items" item-key="name" open-on-click>
+      <template slot="label" slot-scope="{ item }">
         <div
           class="v-treeview-node__label"
           @click="item.path && navigateToLatestRulesetPage(item)"
@@ -18,11 +10,7 @@
     </v-treeview>
     <div class="new-ruleset mt-5">
       <router-link to="/rulesets/new">
-        <v-btn
-          fab
-          dark
-          color="primary"
-        >
+        <v-btn fab dark color="primary">
           <v-icon dark>mdi-plus</v-icon>
         </v-btn>
       </router-link>
@@ -58,7 +46,7 @@ export default {
     },
 
     navigateToLatestRulesetPage(item) {
-      this.$router.push(`/rulesets/${item.path}/latest`);
+      this.$router.push({ name: 'latest-ruleset', params: { path: `${item.path}` } });
     },
   },
 };
