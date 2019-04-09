@@ -8,7 +8,10 @@
           <v-toolbar-title>Parameters</v-toolbar-title>
         </v-toolbar>
         <v-card class="height-card scroll">
-          <v-card-text v-for="param in ruleset.signature.params" :key="param.name">{{param.name}}: {{param.type}}</v-card-text>
+          <v-card-text
+            v-for="param in ruleset.signature.params"
+            :key="param.name"
+          >{{param.name}}: {{param.type}}</v-card-text>
         </v-card>
       </v-flex>
 
@@ -38,16 +41,15 @@
           <v-btn dark color="primary">Edit</v-btn>
         </router-link>
       </v-flex>
-
     </v-layout>
 
     <!-- delegate rules to Rules component -->
-    <Rules v-model="ruleset" :editMode="false" />
+    <Rules v-model="ruleset" :editMode="false"/>
   </v-container>
 </template>
 
 <script>
-import axios from 'axios';
+// import axios from 'axios';
 import { Ruleset, Rule, Signature, Param } from '../NewRuleset/ruleset';
 import Rules from '../NewRuleset/Rules.vue';
 
@@ -59,42 +61,39 @@ export default {
   props: {
     path: {
       type: String,
-    }
+    },
   },
 
   data() {
     return {
       ruleset: new Ruleset({
-            path: this.path,
-            signature: new Signature(
-              "string",
-              [
-                new Param("foo", "string"),
-                new Param("bar", "int64"),
-                new Param("baz", "float64"),
-                new Param("baz1", "float64"),
-                new Param("baz2", "float64"),
-                new Param("baz3", "float64"),
-                new Param("baz4", "float64"),
-              ]
-            ),
-            rules: [
-              new Rule(`(and
+        path: this.path,
+        signature: new Signature('string', [
+          new Param('foo', 'string'),
+          new Param('bar', 'int64'),
+          new Param('baz', 'float64'),
+          new Param('baz1', 'float64'),
+          new Param('baz2', 'float64'),
+          new Param('baz3', 'float64'),
+          new Param('baz4', 'float64'),
+        ]),
+
+        rules: [
+          new Rule(
+            `(and
                 (eq 1 1)
                 (eq 2 2)
-              )`, "wesh"),
-              new Rule("#true", "bien"),
-            ],
-            version: 'abc123',
-            versions: [
-              'def123',
-              'ghi123',
-              'xyz123',
-            ]
-          }),
-    }
+              )`,
+            'wesh',
+          ),
+          new Rule('#true', 'bien'),
+        ],
+        version: 'abc123',
+        versions: ['def123', 'ghi123', 'xyz123'],
+      }),
+    };
   },
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -104,11 +103,11 @@ export default {
   }
 
   .scroll {
-      overflow-y: auto;
+    overflow-y: auto;
   }
 
   .rounded-card {
-    border-radius:50px;
+    border-radius: 50px;
   }
 }
 </style>

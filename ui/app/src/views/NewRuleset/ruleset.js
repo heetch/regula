@@ -26,7 +26,9 @@ class Signature {
 
 // Describes the ruleset payload sent to the server when creating a ruleset.
 class Ruleset {
-  constructor({ path = '', signature = new Signature(), rules = [], version = '', versions = [] }) {
+  constructor({
+    path = '', signature = new Signature(), rules = [], version = '', versions = [],
+  }) {
     this.path = path;
     this.signature = signature;
     this.rules = rules;
