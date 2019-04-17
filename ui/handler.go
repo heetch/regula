@@ -137,6 +137,14 @@ func (h *internalHandler) handleSingleRulset(w http.ResponseWriter, r *http.Requ
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
+	srr.Version = entry.Version
+	srr.Versions = entry.Versions
+	srr.Signature = signature{
+		ReturnType: entry.Signature.ReturnType,
+	}
+	for name, typ := range entry.Signature.ParamTypes {
+		srr.Signature.Params = append(srr.Signature.Params, param{name: typ})
+	}
 	for _, ri := range entry.Ruleset.Rules {
 		sv, err := sexpr.PrettyPrint(0, 80, ri.Expr)
 		if err != nil {
@@ -371,7 +379,7 @@ type param map[string]string
 
 type signature struct {
 	Params     []param `json:"params"`
-	ReturnType string
+	ReturnType string  `json:"returnType"`
 }
 
 type rule struct {
@@ -387,9 +395,9 @@ type newRulesetRequest struct {
 }
 
 type singleRulesetResponse struct {
-	Path      string            `json:"path"`
-	Version   string            `json:"version"`
-	Ruleset   []rule            `json:"rules"`
-	Signature *regula.Signature `json:"signature"`
-	Versions  []string          `json:"versions"`
+	Path      string    `json:"path"`
+	Version   string    `json:"version"`
+	Ruleset   []rule    `json:"rules"`
+	Signature signature `json:"signature"`
+	Versions  []string  `json:"versions"`
 }

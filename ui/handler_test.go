@@ -239,8 +239,14 @@ func TestSingleRulesetHandler(t *testing.T) {
 				},
 				Type: "string",
 			}, //    *regula.Ruleset
-			Signature: nil, //*regula.Signature
-			Versions:  []string{"1", "2"},
+			Signature: &regula.Signature{
+				ParamTypes: map[string]string{
+					"foo": "int64",
+					"bar": "string",
+				},
+				ReturnType: "string",
+			}, //*regula.Signature
+			Versions: []string{"1", "2"},
 		}
 		return entry, nil
 	}
@@ -251,32 +257,17 @@ func TestSingleRulesetHandler(t *testing.T) {
 	body := rec.Body.String()
 	expected := `{"path": "a/nice/ruleset",
 "version": "2",
-"signature": "",
+"signature": {
+    "params": [
+        {"foo": "int64"},
+        {"bar": "string"}
+    ],
+    "returnType": "string"
+},
 "rules": [
     {"sExpr": "#true", "returnValue": "\"Hello\""}
 ],
 "versions": ["1", "2"]}`
-	//     "version": "",
-	//     "signature": {
-	//         "params": [
-	//             {
-	//                 "<name>": "<type>"
-	//             },
-	//         ],
-	//         "returnType": "<type>"
-	//     },
-	//     "versions": [
-	//         "",
-	//         ""
-	//     ],
-	//     "rules": [
-	//         {
-	//             "sExpr": "",
-	//             "returnValue": ""
-	//         }
-	//     ]
-	// }
-	// `
 	require.JSONEq(t, expected, body)
 	require.Equal(t, 1, s.GetCount)
 
