@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/mock"
 	regrule "github.com/heetch/regula/rule"
 	"github.com/heetch/regula/rule/sexpr"
@@ -218,4 +219,65 @@ func TestConvertParams(t *testing.T) {
 
 		})
 	}
+}
+
+func TestSingleRulesetHandler(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+		require.Equal(t, "a/nice/ruleset", path)
+
+		entry := &store.RulesetEntry{
+			Path:    path,
+			Version: "2",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					&regrule.Rule{
+						Expr:   regrule.BoolValue(true),
+						Result: regrule.StringValue("Hello"),
+					},
+				},
+				Type: "string",
+			}, //    *regula.Ruleset
+			Signature: nil, //*regula.Signature
+			Versions:  []string{"1", "2"},
+		}
+		return entry, nil
+	}
+	defer func() { s.GetFn = nil }()
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	expected := `{"path": "a/nice/ruleset",
+"version": "2",
+"signature": "",
+"rules": [
+    {"sExpr": "#true", "returnValue": "\"Hello\""}
+],
+"versions": ["1", "2"]}`
+	//     "version": "",
+	//     "signature": {
+	//         "params": [
+	//             {
+	//                 "<name>": "<type>"
+	//             },
+	//         ],
+	//         "returnType": "<type>"
+	//     },
+	//     "versions": [
+	//         "",
+	//         ""
+	//     ],
+	//     "rules": [
+	//         {
+	//             "sExpr": "",
+	//             "returnValue": ""
+	//         }
+	//     ]
+	// }
+	// `
+	require.JSONEq(t, expected, body)
+	require.Equal(t, 1, s.GetCount)
+
 }

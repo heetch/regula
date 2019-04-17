@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/heetch/regula"
 	reghttp "github.com/heetch/regula/http"
@@ -120,6 +121,46 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 }
 
+func (h *internalHandler) handleSingleRulset(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
+	srr := &singleRulesetResponse{
+		Path: path,
+	}
+
+	entry, err := h.service.Get(r.Context(), path, "")
+	if err != nil {
+		if err == store.ErrNotFound {
+			writeError(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	for _, ri := range entry.Ruleset.Rules {
+		sv, err := sexpr.PrettyPrint(0, 80, ri.Expr)
+		if err != nil {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+		rv, err := sexpr.PrettyPrint(0, 80, ri.Result)
+		if err != nil {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+
+		o := rule{
+			SExpr:       sv,
+			ReturnValue: rv,
+		}
+		srr.Ruleset = append(srr.Ruleset, o)
+	}
+
+	// reghttp.EncodeJSON(w, r, entry, http.StatusOK)
+
+	reghttp.EncodeJSON(w, r, srr, http.StatusOK)
+}
+
 // handleListRequest attempts to return a list of Rulesets based on the data provided in a GET request to the ruleset endpoint.
 func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Request) {
 	type ruleset struct {
@@ -166,28 +207,13 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 		case "POST":
 			h.handleNewRulesetRequest(w, r)
 		case "GET":
-			h.handleListRequest(w, r)
+			if _, ok := r.URL.Query()["list"]; ok {
+				h.handleListRequest(w, r)
+				return
+			}
+			h.handleSingleRulset(w, r)
 		}
 	})
-}
-
-type param map[string]string
-
-type signature struct {
-	Params     []param `json:"params"`
-	ReturnType string
-}
-
-type rule struct {
-	SExpr       string `json:"sExpr"`
-	ReturnValue string `json:"returnValue"`
-}
-
-// newRulesetRequest is the unmarshaled form a new ruleset request.
-type newRulesetRequest struct {
-	Path      string    `json:"path"`
-	Signature signature `json:"signature"`
-	Rules     []rule    `json:"rules"`
 }
 
 // convertParams takes a slice of param, unmarshalled from a
@@ -339,4 +365,31 @@ func (re RuleError) MarshalJSON() ([]byte, error) {
 		},
 	}
 	return json.Marshal(err)
+}
+
+type param map[string]string
+
+type signature struct {
+	Params     []param `json:"params"`
+	ReturnType string
+}
+
+type rule struct {
+	SExpr       string `json:"sExpr"`
+	ReturnValue string `json:"returnValue"`
+}
+
+// newRulesetRequest is the unmarshaled form a new ruleset request.
+type newRulesetRequest struct {
+	Path      string    `json:"path"`
+	Signature signature `json:"signature"`
+	Rules     []rule    `json:"rules"`
+}
+
+type singleRulesetResponse struct {
+	Path      string            `json:"path"`
+	Version   string            `json:"version"`
+	Ruleset   []rule            `json:"rules"`
+	Signature *regula.Signature `json:"signature"`
+	Versions  []string          `json:"versions"`
 }
