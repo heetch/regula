@@ -259,8 +259,10 @@ func TestSingleRulesetHandler(t *testing.T) {
 "version": "2",
 "signature": {
     "params": [
-        {"foo": "int64"},
-        {"bar": "string"}
+        {"name": "foo",
+         "type": "int64"},
+        {"name": "bar",
+         "type": "string"}
     ],
     "returnType": "string"
 },

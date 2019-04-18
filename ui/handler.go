@@ -121,8 +121,15 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 }
 
-func (h *internalHandler) handleSingleRulset(w http.ResponseWriter, r *http.Request) {
+func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
+	logger := reghttp.LoggerFromRequest(r)
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
+	logger.Debug().Msg(fmt.Sprintf("PATH == %q", path))
+
+	if path == "" {
+		h.handleListRequest(w, r)
+		return
+	}
 	srr := &singleRulesetResponse{
 		Path: path,
 	}
@@ -143,7 +150,8 @@ func (h *internalHandler) handleSingleRulset(w http.ResponseWriter, r *http.Requ
 		ReturnType: entry.Signature.ReturnType,
 	}
 	for name, typ := range entry.Signature.ParamTypes {
-		srr.Signature.Params = append(srr.Signature.Params, param{name: typ})
+		srr.Signature.Params = append(srr.Signature.Params,
+			param{"name": name, "type": typ})
 	}
 	for _, ri := range entry.Ruleset.Rules {
 		sv, err := sexpr.PrettyPrint(0, 80, ri.Expr)
@@ -163,8 +171,6 @@ func (h *internalHandler) handleSingleRulset(w http.ResponseWriter, r *http.Requ
 		}
 		srr.Ruleset = append(srr.Ruleset, o)
 	}
-
-	// reghttp.EncodeJSON(w, r, entry, http.StatusOK)
 
 	reghttp.EncodeJSON(w, r, srr, http.StatusOK)
 }
@@ -219,7 +225,7 @@ func (h *internalHandler) rulesetsHandler() http.Handler {
 				h.handleListRequest(w, r)
 				return
 			}
-			h.handleSingleRulset(w, r)
+			h.handleSingleRuleset(w, r)
 		}
 	})
 }
