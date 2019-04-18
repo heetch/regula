@@ -7,7 +7,9 @@
         <v-toolbar color="grey" dark>
           <v-toolbar-title>Parameters</v-toolbar-title>
         </v-toolbar>
-        <v-card class="height-card scroll">
+        <v-card class="height-card scroll"
+                            v-if="typeof(ruleset.signature) != 'undefined'"
+>
           <v-card-text
             v-for="param in ruleset.signature.params"
             :key="param.name"
@@ -19,7 +21,9 @@
         <v-toolbar color="grey" dark>
           <v-toolbar-title>Return type</v-toolbar-title>
         </v-toolbar>
-        <v-card class="height-card">
+        <v-card class="height-card"
+                v-if="typeof(ruleset.signature) != 'undefined'"
+                >
           <v-card-text>{{ruleset.signature.returnType}}</v-card-text>
         </v-card>
       </v-flex>
@@ -49,8 +53,8 @@
 </template>
 
 <script>
-// import axios from 'axios';
-import { Ruleset, Rule, Signature, Param } from '../NewRuleset/ruleset';
+import axios from 'axios';
+// import { Ruleset, Rule, Signature, Param } from '../NewRuleset/ruleset';
 import Rules from '../NewRuleset/Rules.vue';
 
 export default {
@@ -64,34 +68,22 @@ export default {
     },
   },
 
-  data() {
-    return {
-      ruleset: new Ruleset({
-        path: this.path,
-        signature: new Signature('string', [
-          new Param('foo', 'string'),
-          new Param('bar', 'int64'),
-          new Param('baz', 'float64'),
-          new Param('baz1', 'float64'),
-          new Param('baz2', 'float64'),
-          new Param('baz3', 'float64'),
-          new Param('baz4', 'float64'),
-        ]),
+  data: () => ({
+    ruleset: {},
+  }),
 
-        rules: [
-          new Rule(
-            `(and
-                (eq 1 1)
-                (eq 2 2)
-              )`,
-            'wesh',
-          ),
-          new Rule('#true', 'bien'),
-        ],
-        version: 'abc123',
-        versions: ['def123', 'ghi123', 'xyz123'],
-      }),
-    };
+  mounted() {
+    this.fetchRuleset();
+  },
+
+  methods: {
+    fetchRuleset() {
+      const uri = '/ui/i/rulesets/' + this.path;
+      return axios
+        .get(uri)
+        .then(({ data = {} }) => { this.ruleset = data; })
+        .catch(error => error);
+    },
   },
 };
 </script>
