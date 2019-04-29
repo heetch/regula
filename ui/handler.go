@@ -122,9 +122,7 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 }
 
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
-	logger := reghttp.LoggerFromRequest(r)
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
-	logger.Debug().Msg(fmt.Sprintf("PATH == %q", path))
 
 	if path == "" {
 		h.handleListRequest(w, r)
