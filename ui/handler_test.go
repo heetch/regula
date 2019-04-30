@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -254,23 +255,23 @@ func TestSingleRulesetHandler(t *testing.T) {
 
 	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset", nil)
 	require.Equal(t, http.StatusOK, rec.Code)
-	body := rec.Body.String()
-	expected := `{"path": "a/nice/ruleset",
-"version": "2",
-"signature": {
-    "params": [
-        {"name": "foo",
-         "type": "int64"},
-        {"name": "bar",
-         "type": "string"}
-    ],
-    "returnType": "string"
-},
-"rules": [
-    {"sExpr": "#true", "returnValue": "\"Hello\""}
-],
-"versions": ["1", "2"]}`
-	require.JSONEq(t, expected, body)
+	body := rec.Body.Bytes()
+	// Note: we could use require.JSONEq here, but the ordering of
+	// params and rules are not stable and JSONEq can't cope with
+	// disparate ordering.
+	srr := &singleRulesetResponse{}
+	err := json.Unmarshal(body, srr)
+	require.NoError(t, err)
+	require.Equal(t, "a/nice/ruleset", srr.Path)
+	require.Equal(t, "2", srr.Version)
+	require.Equal(t, []rule{{SExpr: "#true", ReturnValue: "\"Hello\""}}, srr.Ruleset)
+	require.Equal(t, signature{
+		Params: []param{
+			{"name": "foo", "type": "int64"},
+			{"name": "bar", "type": "string"},
+		},
+		ReturnType: "string",
+	}, srr.Signature)
 	require.Equal(t, 1, s.GetCount)
 
 }
