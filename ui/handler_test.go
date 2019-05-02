@@ -265,13 +265,9 @@ func TestSingleRulesetHandler(t *testing.T) {
 	require.Equal(t, "a/nice/ruleset", srr.Path)
 	require.Equal(t, "2", srr.Version)
 	require.Equal(t, []rule{{SExpr: "#true", ReturnValue: "\"Hello\""}}, srr.Ruleset)
-	require.Equal(t, signature{
-		Params: []param{
-			{"name": "foo", "type": "int64"},
-			{"name": "bar", "type": "string"},
-		},
-		ReturnType: "string",
-	}, srr.Signature)
+	require.Contains(t, srr.Signature.Params, param{"name": "foo", "type": "int64"})
+	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
+	require.Equal(t, "string", srr.Signature.ReturnType)
 	require.Equal(t, 1, s.GetCount)
 
 }
