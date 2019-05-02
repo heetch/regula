@@ -46,11 +46,11 @@ type ListOptions struct {
 
 // RulesetEntry holds a ruleset and its metadata.
 type RulesetEntry struct {
-	Path      string
-	Version   string
-	Ruleset   *regula.Ruleset
-	Signature *regula.Signature
-	Versions  []string
+	Path      string            `json:"path"`
+	Version   string            `json:"version"`
+	Ruleset   *regula.Ruleset   `json:"rules"`
+	Signature *regula.Signature `json:"signature"`
+	Versions  []string          `json:"versions"`
 }
 
 // RulesetEntries holds a list of ruleset entries.

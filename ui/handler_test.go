@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/mock"
 	regrule "github.com/heetch/regula/rule"
 	"github.com/heetch/regula/rule/sexpr"
@@ -218,4 +220,53 @@ func TestConvertParams(t *testing.T) {
 
 		})
 	}
+}
+
+func TestSingleRulesetHandler(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+		require.Equal(t, "a/nice/ruleset", path)
+
+		entry := &store.RulesetEntry{
+			Path:    path,
+			Version: "2",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					&regrule.Rule{
+						Expr:   regrule.BoolValue(true),
+						Result: regrule.StringValue("Hello"),
+					},
+				},
+				Type: "string",
+			}, //    *regula.Ruleset
+			Signature: &regula.Signature{
+				ParamTypes: map[string]string{
+					"foo": "int64",
+					"bar": "string",
+				},
+				ReturnType: "string",
+			}, //*regula.Signature
+			Versions: []string{"1", "2"},
+		}
+		return entry, nil
+	}
+	defer func() { s.GetFn = nil }()
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.Bytes()
+	// Note: we could use require.JSONEq here, but the ordering of
+	// params and rules are not stable and JSONEq can't cope with
+	// disparate ordering.
+	srr := &singleRulesetResponse{}
+	err := json.Unmarshal(body, srr)
+	require.NoError(t, err)
+	require.Equal(t, "a/nice/ruleset", srr.Path)
+	require.Equal(t, "2", srr.Version)
+	require.Equal(t, []rule{{SExpr: "#true", ReturnValue: "\"Hello\""}}, srr.Ruleset)
+	require.Contains(t, srr.Signature.Params, param{"name": "foo", "type": "int64"})
+	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
+	require.Equal(t, "string", srr.Signature.ReturnType)
+	require.Equal(t, 1, s.GetCount)
 }
