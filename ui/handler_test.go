@@ -269,5 +269,4 @@ func TestSingleRulesetHandler(t *testing.T) {
 	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
 	require.Equal(t, "string", srr.Signature.ReturnType)
 	require.Equal(t, 1, s.GetCount)
-
 }
