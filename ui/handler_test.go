@@ -30,12 +30,12 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
 	s := new(mock.RulesetService)
 	rec := doRequest(NewHandler(s, http.Dir("")), "POST", "/i/rulesets/",
 		strings.NewReader(`{
-    "path": "Path1",
+		- 0:00:00 :: "path": "Path1",
     "signature": {
         "params": [
             {
                 "name": "foo",
-                "type": "string"
+                "type": "string"0:00:00 
             }
         ],
         "returnType": "string"
@@ -269,4 +269,29 @@ func TestSingleRulesetHandler(t *testing.T) {
 	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
 	require.Equal(t, "string", srr.Signature.ReturnType)
 	require.Equal(t, 1, s.GetCount)
+}
+
+func TestEditRulesetHandler(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "PATCH", "/i/rulesets/a/nice/ruleset", strings.NewReader(`{
+    "path": "Path1",
+    "signature": {
+        "params": [
+            {
+                "name": "foo",
+                "type": "string"
+            }
+        ],
+        "returnType": "string"
+    },
+    "rules": [
+        {
+            "sExpr": "(= 1 1)",
+            "returnValue": "wibble"
+        }
+    ]
+}`))
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
 }

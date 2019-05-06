@@ -121,6 +121,32 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 }
 
+func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
+	if path == "" {
+		writeError(w, r, nil, http.StatusNotFound)
+		return
+	}
+
+	entry, err := h.service.Get(r.Context(), path, "")
+	if err != nil {
+		if err == store.ErrNotFound {
+			writeError(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	if entry == nil {
+		err := fmt.Errorf("No Ruleset found at path: %q", path)
+		writeError(w, r, err, http.StatusNotFound)
+		return
+	}
+	fmt.Printf("%v", entry)
+	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
+}
+
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
@@ -216,6 +242,8 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 func (h *internalHandler) rulesetsHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
+		case "PATCH":
+			h.handleEditRulesetRequest(w, r)
 		case "POST":
 			h.handleNewRulesetRequest(w, r)
 		case "GET":
