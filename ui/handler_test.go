@@ -274,24 +274,45 @@ func TestSingleRulesetHandler(t *testing.T) {
 func TestEditRulesetHandler(t *testing.T) {
 	s := new(mock.RulesetService)
 
-	rec := doRequest(NewHandler(s, http.Dir("")), "PATCH", "/i/rulesets/a/nice/ruleset", strings.NewReader(`{
-    "path": "Path1",
-    "signature": {
-        "params": [
-            {
-                "name": "foo",
-                "type": "string"
-            }
-        ],
-        "returnType": "string"
-    },
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:      path,
+			Version:   "1",
+			Ruleset:   &regula.Ruleset{},
+			Signature: &regula.Signature{},
+			Versions:  []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:      path,
+			Version:   "2",
+			Ruleset:   &regula.Ruleset{},
+			Signature: &regula.Signature{},
+			Versions:  []string{"1", "2"},
+		}
+		return entry, nil
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{
     "rules": [
         {
             "sExpr": "(= 1 1)",
             "returnValue": "wibble"
         }
     ]
-}`))
+}`)
+	rec := doRequest(handler, method, path, body)
 	require.Equal(t, http.StatusNoContent, rec.Code)
 	require.Equal(t, 1, s.PutCount)
 }

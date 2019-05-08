@@ -128,6 +128,14 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 
+	nrr := newRulesetRequest{}
+
+	err := json.NewDecoder(r.Body).Decode(&nrr)
+	if err != nil {
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
 	entry, err := h.service.Get(r.Context(), path, "")
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -138,12 +146,25 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
-	if entry == nil {
+
+	// entry.Ruleset.Rules = make([]*regrule.Rule, len(rules), len(rules))
+
+	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
+	if err != nil {
+		if err == store.ErrNotFound {
+			writeError(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	if result == nil {
 		err := fmt.Errorf("No Ruleset found at path: %q", path)
 		writeError(w, r, err, http.StatusNotFound)
 		return
 	}
-	fmt.Printf("%v", entry)
+	fmt.Printf("%v", result)
 	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
 }
 
@@ -160,6 +181,8 @@ func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Req
 
 	entry, err := h.service.Get(r.Context(), path, "")
 	if err != nil {
+		logger := reghttp.LoggerFromRequest(r)
+		logger.Debug().Msg("foo")
 		if err == store.ErrNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return

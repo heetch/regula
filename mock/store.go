@@ -25,8 +25,6 @@ type RulesetService struct {
 	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	EvalVersionCount int
 	EvalVersionFn    func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
-	PatchCount       int
-	PatchFn          func(context.Context, string) (*store.RulesetEntry, error)
 }
 
 // Get runs GetFn if provided and increments GetCount when invoked.
@@ -88,17 +86,6 @@ func (s *RulesetService) EvalVersion(ctx context.Context, path, version string, 
 
 	if s.EvalVersionFn != nil {
 		return s.EvalVersionFn(ctx, path, version, params)
-	}
-	return nil, nil
-}
-
-// Patch runs PatchFn if provided and increments PatchCount when invoked.
-//
-func (s *RulesetService) Patch(ctx context.Context, path string, ruleset *regula.Ruleset) (*store.RulesetEntry, error) {
-	s.PatchCount++
-
-	if s.PatchFn != nil {
-		return s.PatchFn(ctx, path)
 	}
 	return nil, nil
 }
