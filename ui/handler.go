@@ -147,7 +147,38 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// entry.Ruleset.Rules = make([]*regrule.Rule, len(rules), len(rules))
+	parm, err := convertParams(nrr.Signature.Params)
+	if err != nil {
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
+	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
+	for n, rule := range nrr.Rules {
+		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
+		expr, err := p.Parse(parm)
+		if err != nil {
+			writeError(w, r, newRuleError(n+1, err), http.StatusInternalServerError)
+			return
+		}
+
+		val, err := makeValue(entry.Signature.ReturnType, rule.ReturnValue)
+		if err != nil {
+			writeError(w, r, newRuleError(n+1, err), http.StatusInternalServerError)
+			return
+		}
+
+		rules[n] = &regrule.Rule{
+			Expr:   expr,
+			Result: val,
+		}
+	}
+
+	entry.Ruleset, err = makeRuleset(entry.Signature.ReturnType, rules...)
+	if err != nil {
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
 
 	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
 	if err != nil {
@@ -164,7 +195,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		writeError(w, r, err, http.StatusNotFound)
 		return
 	}
-	fmt.Printf("%v", result)
+	fmt.Printf("%+v", result)
 	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
 }
 

@@ -278,23 +278,43 @@ func TestEditRulesetHandler(t *testing.T) {
 		var entry *store.RulesetEntry
 
 		entry = &store.RulesetEntry{
-			Path:      path,
-			Version:   "1",
-			Ruleset:   &regula.Ruleset{},
-			Signature: &regula.Signature{},
-			Versions:  []string{"1"},
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: nil,
+				Type:  "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: make(map[string]string),
+			},
+			Versions: []string{"1"},
 		}
 		return entry, nil
 
 	}
 
-	s.PutFn = func(ctx context.Context, path string) (*store.RulesetEntry, error) {
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
 		var entry *store.RulesetEntry
+
+		// Assert that the rules we constructed are as expected
+		require.Equal(t, 1, len(rs.Rules))
+
+		expected, ok := regrule.Eq(
+			regrule.Int64Value(1),
+			regrule.Int64Value(1),
+		).(regrule.ComparableExpression)
+		require.Equal(t, true, ok)
+
+		result, ok := rs.Rules[0].Expr.(regrule.ComparableExpression)
+		require.Equal(t, true, ok)
+
+		require.Equal(t, true, expected.Same(result))
 
 		entry = &store.RulesetEntry{
 			Path:      path,
 			Version:   "2",
-			Ruleset:   &regula.Ruleset{},
+			Ruleset:   rs,
 			Signature: &regula.Signature{},
 			Versions:  []string{"1", "2"},
 		}

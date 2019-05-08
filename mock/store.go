@@ -20,7 +20,7 @@ type RulesetService struct {
 	WatchCount       int
 	WatchFn          func(context.Context, string, string) (*store.RulesetEvents, error)
 	PutCount         int
-	PutFn            func(context.Context, string) (*store.RulesetEntry, error)
+	PutFn            func(context.Context, string, *regula.Ruleset) (*store.RulesetEntry, error)
 	EvalCount        int
 	EvalFn           func(ctx context.Context, path string, params rule.Params) (*regula.EvalResult, error)
 	EvalVersionCount int
@@ -65,7 +65,7 @@ func (s *RulesetService) Put(ctx context.Context, path string, ruleset *regula.R
 	s.PutCount++
 
 	if s.PutFn != nil {
-		return s.PutFn(ctx, path)
+		return s.PutFn(ctx, path, ruleset)
 	}
 	return nil, nil
 }
