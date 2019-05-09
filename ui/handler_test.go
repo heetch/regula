@@ -344,3 +344,66 @@ func TestEditRulesetHandler(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code)
 	require.Equal(t, 1, s.PutCount)
 }
+
+func TestEditRulesetHandlerRemoveRule(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		// Assert that the rules we constructed are as expected
+		require.Equal(t, 0, len(rs.Rules))
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "2",
+			Ruleset: rs,
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1", "2"},
+		}
+		return entry, nil
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": []}`)
+	rec := doRequest(handler, method, path, body)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
+}
