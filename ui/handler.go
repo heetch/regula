@@ -174,6 +174,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
 }
 
+// updateEntry augments an existing entry with new Rules
 func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) error {
 	params, err := sexpr.GetParametersFromSignature(entry.Signature)
 	if err != nil {
@@ -206,6 +207,8 @@ func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) error {
 	return nil
 }
 
+// handleSingleRuleset handles requests for a single ruleset,
+// returning the ruleset itself along with version information
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
