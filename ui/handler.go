@@ -147,19 +147,16 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 
-	parms := make(sexpr.Parameters)
-	for n, t := range entry.Signature.ParamTypes {
-		parms[n], err = regrule.TypeFromName(t)
-		if err != nil {
-			writeError(w, r, err, http.StatusInternalServerError)
-			return
-		}
+	params, err := sexpr.GetParametersFromSignature(entry.Signature)
+	if err != nil {
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
 	}
 
 	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
 	for n, rule := range nrr.Rules {
 		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
-		expr, err := p.Parse(parms)
+		expr, err := p.Parse(params)
 		if err != nil {
 			writeError(w, r, newRuleError(n+1, err), http.StatusInternalServerError)
 			return
