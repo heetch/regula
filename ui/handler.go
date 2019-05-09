@@ -128,14 +128,15 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 
-	nrr := newRulesetRequest{}
+	nrr := &newRulesetRequest{}
 
-	err := json.NewDecoder(r.Body).Decode(&nrr)
+	err := json.NewDecoder(r.Body).Decode(nrr)
 	if err != nil {
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Get the existing entry
 	entry, err := h.service.Get(r.Context(), path, "")
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -147,39 +148,14 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 
-	params, err := sexpr.GetParametersFromSignature(entry.Signature)
+	// Update the entry with the new rules
+	err = updateEntry(entry, nrr)
 	if err != nil {
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
-	for n, rule := range nrr.Rules {
-		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
-		expr, err := p.Parse(params)
-		if err != nil {
-			writeError(w, r, newRuleError(n+1, err), http.StatusInternalServerError)
-			return
-		}
-
-		val, err := makeValue(entry.Signature.ReturnType, rule.ReturnValue)
-		if err != nil {
-			writeError(w, r, newRuleError(n+1, err), http.StatusInternalServerError)
-			return
-		}
-
-		rules[n] = &regrule.Rule{
-			Expr:   expr,
-			Result: val,
-		}
-	}
-
-	entry.Ruleset, err = makeRuleset(entry.Signature.ReturnType, rules...)
-	if err != nil {
-		writeError(w, r, err, http.StatusInternalServerError)
-		return
-	}
-
+	// Write the new entry back to the DB
 	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -196,6 +172,38 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
+}
+
+func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) error {
+	params, err := sexpr.GetParametersFromSignature(entry.Signature)
+	if err != nil {
+		return err
+	}
+
+	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
+	for n, rule := range nrr.Rules {
+		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
+		expr, err := p.Parse(params)
+		if err != nil {
+			return err
+		}
+
+		val, err := makeValue(entry.Signature.ReturnType, rule.ReturnValue)
+		if err != nil {
+			return err
+		}
+
+		rules[n] = &regrule.Rule{
+			Expr:   expr,
+			Result: val,
+		}
+	}
+
+	entry.Ruleset, err = makeRuleset(entry.Signature.ReturnType, rules...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
