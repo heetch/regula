@@ -286,7 +286,9 @@ func TestEditRulesetHandler(t *testing.T) {
 			},
 			Signature: &regula.Signature{
 				ReturnType: "string",
-				ParamTypes: make(map[string]string),
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
 			},
 			Versions: []string{"1"},
 		}
@@ -300,23 +302,29 @@ func TestEditRulesetHandler(t *testing.T) {
 		// Assert that the rules we constructed are as expected
 		require.Equal(t, 1, len(rs.Rules))
 
-		expected, ok := regrule.Eq(
+		expected := regrule.Eq(
 			regrule.Int64Value(1),
-			regrule.Int64Value(1),
-		).(regrule.ComparableExpression)
+			regrule.StringParam("foo"),
+		)
+		comp, ok := expected.(regrule.ComparableExpression)
 		require.Equal(t, true, ok)
 
 		result, ok := rs.Rules[0].Expr.(regrule.ComparableExpression)
 		require.Equal(t, true, ok)
 
-		require.Equal(t, true, expected.Same(result))
+		require.Equal(t, true, comp.Same(result))
 
 		entry = &store.RulesetEntry{
-			Path:      path,
-			Version:   "2",
-			Ruleset:   rs,
-			Signature: &regula.Signature{},
-			Versions:  []string{"1", "2"},
+			Path:    path,
+			Version: "2",
+			Ruleset: rs,
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1", "2"},
 		}
 		return entry, nil
 	}
@@ -327,7 +335,7 @@ func TestEditRulesetHandler(t *testing.T) {
 	body := strings.NewReader(`{
     "rules": [
         {
-            "sExpr": "(= 1 1)",
+            "sExpr": "(= 1 foo)",
             "returnValue": "wibble"
         }
     ]
