@@ -132,7 +132,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 
 	err := json.NewDecoder(r.Body).Decode(nrr)
 	if err != nil {
-		writeError(w, r, err, http.StatusInternalServerError)
+		writeError(w, r, err, http.StatusBadRequest)
 		return
 	}
 
