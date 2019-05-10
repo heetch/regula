@@ -167,7 +167,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		return
 	}
 	if result == nil {
-		err := fmt.Errorf("No Ruleset found at path: %q", path)
+		err := fmt.Errorf("no Ruleset found at path: %q", path)
 		writeError(w, r, err, http.StatusNotFound)
 		return
 	}
