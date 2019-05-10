@@ -407,3 +407,54 @@ func TestEditRulesetHandlerRemoveRule(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code)
 	require.Equal(t, 1, s.PutCount)
 }
+
+func TestEditRulesetHandlerSExprValidationError(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": [
+        {
+            "sExpr": "(= 1 1",
+            "returnValue": "wibble"
+        }
+]}`)
+	rec := doRequest(handler, method, path, body)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	expected_err := `{"error":"validation","fields":[{"path":["rules","1","sExpr"],"error":{"message":"Error in rule 1: unexpected end of file","line":1,"char":6,"absChar":6}}]}
+`
+	require.Equal(t, expected_err, rec.Body.String())
+	require.Equal(t, 0, s.PutCount)
+}
