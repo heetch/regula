@@ -171,7 +171,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 		writeError(w, r, err, http.StatusNotFound)
 		return
 	}
-	reghttp.EncodeJSON(w, r, nil, http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // updateEntry augments an existing entry with new Rules
