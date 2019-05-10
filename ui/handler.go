@@ -149,7 +149,7 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 	}
 
 	// Update the entry with the new rules
-	err, status := updateEntry(entry, nrr)
+	status, err := updateEntry(entry, nrr)
 	if err != nil {
 		writeError(w, r, err, status)
 		return
@@ -170,10 +170,10 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 }
 
 // updateEntry augments an existing entry with new Rules
-func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (error, int) {
+func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (int, error) {
 	params, err := sexpr.GetParametersFromSignature(entry.Signature)
 	if err != nil {
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 
 	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
@@ -181,12 +181,12 @@ func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (error, int)
 		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
 		expr, err := p.Parse(params)
 		if err != nil {
-			return newRuleError(n+1, err), http.StatusBadRequest
+			return http.StatusBadRequest, newRuleError(n+1, err)
 		}
 
 		val, err := makeValue(entry.Signature.ReturnType, rule.ReturnValue)
 		if err != nil {
-			return err, http.StatusInternalServerError
+			return http.StatusInternalServerError, err
 		}
 
 		rules[n] = &regrule.Rule{
@@ -197,9 +197,9 @@ func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (error, int)
 
 	entry.Ruleset, err = makeRuleset(entry.Signature.ReturnType, rules...)
 	if err != nil {
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
-	return nil, 0
+	return 0, nil
 }
 
 // handleSingleRuleset handles requests for a single ruleset,
