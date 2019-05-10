@@ -158,11 +158,6 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 	// Write the new entry back to the DB
 	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
 	if err != nil {
-		if err == store.ErrNotFound {
-			writeError(w, r, err, http.StatusNotFound)
-			return
-		}
-
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
