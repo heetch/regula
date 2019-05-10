@@ -30,12 +30,12 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
 	s := new(mock.RulesetService)
 	rec := doRequest(NewHandler(s, http.Dir("")), "POST", "/i/rulesets/",
 		strings.NewReader(`{
-		- 0:00:00 :: "path": "Path1",
+    "path": "Path1",
     "signature": {
         "params": [
             {
                 "name": "foo",
-                "type": "string"0:00:00 
+                "type": "string"
             }
         ],
         "returnType": "string"
@@ -50,7 +50,7 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	body := rec.Body.String()
 	require.JSONEq(t, `{
-    "error": "Error in rule 1: unexpected end of file",
+    "error": "validation",
     "fields": [
 	{
 	    "path": ["rules", "1", "sExpr"],
