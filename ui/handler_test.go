@@ -50,7 +50,7 @@ func TestPOSTNewRulesetWithParserError(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	body := rec.Body.String()
 	require.JSONEq(t, `{
-    "error": "Error in rule 1: unexpected end of file",
+    "error": "validation",
     "fields": [
 	{
 	    "path": ["rules", "1", "sExpr"],
@@ -269,4 +269,245 @@ func TestSingleRulesetHandler(t *testing.T) {
 	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
 	require.Equal(t, "string", srr.Signature.ReturnType)
 	require.Equal(t, 1, s.GetCount)
+}
+
+func TestEditRulesetHandler(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: nil,
+				Type:  "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		// Assert that the rules we constructed are as expected
+		require.Equal(t, 1, len(rs.Rules))
+
+		expected := regrule.Eq(
+			regrule.Int64Value(1),
+			regrule.StringParam("foo"),
+		)
+		comp, ok := expected.(regrule.ComparableExpression)
+		require.Equal(t, true, ok)
+
+		result, ok := rs.Rules[0].Expr.(regrule.ComparableExpression)
+		require.Equal(t, true, ok)
+
+		require.Equal(t, true, comp.Same(result))
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "2",
+			Ruleset: rs,
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1", "2"},
+		}
+		return entry, nil
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{
+    "rules": [
+        {
+            "sExpr": "(= 1 foo)",
+            "returnValue": "wibble"
+        }
+    ]
+}`)
+	rec := doRequest(handler, method, path, body)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
+}
+
+func TestEditRulesetHandlerRemoveRule(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		// Assert that the rules we constructed are as expected
+		require.Equal(t, 0, len(rs.Rules))
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "2",
+			Ruleset: rs,
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1", "2"},
+		}
+		return entry, nil
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": []}`)
+	rec := doRequest(handler, method, path, body)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
+}
+
+func TestEditRulesetHandlerSExprValidationError(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": [
+        {
+            "sExpr": "(= 1 1",
+            "returnValue": "wibble"
+        }
+]}`)
+	rec := doRequest(handler, method, path, body)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	expected_err := `{"error":"validation","fields":[{"path":["rules","1","sExpr"],"error":{"message":"Error in rule 1: unexpected end of file","line":1,"char":6,"absChar":6}}]}
+`
+	require.Equal(t, expected_err, rec.Body.String())
+	require.Equal(t, 0, s.PutCount)
+}
+
+func TestEditRulesetHandlerWithNoChange(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
+		// Attempting to put with no changes will result in ErrNotModified
+		return nil, store.ErrNotModified
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": [
+        {
+            "sExpr": "(or #true #false)",
+            "returnValue": "Easy tiger"
+        }
+]}`)
+	rec := doRequest(handler, method, path, body)
+	// Even though we don't actually write any changes to the DB, we should act as if all is well (after all, all is well!)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
 }

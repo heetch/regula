@@ -121,6 +121,95 @@ func (h *internalHandler) handleNewRulesetRequest(w http.ResponseWriter, r *http
 
 }
 
+func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
+	if path == "" {
+		writeError(w, r, nil, http.StatusNotFound)
+		return
+	}
+
+	nrr := &newRulesetRequest{}
+
+	err := json.NewDecoder(r.Body).Decode(nrr)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	// Get the existing entry
+	entry, err := h.service.Get(r.Context(), path, "")
+	if err != nil {
+		if err == store.ErrNotFound {
+			writeError(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
+	// Update the entry with the new rules
+	status, err := updateEntry(entry, nrr)
+	if err != nil {
+		writeError(w, r, err, status)
+		return
+	}
+
+	// Write the new entry back to the DB
+	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
+	if err != nil {
+		if err == store.ErrNotModified {
+			// This isn't actually a failure - we just
+			// don't have any changes to make.
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		writeError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	if result == nil {
+		err := fmt.Errorf("no Ruleset found at path: %q", path)
+		writeError(w, r, err, http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// updateEntry augments an existing entry with new Rules
+func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (int, error) {
+	params, err := sexpr.GetParametersFromSignature(entry.Signature)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	rules := make([]*regrule.Rule, len(nrr.Rules), len(nrr.Rules))
+	for n, rule := range nrr.Rules {
+		p := sexpr.NewParser(bytes.NewBufferString(rule.SExpr))
+		expr, err := p.Parse(params)
+		if err != nil {
+			return http.StatusBadRequest, newRuleError(n+1, err)
+		}
+
+		val, err := makeValue(entry.Signature.ReturnType, rule.ReturnValue)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+
+		rules[n] = &regrule.Rule{
+			Expr:   expr,
+			Result: val,
+		}
+	}
+
+	entry.Ruleset, err = makeRuleset(entry.Signature.ReturnType, rules...)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return 0, nil
+}
+
+// handleSingleRuleset handles requests for a single ruleset,
+// returning the ruleset itself along with version information
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
@@ -134,6 +223,8 @@ func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Req
 
 	entry, err := h.service.Get(r.Context(), path, "")
 	if err != nil {
+		logger := reghttp.LoggerFromRequest(r)
+		logger.Debug().Msg("foo")
 		if err == store.ErrNotFound {
 			writeError(w, r, err, http.StatusNotFound)
 			return
@@ -216,6 +307,8 @@ func (h *internalHandler) handleListRequest(w http.ResponseWriter, r *http.Reque
 func (h *internalHandler) rulesetsHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
+		case "PATCH":
+			h.handleEditRulesetRequest(w, r)
 		case "POST":
 			h.handleNewRulesetRequest(w, r)
 		case "GET":
@@ -360,11 +453,12 @@ func (re RuleError) MarshalJSON() ([]byte, error) {
 		Fields []field `json:"fields"`
 	}
 	errMsg := re.Error()
-	err.Error = errMsg
 	pe, ok := re.err.(sexpr.ParserError)
 	if !ok {
+		err.Error = errMsg
 		return json.Marshal(err)
 	}
+	err.Error = "validation"
 	err.Fields = []field{
 		{
 			Path: []string{"rules", strconv.Itoa(re.ruleNum), "sExpr"},

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 	"github.com/heetch/regula/rule/sexpr"
 	"github.com/stretchr/testify/require"
@@ -65,4 +66,15 @@ func TestParser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetParametersFromSignature(t *testing.T) {
+	sig := &regula.Signature{
+		ParamTypes: map[string]string{"foo": "string", "bar": "integer"},
+	}
+
+	params, err := sexpr.GetParametersFromSignature(sig)
+	require.NoError(t, err)
+	require.Equal(t, sexpr.Parameters{"foo": rule.STRING, "bar": rule.INTEGER}, params)
+
 }

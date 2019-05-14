@@ -404,7 +404,7 @@ func TestAPI(t *testing.T) {
 		call := func(t *testing.T, url string, code int, e *store.RulesetEntry, putErr error) {
 			t.Helper()
 
-			s.PutFn = func(context.Context, string) (*store.RulesetEntry, error) {
+			s.PutFn = func(context.Context, string, *regula.Ruleset) (*store.RulesetEntry, error) {
 				return e, putErr
 			}
 			defer func() { s.PutFn = nil }()

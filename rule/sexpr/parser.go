@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/heetch/regula"
 	"github.com/heetch/regula/rule"
 )
 
@@ -38,6 +39,20 @@ func makeSymbolMap() *opCodeMap {
 }
 
 type Parameters map[string]rule.Type
+
+// Extract typed parameters from a regula.Signature
+func GetParametersFromSignature(sig *regula.Signature) (Parameters, error) {
+	var err error
+	params := make(Parameters)
+
+	for n, t := range sig.ParamTypes {
+		params[n], err = rule.TypeFromName(t)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return params, nil
+}
 
 // Parser is a parser for the Regula Symbolic Expression Language.  It
 // should always be constructed by passing an io.Reader to the
