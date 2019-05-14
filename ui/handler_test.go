@@ -458,3 +458,56 @@ func TestEditRulesetHandlerSExprValidationError(t *testing.T) {
 	require.Equal(t, expected_err, rec.Body.String())
 	require.Equal(t, 0, s.PutCount)
 }
+
+func TestEditRulesetHandlerWithNoChange(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, version string) (*store.RulesetEntry, error) {
+		var entry *store.RulesetEntry
+
+		entry = &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					{
+						Expr: regrule.Or(
+							regrule.BoolValue(true),
+							regrule.BoolValue(false),
+						),
+						Result: regrule.StringValue("Easy tiger"),
+					},
+				},
+				Type: "string",
+			},
+			Signature: &regula.Signature{
+				ReturnType: "string",
+				ParamTypes: map[string]string{
+					"foo": "string",
+				},
+			},
+			Versions: []string{"1"},
+		}
+		return entry, nil
+
+	}
+
+	s.PutFn = func(ctx context.Context, path string, rs *regula.Ruleset) (*store.RulesetEntry, error) {
+		// Attempting to put with no changes will result in ErrNotModified
+		return nil, store.ErrNotModified
+	}
+
+	handler := NewHandler(s, http.Dir(""))
+	method := "PATCH"
+	path := "/i/rulesets/a/nice/ruleset"
+	body := strings.NewReader(`{"rules": [
+        {
+            "sExpr": "(or #true #false)",
+            "returnValue": "Easy tiger"
+        }
+]}`)
+	rec := doRequest(handler, method, path, body)
+	// Even though we don't actually write any changes to the DB, we should act as if all is well (after all, all is well!)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, 1, s.PutCount)
+}

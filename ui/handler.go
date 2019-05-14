@@ -158,6 +158,12 @@ func (h *internalHandler) handleEditRulesetRequest(w http.ResponseWriter, r *htt
 	// Write the new entry back to the DB
 	result, err := h.service.Put(r.Context(), path, entry.Ruleset)
 	if err != nil {
+		if err == store.ErrNotModified {
+			// This isn't actually a failure - we just
+			// don't have any changes to make.
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
