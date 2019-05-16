@@ -16,86 +16,50 @@ func TestEngine(t *testing.T) {
 
 	buf := regula.NewRulesetBuffer()
 
-	buf.Set("match-string-a", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v1")),
-				},
-			},
-			{
-				Version: "2",
-				Rules: []*rule.Rule{
-					rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v2")),
-				},
-			},
+	buf.Add("match-string-a", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v1")),
 		},
 	})
-
-	buf.Set("match-string-b", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.StringValue("matched b")),
-				},
-			}},
+	buf.Add("match-string-a", "2", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringParam("foo"), rule.StringValue("bar")), rule.StringValue("matched a v2")),
+		},
 	})
-
-	buf.Set("type-mismatch", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
-				},
-			}},
+	buf.Add("match-string-b", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("matched b")),
+		},
 	})
-	buf.Set("no-match", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("matched d")),
-				},
-			}},
+	buf.Add("type-mismatch", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "int", Data: "5"}),
+		},
 	})
-	buf.Set("match-bool", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
-				},
-			}},
+	buf.Add("no-match", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.Eq(rule.StringValue("foo"), rule.StringValue("bar")), rule.StringValue("matched d")),
+		},
 	})
-	buf.Set("match-int64", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
-				},
-			}},
+	buf.Add("match-bool", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "bool", Data: "true"}),
+		},
 	})
-	buf.Set("match-float64", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
-				},
-			}},
+	buf.Add("match-int64", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "int64", Data: "-10"}),
+		},
 	})
-	buf.Set("match-duration", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "1",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.StringValue("3s")),
-				},
-			}},
+	buf.Add("match-float64", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), &rule.Value{Type: "float64", Data: "-3.14"}),
+		},
+	})
+	buf.Add("match-duration", "1", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("3s")),
+		},
 	})
 
 	e := regula.NewEngine(buf)
@@ -132,10 +96,10 @@ func TestEngine(t *testing.T) {
 		require.Equal(t, -3.14, f)
 
 		_, err = e.GetString(ctx, "match-bool", nil)
-		require.Error(t, err)
+		require.NoError(t, err)
 
 		_, err = e.GetString(ctx, "type-mismatch", nil)
-		require.Error(t, err)
+		require.NoError(t, err)
 
 		_, err = e.GetString(ctx, "no-match", nil)
 		require.Equal(t, errors.ErrNoMatch, err)

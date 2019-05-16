@@ -54,69 +54,39 @@ func init() {
 	buf := regula.NewRulesetBuffer()
 	ev = buf
 
-	buf.Set("/a/b/c", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.StringValue("some-string")),
-				},
-			},
+	buf.Add("/a/b/c", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
-	buf.Set("/path/to/string/key", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.StringValue("some-string")),
-				},
-			},
+	buf.Add("/path/to/string/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("some-string")),
 		},
 	})
 
-	buf.Set("/path/to/int64/key", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.Int64Value(10)),
-				},
-			},
+	buf.Add("/path/to/int64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.Int64Value(10)),
 		},
 	})
 
-	buf.Set("/path/to/float64/key", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.Float64Value(3.14)),
-				},
-			},
+	buf.Add("/path/to/float64/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.Float64Value(3.14)),
 		},
 	})
 
-	buf.Set("/path/to/bool/key", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.BoolValue(true)),
-				},
-			},
+	buf.Add("/path/to/bool/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.BoolValue(true)),
 		},
 	})
 
-	buf.Set("/path/to/duration/key", &regula.Ruleset{
-		Versions: []regula.RulesetVersion{
-			{
-				Version: "5b4cbdf307bb5346a6c42ac3",
-				Rules: []*rule.Rule{
-					rule.New(rule.True(), rule.StringValue("3s")),
-				},
-			},
+	buf.Add("/path/to/duration/key", "5b4cbdf307bb5346a6c42ac3", &regula.Ruleset{
+		Rules: []*rule.Rule{
+			rule.New(rule.True(), rule.StringValue("3s")),
 		},
 	})
 }
@@ -131,6 +101,8 @@ func ExampleEngine() {
 
 	if err != nil {
 		switch err {
+		case errors.ErrRulesetNotFound:
+			// when the ruleset doesn't exist
 		case errors.ErrNoMatch:
 			// when the ruleset doesn't match
 		default:
