@@ -11,8 +11,6 @@ import (
 )
 
 func TestEval(t *testing.T) {
-	t.Parallel()
-
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
@@ -28,7 +26,7 @@ func TestEval(t *testing.T) {
 	)
 
 	ruleset := createRuleset(t, s, "a", r)
-	version := ruleset.LatestVersion().Version
+	version := ruleset.Version
 
 	t.Run("OK", func(t *testing.T) {
 		res, err := s.Eval(context.Background(), "a", version, regula.Params{

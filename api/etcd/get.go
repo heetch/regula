@@ -19,7 +19,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 
 	ops := []clientv3.Op{
 		clientv3.OpGet(s.signaturesPath(path)),
-		clientv3.OpGet(s.rulesPath(path, "")+versionSeparator, clientv3.WithKeysOnly()),
+		clientv3.OpGet(s.rulesPath(path, "")+versionSeparator, clientv3.WithPrefix(), clientv3.WithKeysOnly()),
 	}
 
 	if version == "" {
@@ -55,11 +55,16 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 		_, versions[i] = s.pathVersionFromKey(string(kv.Key))
 	}
 
-	// decode rules
+	// decode rules, might not be filled if only the signature was created
 	var rules pb.Rules
-	err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &rules)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal rules")
+	if resp.Responses[2].GetResponseRange().Count > 0 {
+		err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &rules)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal rules")
+		}
+	} else if version != "" {
+		// if no rules are returned but a version is specified, it means that the version doesn't exist
+		return nil, api.ErrRulesetNotFound
 	}
 
 	// if the version wasn't specified, get the latest returned

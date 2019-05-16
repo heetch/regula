@@ -16,8 +16,6 @@ import (
 )
 
 func TestPut(t *testing.T) {
-	t.Parallel()
-
 	s, cleanup := newEtcdRulesetService(t)
 	defer cleanup()
 
@@ -53,7 +51,7 @@ func TestPut(t *testing.T) {
 		// create new version with same ruleset
 		newVersion, err := s.Put(context.Background(), path, rules)
 		require.Equal(t, api.ErrRulesetNotModified, err)
-		require.Equal(t, version, newVersion)
+		require.Empty(t, newVersion)
 
 		// create new version with different rules
 		rules = []*rule.Rule{rule.New(rule.True(), rule.BoolValue(false))}
