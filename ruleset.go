@@ -8,69 +8,31 @@ import (
 
 // A Ruleset is a list of rules and their metadata.
 type Ruleset struct {
-	Path      string           `json:"path"`
-	Signature *Signature       `json:"signature,omitempty"`
-	Versions  []RulesetVersion `json:"versions,omitempty"`
+	Path      string       `json:"path"`
+	Version   string       `json:"version,omitempty"`
+	Rules     []*rule.Rule `json:"rules,omitempty"`
+	Signature *Signature   `json:"signature,omitempty"`
+	Versions  []string     `json:"versions,omitempty"`
 }
 
 // NewRuleset creates a ruleset.
 func NewRuleset(rules ...*rule.Rule) *Ruleset {
-	var rs Ruleset
-
-	rs.Versions = append(rs.Versions, RulesetVersion{
-		Version: "latest",
-		Rules:   rules,
-	})
-
-	return &rs
+	return &Ruleset{
+		Rules: rules,
+	}
 }
 
-// Eval evaluates the latest ruleset version, evaluating every rule until one matches.
+// Eval evaluates the ruleset, evaluating every rule until one matches.
 // It returns rule.ErrNoMatch if no rule matches the given context.
 func (r *Ruleset) Eval(params rule.Params) (*rule.Value, error) {
-	if len(r.Versions) == 0 {
-		return nil, rerrors.ErrNoMatch
-	}
-
-	for _, rl := range r.LatestVersion().Rules {
+	for _, rl := range r.Rules {
 		res, err := rl.Eval(params)
 		if err != rerrors.ErrNoMatch {
 			return res, err
 		}
 	}
 
-	return nil, rerrors.ErrRulesetVersionNotFound
-}
-
-// EvalVersion evaluates a version of the ruleset, evaluating every rule until one matches.
-// It returns rule.ErrNoMatch if no rule matches the given context.
-func (r *Ruleset) EvalVersion(version string, params rule.Params) (*rule.Value, error) {
-	if len(r.Versions) == 0 {
-		return nil, rerrors.ErrNoMatch
-	}
-
-	for _, rv := range r.Versions {
-		if rv.Version == version {
-			for _, rl := range rv.Rules {
-				res, err := rl.Eval(params)
-				if err != rerrors.ErrNoMatch {
-					return res, err
-				}
-			}
-		}
-	}
-
 	return nil, rerrors.ErrNoMatch
-}
-
-// LatestVersion returns the latest RuleserVersion stored in the ruleset
-// or nil if there are none.
-func (r *Ruleset) LatestVersion() *RulesetVersion {
-	if len(r.Versions) == 0 {
-		return nil
-	}
-
-	return &r.Versions[len(r.Versions)-1]
 }
 
 // Signature represents the signature of a ruleset.
@@ -96,10 +58,4 @@ func (s *Signature) Validate() error {
 	}
 
 	return nil
-}
-
-// A RulesetVersion describes a version of a list of rules.
-type RulesetVersion struct {
-	Version string
-	Rules   []*rule.Rule
 }
