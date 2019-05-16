@@ -6,24 +6,17 @@ import (
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/gogo/protobuf/proto"
-	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
-	pb "github.com/heetch/regula/api/etcd/proto"
 	"github.com/pkg/errors"
 )
 
-// List returns rulesets whose path starts by the given prefix.
+// List returns a list of ruleset paths.
 // The listing is paginated and can be customised using the ListOptions type.
-// It runs two requests to etcd, one for fetching the signatures and one for fetching the related rules versions.
-func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
-	opts := make([]clientv3.OpOption, 0, 3)
+func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Rulesets, error) {
+	var opts []clientv3.OpOption
 
-	if opt == nil {
-		opt = new(api.ListOptions)
-	}
-
-	var key string
+	// only fetch keys
+	opts = append(opts, clientv3.WithKeysOnly())
 
 	// if a cursor is specified, decode the key from it and start the request from that key
 	if opt.Cursor != "" {
@@ -32,11 +25,8 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 			return nil, api.ErrInvalidCursor
 		}
 
-		key = string(lastPath)
-
-		opts = append(opts, clientv3.WithRange(clientv3.GetPrefixRangeEnd(s.rulesPath(prefix, ""))))
+		opts = append(opts, clientv3.WithRange(clientv3.GetPrefixRangeEnd(s.signaturesPath(string(lastPath)))))
 	} else {
-		key = prefix
 		opts = append(opts, clientv3.WithPrefix())
 	}
 
@@ -44,93 +34,27 @@ func (s *RulesetService) List(ctx context.Context, prefix string, opt *api.ListO
 	opts = append(opts, clientv3.WithLimit(int64(opt.GetLimit())))
 
 	// fetch signatures
-	resp, err := s.Client.KV.Get(ctx, s.signaturesPath(key), opts...)
+	resp, err := s.Client.KV.Get(ctx, s.signaturesPath(""), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch signatures")
 	}
 
-	// if a prefix is provided it must always return results
-	// otherwise it doesn't exist.
-	if resp.Count == 0 && prefix != "" {
-		return nil, api.ErrRulesetNotFound
-	}
-
-	// decode signatures into rulesets
-	rulesets, err := s.decodeSignatures(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	// if the user also wants the associated rules, we add an operation for every signature.
-	if opt.LatestVersionsLimit > 0 {
-		ops := make([]clientv3.Op, len(resp.Kvs))
-		for i := range resp.Kvs {
-			ops[i] = clientv3.OpGet(s.rulesPath(rulesets.Rulesets[i].Path, ""), clientv3.WithLimit(int64(opt.LatestVersionsLimit)))
-		}
-
-		err = s.fetchRulesVersions(ctx, rulesets, ops)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// if there are still rulesets left, generate a new cursor
-	if len(rulesets.Rulesets) == opt.GetLimit() && resp.More {
-		lastRuleset := rulesets.Rulesets[len(rulesets.Rulesets)-1]
-
-		// we want to start immediately after the last key
-		rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastRuleset.Path + "\x00"))
-	}
-
-	return rulesets, nil
-}
-
-func (s *RulesetService) decodeSignatures(resp *clientv3.GetResponse) (*api.Rulesets, error) {
 	rulesets := api.Rulesets{
 		Revision: strconv.FormatInt(resp.Header.Revision, 10),
-		Rulesets: make([]regula.Ruleset, len(resp.Kvs)),
 	}
 
-	for i, pair := range resp.Kvs {
-		var sig pb.Signature
+	rulesets.Paths = make([]string, 0, len(resp.Kvs))
+	for _, pair := range resp.Kvs {
+		rulesets.Paths = append(rulesets.Paths, string(pair.Key))
+	}
 
-		err := proto.Unmarshal(pair.Value, &sig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal signature")
-		}
+	// if there are still paths left, generate a new cursor
+	if len(rulesets.Paths) == opt.GetLimit() && resp.More {
+		lastPath := rulesets.Paths[len(rulesets.Paths)-1]
 
-		rulesets.Rulesets[i].Path = s.pathFromKey("signatures", string(pair.Key))
-		rulesets.Rulesets[i].Signature = signatureFromProtobuf(&sig)
+		// we want to start immediately after the last key
+		rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastPath + "\x00"))
 	}
 
 	return &rulesets, nil
-}
-
-func (s *RulesetService) fetchRulesVersions(ctx context.Context, rulesets *api.Rulesets, ops []clientv3.Op) error {
-	// running all the requests within a single transaction so only one network round trip is performed.
-	rulesResp, err := s.Client.KV.Txn(ctx).Then(ops...).Commit()
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch rules")
-	}
-
-	for i, rop := range rulesResp.Responses {
-		respRange := rop.GetResponseRange()
-		if respRange.Count == 0 {
-			continue
-		}
-
-		rulesets.Rulesets[i].Versions = make([]regula.RulesetVersion, int(respRange.Count))
-		for j, kv := range respRange.Kvs {
-			var pbr pb.Rules
-			err = proto.Unmarshal(kv.Value, &pbr)
-			if err != nil {
-				return errors.Wrap(err, "failed to unmarshal rules")
-			}
-
-			_, rulesets.Rulesets[i].Versions[j].Version = s.pathVersionFromKey(string(kv.Key))
-			rulesets.Rulesets[i].Versions[j].Rules = rulesFromProtobuf(&pbr)
-		}
-	}
-
-	return nil
 }
