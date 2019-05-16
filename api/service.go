@@ -26,9 +26,9 @@ type RulesetService interface {
 	Put(ctx context.Context, path string, rules []*rule.Rule) (string, error)
 	// Get returns a ruleset alongside its metadata.
 	Get(ctx context.Context, path string) (*regula.Ruleset, error)
-	// List returns rulesets whose path starts by the given prefix.
+	// List returns the list of all rulesets paths.
 	// The listing is paginated and can be customised using the ListOptions type.
-	List(ctx context.Context, prefix string, opt *ListOptions) (*Rulesets, error)
+	List(ctx context.Context, opt ListOptions) (*Rulesets, error)
 	// Watch a prefix for changes and return a list of events.
 	Watch(ctx context.Context, prefix string, revision string) (*RulesetEvents, error)
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
@@ -53,9 +53,9 @@ func (l *ListOptions) GetLimit() int {
 
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
-	Rulesets []regula.Ruleset `json:"rulesets"`
-	Revision string           `json:"revision"`         // revision when the request was applied
-	Cursor   string           `json:"cursor,omitempty"` // cursor of the next page, if any
+	Paths    []string `json:"paths"`
+	Revision string   `json:"revision"`         // revision when the request was applied
+	Cursor   string   `json:"cursor,omitempty"` // cursor of the next page, if any
 }
 
 // List of possible events executed against a ruleset.
