@@ -5,18 +5,20 @@ package cli
 
 import (
 	"context"
+	stdflag "flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
-	"github.com/heetch/confita/backend/flags"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -39,22 +41,48 @@ type Config struct {
 }
 
 // LoadConfig loads the configuration from the environment or command line flags.
-func LoadConfig() (*Config, error) {
+// The args hold the command line arguments, as found in os.Argv.
+// It returns flag.ErrHelp if the -help flag is specified on the command line.
+func LoadConfig(args []string) (*Config, error) {
 	var cfg Config
-	cfg.LogLevel = zerolog.DebugLevel.String()
+	flag := stdflag.NewFlagSet("", stdflag.ContinueOnError)
+	flag.StringVar(&cfg.Etcd.Namespace, "etcd-namespace", "", "etcd namespace to use")
+	flag.StringVar(&cfg.LogLevel, "log-level", zerolog.DebugLevel.String(), "debug level")
 	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
-	cfg.Etcd.DialTimeout = 5 * time.Second
-	cfg.Server.Address = "0.0.0.0:5331"
-	cfg.Server.Timeout = 5 * time.Second
-	cfg.Server.WatchTimeout = 30 * time.Second
-	cfg.Server.DistPath = "dist"
+	flag.Var(commaSeparatedFlag{&cfg.Etcd.Endpoints}, "etcd-endpoints", "comma separated etcd endpoints")
+	flag.StringVar(&cfg.Server.Address, "addr", "0.0.0.0:5331", "server address to listen on")
+	flag.DurationVar(&cfg.Server.Timeout, "server-timeout", 5*time.Second, "server timeout (TODO)")
+	flag.DurationVar(&cfg.Server.WatchTimeout, "server-watch-timeout", 30*time.Second, "server watch timeout (TODO)")
 
-	err := confita.NewLoader(env.NewBackend(), flags.NewBackend()).Load(context.Background(), &cfg)
+	err := confita.NewLoader(env.NewBackend()).Load(context.Background(), &cfg)
 	if err != nil {
 		return nil, err
 	}
-
+	if err := flag.Parse(args[1:]); err != nil {
+		return nil, err
+	}
+	if cfg.Etcd.Namespace == "" {
+		return nil, fmt.Errorf("etcdnamespace is required (use the -etc-namespace flag to set it)")
+	}
 	return &cfg, nil
+}
+
+type commaSeparatedFlag struct {
+	parts *[]string
+}
+
+func (f commaSeparatedFlag) Set(s string) error {
+	*f.parts = strings.Split(s, ",")
+	return nil
+}
+
+func (f commaSeparatedFlag) String() string {
+	if f.parts == nil {
+		// Note: the flag package can make a new zero value
+		// which is how it's possible for parts to be nil.
+		return ""
+	}
+	return strings.Join(*f.parts, ",")
 }
 
 // CreateLogger returns a configured logger.
