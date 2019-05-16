@@ -25,7 +25,7 @@ type RulesetService interface {
 	// Put is used to add a new version of the rules to a ruleset.
 	Put(ctx context.Context, path string, rules []*rule.Rule) (string, error)
 	// Get returns a ruleset alongside its metadata.
-	Get(ctx context.Context, path string) (*regula.Ruleset, error)
+	Get(ctx context.Context, path, version string) (*regula.Ruleset, error)
 	// List returns the list of all rulesets paths.
 	// The listing is paginated and can be customised using the ListOptions type.
 	List(ctx context.Context, opt ListOptions) (*Rulesets, error)
