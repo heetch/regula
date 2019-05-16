@@ -150,34 +150,53 @@ type EvalResult struct {
 // It is safe for concurrent use.
 type RulesetBuffer struct {
 	rw       sync.RWMutex
-	rulesets map[string]*Ruleset
+	rulesets map[string][]*rulesetInfo
 }
 
 // NewRulesetBuffer creates a ready to use RulesetBuffer.
 func NewRulesetBuffer() *RulesetBuffer {
 	return &RulesetBuffer{
-		rulesets: make(map[string]*Ruleset),
+		rulesets: make(map[string][]*rulesetInfo),
 	}
 }
 
-// Set the given ruleset to a list for a specific path.
-func (b *RulesetBuffer) Set(path string, r *Ruleset) {
+type rulesetInfo struct {
+	path, version string
+	r             *Ruleset
+}
+
+// Add adds the given ruleset version to a list for a specific path.
+// The last added ruleset is treated as the latest version.
+func (b *RulesetBuffer) Add(path, version string, r *Ruleset) {
 	b.rw.Lock()
-	b.rulesets[path] = r
+	b.rulesets[path] = append(b.rulesets[path], &rulesetInfo{path, version, r})
 	b.rw.Unlock()
 }
 
-// Get a ruleset associated with path.
-func (b *RulesetBuffer) Get(path string) (*Ruleset, error) {
+// Latest returns the latest version of a ruleset.
+func (b *RulesetBuffer) Latest(path string) (*Ruleset, string, error) {
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
-	r, ok := b.rulesets[path]
-	if !ok {
-		return nil, errors.New("ruleset not found")
+	l, ok := b.rulesets[path]
+	if !ok || len(l) == 0 {
+		return nil, "", rerrors.ErrRulesetNotFound
 	}
 
-	return r, nil
+	return l[len(l)-1].r, l[len(l)-1].version, nil
+}
+
+// GetVersion returns a ruleset associated with the given path and version.
+func (b *RulesetBuffer) GetVersion(path, version string) (*Ruleset, error) {
+	b.rw.RLock()
+	defer b.rw.RUnlock()
+
+	ri, err := b.getVersion(path, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return ri.r, nil
 }
 
 // Eval evaluates the selected ruleset version, or the latest one if the version is empty, and returns errors.ErrRulesetNotFound if not found.
@@ -185,29 +204,45 @@ func (b *RulesetBuffer) Eval(ctx context.Context, path, version string, params r
 	b.rw.RLock()
 	defer b.rw.RUnlock()
 
-	r, ok := b.rulesets[path]
-	if !ok || len(r.Versions) == 0 {
-		return nil, rerrors.ErrRulesetVersionNotFound
-	}
-
-	var (
-		v   *rule.Value
-		err error
-	)
+	var ri *rulesetInfo
+	var err error
 
 	if version == "" {
-		version = r.Versions[len(r.Versions)-1].Version
-		v, err = r.Eval(params)
+		l, ok := b.rulesets[path]
+		if !ok || len(l) == 0 {
+			return nil, rerrors.ErrRulesetNotFound
+		}
+
+		ri = l[len(l)-1]
 	} else {
-		v, err = r.EvalVersion(version, params)
+		ri, err = b.getVersion(path, version)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	v, err := ri.r.Eval(params)
 	if err != nil {
 		return nil, err
 	}
 
 	return &EvalResult{
 		Value:   v,
-		Version: version,
+		Version: ri.version,
 	}, nil
+}
+
+func (b *RulesetBuffer) getVersion(path, version string) (*rulesetInfo, error) {
+	l, ok := b.rulesets[path]
+	if !ok || len(l) == 0 {
+		return nil, rerrors.ErrRulesetNotFound
+	}
+
+	for _, ri := range l {
+		if ri.version == version {
+			return ri, nil
+		}
+	}
+
+	return nil, rerrors.ErrRulesetNotFound
 }
