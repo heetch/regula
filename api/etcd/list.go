@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
@@ -15,6 +16,8 @@ import (
 func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Rulesets, error) {
 	var opts []clientv3.OpOption
 
+	var key string
+
 	// only fetch keys
 	opts = append(opts, clientv3.WithKeysOnly())
 
@@ -25,8 +28,11 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 			return nil, api.ErrInvalidCursor
 		}
 
-		opts = append(opts, clientv3.WithRange(clientv3.GetPrefixRangeEnd(s.signaturesPath(string(lastPath)))))
+		key = s.signaturesPath(string(lastPath))
+
+		opts = append(opts, clientv3.WithRange(clientv3.GetPrefixRangeEnd(s.signaturesPath(""))))
 	} else {
+		key = s.signaturesPath("")
 		opts = append(opts, clientv3.WithPrefix())
 	}
 
@@ -34,7 +40,7 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 	opts = append(opts, clientv3.WithLimit(int64(opt.GetLimit())))
 
 	// fetch signatures
-	resp, err := s.Client.KV.Get(ctx, s.signaturesPath(""), opts...)
+	resp, err := s.Client.KV.Get(ctx, key, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch signatures")
 	}
@@ -45,13 +51,13 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 
 	rulesets.Paths = make([]string, 0, len(resp.Kvs))
 	for _, pair := range resp.Kvs {
-		rulesets.Paths = append(rulesets.Paths, string(pair.Key))
+		rulesets.Paths = append(rulesets.Paths, s.pathFromKey("signatures", string(pair.Key)))
 	}
 
 	// if there are still paths left, generate a new cursor
 	if len(rulesets.Paths) == opt.GetLimit() && resp.More {
 		lastPath := rulesets.Paths[len(rulesets.Paths)-1]
-
+		fmt.Println("lastPath", lastPath)
 		// we want to start immediately after the last key
 		rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastPath + "\x00"))
 	}

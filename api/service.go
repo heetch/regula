@@ -37,9 +37,8 @@ type RulesetService interface {
 
 // ListOptions is used to customize the List output.
 type ListOptions struct {
-	Limit               int    // If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
-	Cursor              string // pagination cursor
-	LatestVersionsLimit int    // limit the number of versions to return.
+	Limit  int    // If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
+	Cursor string // pagination cursor
 }
 
 // GetLimit returns a limit that is withing the 0 - 100 boundries.
