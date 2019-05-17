@@ -39,10 +39,10 @@ type Config struct {
 func LoadConfig(args []string) (*Config, error) {
 	var cfg Config
 	flag := stdflag.NewFlagSet("", stdflag.ContinueOnError)
-	flag.StringVar(&cfg.Etcd.Namespace, "etcd-namespace", "", "etc namespace to use")
+	flag.StringVar(&cfg.Etcd.Namespace, "etcd-namespace", "", "etcd namespace to use")
 	flag.StringVar(&cfg.LogLevel, "log-level", zerolog.DebugLevel.String(), "debug level")
 	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
-	flag.Var(commaSeparatedFlag{&cfg.Etcd.Endpoints}, "etcd-endpoints", "comma separated etc endpoints")
+	flag.Var(commaSeparatedFlag{&cfg.Etcd.Endpoints}, "etcd-endpoints", "comma separated etcd endpoints")
 	flag.StringVar(&cfg.Server.Address, "addr", "0.0.0.0:5331", "server address to listen on")
 	flag.DurationVar(&cfg.Server.Timeout, "server-timeout", 5*time.Second, "server timeout (TODO)")
 	flag.DurationVar(&cfg.Server.WatchTimeout, "server-watch-timeout", 30*time.Second, "server watch timeout (TODO)")
@@ -51,7 +51,7 @@ func LoadConfig(args []string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := flag.Parse(os.Args[1:]); err != nil {
+	if err := flag.Parse(args[1:]); err != nil {
 		return nil, err
 	}
 	if cfg.Etcd.Namespace == "" {
