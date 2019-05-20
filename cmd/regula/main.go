@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -18,9 +19,13 @@ import (
 )
 
 func main() {
-	cfg, err := cli.LoadConfig()
+	cfg, err := cli.LoadConfig(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		if err == flag.ErrHelp {
+			os.Exit(0)
+		}
+		fmt.Fprintf(os.Stderr, "regula: %v\n", err)
+		os.Exit(2)
 	}
 
 	logger := cli.CreateLogger(cfg.LogLevel, os.Stderr)
