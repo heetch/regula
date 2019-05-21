@@ -305,61 +305,47 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Put", func(t *testing.T) {
-		e1 := regula.Ruleset{
-			Path:    "a",
-			Version: "version",
-			Rules:   r1,
+		tests := []struct {
+			name    string
+			path    string
+			status  int
+			version string
+			err     error
+		}{
+			{"OK", "/rulesets/a", http.StatusOK, "version", nil},
+			{"NotModified", "/rulesets/a", http.StatusOK, "version", api.ErrRulesetNotModified},
+			{"EmptyPath", "/rulesets/", http.StatusNotFound, "version", nil},
+			{"StoreError", "/rulesets/a", http.StatusInternalServerError, "", errors.New("some error")},
+			{"Bad ruleset name", "/rulesets/a", http.StatusBadRequest, "", new(api.ValidationError)},
+			{"Bad param name", "/rulesets/a", http.StatusBadRequest, "", new(api.ValidationError)},
 		}
 
-		call := func(t *testing.T, url string, code int, e *regula.Ruleset, putErr error) {
-			t.Helper()
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				s.PutFn = func(context.Context, string, []*rule.Rule) (string, error) {
+					return test.version, test.err
+				}
+				defer func() { s.PutFn = nil }()
 
-			s.PutFn = func(context.Context, string, []*rule.Rule) (*regula.Ruleset, error) {
-				return e, putErr
-			}
-			defer func() { s.PutFn = nil }()
-
-			var buf bytes.Buffer
-			err := json.NewEncoder(&buf).Encode(r1)
-			require.NoError(t, err)
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("PUT", url, &buf)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var rs regula.Ruleset
-				err := json.NewDecoder(w.Body).Decode(&rs)
+				var buf bytes.Buffer
+				err := json.NewEncoder(&buf).Encode(r1)
 				require.NoError(t, err)
-				require.EqualValues(t, *e, rs)
-			}
+
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("PUT", test.path, &buf)
+				h.ServeHTTP(w, r)
+
+				require.Equal(t, test.status, w.Code)
+
+				if test.status == http.StatusOK {
+					var rs regula.Ruleset
+					err := json.NewDecoder(w.Body).Decode(&rs)
+					require.NoError(t, err)
+					require.EqualValues(t, test.version, rs)
+				}
+			})
+
 		}
-
-		t.Run("OK", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
-		})
-
-		t.Run("NotModified", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, api.ErrRulesetNotModified)
-		})
-
-		t.Run("EmptyPath", func(t *testing.T) {
-			call(t, "/rulesets/", http.StatusNotFound, &e1, nil)
-		})
-
-		t.Run("StoreError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
-		})
-
-		t.Run("Bad ruleset name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
-
-		t.Run("Bad param name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
 	})
 
 	t.Run("Create", func(t *testing.T) {
