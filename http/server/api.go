@@ -143,7 +143,7 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, (*api.Rulesets)(rulesets), http.StatusOK)
+	reghttp.EncodeJSON(w, r, rulesets, http.StatusOK)
 }
 
 func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
