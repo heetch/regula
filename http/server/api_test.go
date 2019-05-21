@@ -163,36 +163,15 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Eval", func(t *testing.T) {
+		result := regula.EvalResult{Value: rule.StringValue("success"), Version: "123"}
 
-		call := func(t *testing.T, url string, code int, result *regula.EvalResult, testParamsFn func(params rule.Params)) {
-			t.Helper()
-			resetStore(s)
-
-			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-				testParamsFn(params)
-				return result, nil
-			}
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", url, nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var res regula.EvalResult
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				require.EqualValues(t, result, &res)
-			}
-		}
-
-		t.Run("OK", func(t *testing.T) {
-			exp := regula.EvalResult{
-				Value: rule.StringValue("success"),
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
+		tests := []struct {
+			name         string
+			path         string
+			status       int
+			mockFn func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+		}{
+			{"OK", "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
@@ -202,43 +181,43 @@ func TestAPI(t *testing.T) {
 				b, err := params.GetBool("boolean")
 				require.NoError(t, err)
 				require.True(t, b)
-			})
-			require.Equal(t, 1, s.EvalCount)
-		})
 
-		t.Run("OK With version", func(t *testing.T) {
-			exp := regula.EvalResult{
-				Value:   rule.StringValue("success"),
-				Version: "123",
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
+				return &result, nil
+			}},
+			{"OK With version", "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				s, err := params.GetString("str")
 				require.NoError(t, err)
 				require.Equal(t, "str", s)
-			})
-			require.Equal(t, 1, s.EvalCount)
-		})
-
-		t.Run("NOK - Ruleset not found", func(t *testing.T) {
-			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+				return &result, nil
+			}},
+			{"NOK - Ruleset not found", "/rulesets/path/to/my/ruleset?eval&foo=10", http.StatusNotFound, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				return nil, rerrors.ErrRulesetNotFound
-			}
+			}}
+		}
 
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
-			h.ServeHTTP(w, r)
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				resetStore(s)
 
-			exp := reghttp.Error{
-				Err: "the path 'path/to/my/ruleset' doesn't exist",
-			}
+				s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+					test.testParamsFn(params)
+					return test.result, nil
+				}
 
-			var resp reghttp.Error
-			err := json.Unmarshal(w.Body.Bytes(), &resp)
-			require.NoError(t, err)
-			require.Equal(t, http.StatusNotFound, w.Code)
-			require.Equal(t, exp, resp)
-		})
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("GET", test.path, nil)
+				h.ServeHTTP(w, r)
+
+				require.Equal(t, test.status, w.Code)
+
+				if test.status == http.StatusOK {
+					var res regula.EvalResult
+					err := json.NewDecoder(w.Body).Decode(&res)
+					require.NoError(t, err)
+					require.EqualValues(t, test.result, &res)
+				}
+			})
+		}
 
 		t.Run("NOK - errors", func(t *testing.T) {
 			errs := []error{
