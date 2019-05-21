@@ -279,8 +279,6 @@ func TestAPI(t *testing.T) {
 		}
 
 		t.Run("WithRevision", func(t *testing.T) {
-			t.Helper()
-
 			s.WatchFn = func(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
 				require.Equal(t, "a", prefix)
 				require.Equal(t, "somerev", revision)
@@ -351,48 +349,35 @@ func TestAPI(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
 		sig := regula.Signature{ReturnType: "int64"}
 
-		e1 := regula.Ruleset{
-			Path:      "a",
-			Signature: &sig,
+		tests := []struct {
+			name   string
+			path   string
+			status int
+			err    error
+		}{
+			{"OK", "/rulesets/a", http.StatusCreated, nil},
+			{"StoreError", "/rulesets/a", http.StatusInternalServerError, errors.New("some error")},
+			{"Validation error", "/rulesets/a", http.StatusBadRequest, new(api.ValidationError)},
 		}
 
-		call := func(t *testing.T, url string, code int, e *regula.Ruleset, createErr error) {
-			t.Helper()
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				resetStore(s)
+				s.CreateFn = func(context.Context, string, *regula.Signature) error {
+					return test.err
+				}
 
-			s.CreateFn = func(context.Context, string, *regula.Signature) error {
-				return createErr
-			}
-			defer func() { s.CreateFn = nil }()
-
-			var buf bytes.Buffer
-			err := json.NewEncoder(&buf).Encode(sig)
-			require.NoError(t, err)
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("POST", url, &buf)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusCreated {
-				var rs regula.Ruleset
-				err := json.NewDecoder(w.Body).Decode(&rs)
+				var buf bytes.Buffer
+				err := json.NewEncoder(&buf).Encode(sig)
 				require.NoError(t, err)
-				require.EqualValues(t, *e, rs)
-			}
+
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("POST", test.path, &buf)
+				h.ServeHTTP(w, r)
+
+				require.Equal(t, test.status, w.Code)
+			})
 		}
-
-		t.Run("OK", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusCreated, &e1, nil)
-		})
-
-		t.Run("StoreError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
-		})
-
-		t.Run("Validation error", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
 	})
 }
 
