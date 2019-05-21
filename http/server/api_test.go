@@ -74,7 +74,7 @@ func TestAPI(t *testing.T) {
 				version := uu.Query().Get("version")
 				s.GetFn = func(ctx context.Context, path, v string) (*regula.Ruleset, error) {
 					require.Equal(t, v, version)
-					return test.ruleset, err
+					return test.ruleset, test.err
 				}
 				defer func() { s.GetFn = nil }()
 
@@ -114,9 +114,9 @@ func TestAPI(t *testing.T) {
 			err    error
 		}{
 			{"OK", "/rulesets/?list", http.StatusOK, &rss, api.ListOptions{}, nil},
-			{"WithLimitAndCursor", "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
+			{"WithLimitAndCursor", "/rulesets/a?list&limit=10&cursor=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
 			{"NoResult", "/rulesets/?list", http.StatusOK, new(api.Rulesets), api.ListOptions{}, nil},
-			{"InvalidCursor", "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{}, api.ErrInvalidCursor},
+			{"InvalidCursor", "/rulesets/someprefix?list&cursor=abc123", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{Cursor: "abc123"}, api.ErrInvalidCursor},
 			{"UnexpectedError", "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), api.ListOptions{}, errors.New("unexpected error")},
 			{"InvalidLimit", "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, api.ListOptions{}, nil},
 		}
@@ -135,7 +135,7 @@ func TestAPI(t *testing.T) {
 					assert.Equal(t, limit, strconv.Itoa(opt.Limit))
 					assert.Equal(t, cursor, opt.Cursor)
 					assert.Equal(t, test.opt, opt)
-					return test.rss, err
+					return test.rss, test.err
 				}
 				defer func() { s.ListFn = nil }()
 
@@ -323,6 +323,12 @@ func TestAPI(t *testing.T) {
 				s.PutFn = func(context.Context, string, []*rule.Rule) (string, error) {
 					return test.version, test.err
 				}
+				s.GetFn = func(ctx context.Context, path string, version string) (*regula.Ruleset, error) {
+					return &regula.Ruleset{
+						Path:    path,
+						Version: version,
+					}, nil
+				}
 				defer func() { s.PutFn = nil }()
 
 				var buf bytes.Buffer
@@ -339,7 +345,7 @@ func TestAPI(t *testing.T) {
 					var rs regula.Ruleset
 					err := json.NewDecoder(w.Body).Decode(&rs)
 					require.NoError(t, err)
-					require.EqualValues(t, test.version, rs)
+					require.Equal(t, test.version, rs.Version)
 				}
 			})
 

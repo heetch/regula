@@ -78,6 +78,11 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 			return
 		}
 
+		if err == api.ErrInvalidCursor {
+			writeError(w, r, err, http.StatusBadRequest)
+			return
+		}
+
 		if api.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
@@ -202,19 +207,23 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 
 	version, err := s.rulesets.Put(r.Context(), path, rules)
 	if err != nil {
-		if err == api.ErrRulesetNotModified {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 
 		if api.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 
+		if err != api.ErrRulesetNotModified {
+			writeError(w, r, err, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	rs, err := s.rulesets.Get(r.Context(), path, version)
+	if err != nil {
 		writeError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, version, http.StatusOK)
+	reghttp.EncodeJSON(w, r, rs, http.StatusOK)
 }
