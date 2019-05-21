@@ -8,55 +8,84 @@ import (
 
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWatch(t *testing.T) {
 	t.Parallel()
 
-	s, cleanup := newEtcdRulesetService(t)
-	defer cleanup()
+	tests := []struct {
+		name     string
+		paths    []string
+		expected []string
+	}{
+		{"no paths", nil, []string{"a", "b", "c"}},
+		{"existing paths", []string{"a", "c"}, []string{"a", "c"}},
+	}
 
-	var wg sync.WaitGroup
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s, cleanup := newEtcdRulesetService(t)
+			defer cleanup()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+			var wg sync.WaitGroup
 
-		time.Sleep(time.Second)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-		r := rule.New(rule.True(), rule.BoolValue(true))
+				time.Sleep(time.Second)
 
-		createBoolRuleset(t, s, "aa", r)
-		createBoolRuleset(t, s, "ab", r)
-		createBoolRuleset(t, s, "a/1", r)
-	}()
+				r := rule.New(rule.True(), rule.BoolValue(true))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+				createBoolRuleset(t, s, "a", r)
+				createBoolRuleset(t, s, "b", r)
+				createBoolRuleset(t, s, "c", r)
+			}()
 
-	events, err := s.Watch(ctx, "a", "")
-	require.NoError(t, err)
-	require.Len(t, events.Events, 1)
-	require.NotEmpty(t, events.Revision)
-	require.Equal(t, "aa", events.Events[0].Path)
-	require.Equal(t, api.RulesetPutEvent, events.Events[0].Type)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
-	wg.Wait()
+			var events api.RulesetEvents
+			var rev string
+			var watchCount int
+			for len(events.Events) != len(test.expected) && watchCount < 4 {
+				evs, err := s.Watch(ctx, test.paths, rev)
+				if err != nil {
+					assert.Equal(t, err, context.DeadlineExceeded)
+					break
+				}
+				assert.True(t, len(evs.Events) >= 1)
+				assert.NotEmpty(t, evs.Revision)
+				rev = evs.Revision
+				events.Events = append(events.Events, evs.Events...)
+				watchCount++
+			}
 
-	events, err = s.Watch(ctx, "a", events.Revision)
-	require.NoError(t, err)
-	require.Len(t, events.Events, 2)
-	require.NotEmpty(t, events.Revision)
-	require.Equal(t, api.RulesetPutEvent, events.Events[0].Type)
-	require.Equal(t, "ab", events.Events[0].Path)
-	require.Equal(t, api.RulesetPutEvent, events.Events[1].Type)
-	require.Equal(t, "a/1", events.Events[1].Path)
+			wg.Wait()
+
+			var foundCount int
+			for _, ev := range events.Events {
+				for _, p := range test.expected {
+					if ev.Path == p {
+						foundCount++
+						break
+					}
+				}
+			}
+			require.Equal(t, len(test.expected), foundCount)
+		})
+
+	}
 
 	t.Run("timeout", func(t *testing.T) {
+		s, cleanup := newEtcdRulesetService(t)
+		defer cleanup()
+
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		events, err := s.Watch(ctx, "", "")
+		events, err := s.Watch(ctx, nil, "")
 		require.Equal(t, context.DeadlineExceeded, err)
 		require.True(t, events.Timeout)
 	})

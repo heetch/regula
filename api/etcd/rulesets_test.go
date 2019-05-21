@@ -11,6 +11,7 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	"github.com/heetch/regula/rule"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +25,7 @@ var (
 	endpoints   = []string{"localhost:2379", "etcd:2379"}
 )
 
-func Init() {
+func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
@@ -55,12 +56,12 @@ func createRuleset(t *testing.T, s *RulesetService, path string, rules ...*rule.
 	}
 
 	rs, err := s.Get(context.Background(), path, "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	return rs
 }
 
 func createBoolRuleset(t *testing.T, s *RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
 	err := s.Create(context.Background(), path, &regula.Signature{ReturnType: "bool"})
-	require.False(t, err != nil && err != api.ErrAlreadyExists)
+	assert.False(t, err != nil && err != api.ErrAlreadyExists)
 	return createRuleset(t, s, path, rules...)
 }

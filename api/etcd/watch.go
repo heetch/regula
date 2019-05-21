@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
@@ -45,9 +46,11 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 			for i, ev := range wresp.Events {
 				// detect if the event key is found in the paths list
 				// or that the paths list is empty
+				key := string(ev.Kv.Key)
+				key = key[:strings.Index(key, versionSeparator)]
 				ok := len(paths) == 0
 				for i := 0; i < len(paths) && !ok; i++ {
-					if string(ev.Kv.Key) == s.rulesPath(paths[i], "") {
+					if key == s.rulesPath(paths[i], "") {
 						ok = true
 					}
 				}
@@ -64,7 +67,9 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 					continue
 				}
 
-				list[i].Type = api.RulesetPutEvent
+				list = append(list, api.RulesetEvent{
+					Type: api.RulesetPutEvent,
+				})
 
 				var pbrs pb.Rules
 				err := proto.Unmarshal(ev.Kv.Value, &pbrs)
@@ -76,6 +81,12 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 				list[i].Path = path
 				list[i].Rules = rulesFromProtobuf(&pbrs)
 				list[i].Version = version
+			}
+
+			// none of the returned events matched the user selection
+			// we continue watching
+			if len(list) == 0 {
+				continue
 			}
 
 			events.Events = list
