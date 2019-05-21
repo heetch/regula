@@ -7,9 +7,7 @@
         <v-toolbar color="grey" dark>
           <v-toolbar-title>Parameters</v-toolbar-title>
         </v-toolbar>
-        <v-card class="height-card scroll"
-                            v-if="typeof(ruleset.signature) != 'undefined'"
->
+        <v-card class="height-card scroll" v-if="typeof(ruleset.signature) != 'undefined'">
           <v-card-text
             v-for="param in ruleset.signature.params"
             :key="param.name"
@@ -21,9 +19,7 @@
         <v-toolbar color="grey" dark>
           <v-toolbar-title>Return type</v-toolbar-title>
         </v-toolbar>
-        <v-card class="height-card"
-                v-if="typeof(ruleset.signature) != 'undefined'"
-                >
+        <v-card class="height-card" v-if="typeof(ruleset.signature) != 'undefined'">
           <v-card-text>{{ruleset.signature.returnType}}</v-card-text>
         </v-card>
       </v-flex>
@@ -54,7 +50,7 @@
 
 <script>
 import axios from 'axios';
-// import { Ruleset, Rule, Signature, Param } from '../NewRuleset/ruleset';
+import { Ruleset } from '../NewRuleset/ruleset';
 import Rules from '../NewRuleset/Rules.vue';
 
 export default {
@@ -69,16 +65,24 @@ export default {
   },
 
   data: () => ({
-    ruleset: {},
+    ruleset: Ruleset,
   }),
 
   mounted() {
     this.fetchRuleset();
   },
 
+  updated() {
+    // call fetchRuleset method only
+    // when another ruleset is asked to render
+    if (this.ruleset.path !== this.path) {
+      this.fetchRuleset();
+    }
+  },
+
   methods: {
     fetchRuleset() {
-      const uri = '/ui/i/rulesets/' + this.path;
+      const uri = `/ui/i/rulesets/${this.path}`;
       return axios
         .get(uri)
         .then(({ data = {} }) => { this.ruleset = data; })

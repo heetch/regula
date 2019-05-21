@@ -72,7 +72,7 @@ export default {
   name: 'Rules',
 
   props: {
-    value: Ruleset,
+    value: new Ruleset({}),
     editMode: {
       type: Boolean,
       default: true,
