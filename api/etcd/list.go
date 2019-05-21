@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
@@ -57,7 +56,6 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 	// if there are still paths left, generate a new cursor
 	if len(rulesets.Paths) == opt.GetLimit() && resp.More {
 		lastPath := rulesets.Paths[len(rulesets.Paths)-1]
-		fmt.Println("lastPath", lastPath)
 		// we want to start immediately after the last key
 		rulesets.Cursor = base64.URLEncoding.EncodeToString([]byte(lastPath + "\x00"))
 	}
