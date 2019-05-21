@@ -19,14 +19,13 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 	defer cancel()
 
 	opts := []clientv3.OpOption{clientv3.WithPrefix()}
-	if i, _ := strconv.ParseInt(revision, 10, 64); i > 0 {
+	rev, _ := strconv.ParseInt(revision, 10, 64)
+	if rev > 0 {
 		// watch from the next revision
-		opts = append(opts, clientv3.WithRev(i+1))
+		opts = append(opts, clientv3.WithRev(rev+1))
 	}
 
-	events := api.RulesetEvents{
-		Revision: revision,
-	}
+	var events api.RulesetEvents
 
 	wc := s.Client.Watch(ctx, s.rulesPath("", ""), opts...)
 	for {
@@ -35,6 +34,8 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 			if err := wresp.Err(); err != nil {
 				return nil, errors.Wrapf(err, "failed to watch paths: '%#v'", paths)
 			}
+
+			rev = wresp.Header.Revision
 
 			if len(wresp.Events) == 0 {
 				continue
@@ -78,10 +79,15 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 			}
 
 			events.Events = list
-			events.Revision = strconv.FormatInt(wresp.Header.Revision, 10)
+			events.Revision = strconv.FormatInt(rev, 10)
 			return &events, nil
 		case <-ctx.Done():
 			events.Timeout = true
+			// if we received events but ignored them
+			// this function will go on until the context is canceled.
+			// we need to return the latest received revision so the
+			// caller can start after the filtered events.
+			events.Revision = strconv.FormatInt(rev, 10)
 			return &events, ctx.Err()
 		}
 	}
