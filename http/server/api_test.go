@@ -39,15 +39,15 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		e1 := regula.Ruleset{
+		rs1 := regula.Ruleset{
 			Path:      "a",
-			Version:   "version",
+			Version:   "version1",
 			Rules:     r1,
-			Versions:  []string{"version"},
+			Versions:  []string{"version1"},
 			Signature: &regula.Signature{ReturnType: "bool"},
 		}
 
-		e2 := regula.Ruleset{
+		rs2 := regula.Ruleset{
 			Path:      "a",
 			Version:   "version2",
 			Rules:     r1,
@@ -55,158 +55,115 @@ func TestAPI(t *testing.T) {
 			Signature: &regula.Signature{ReturnType: "bool"},
 		}
 
-		call := func(t *testing.T, u string, code int, e *regula.Ruleset, err error) {
-			t.Helper()
-
-			uu, uerr := url.Parse(u)
-			require.NoError(t, uerr)
-			version := uu.Query().Get("version")
-			s.GetFn = func(ctx context.Context, path, v string) (*regula.Ruleset, error) {
-				require.Equal(t, v, version)
-				return e, err
-			}
-			defer func() { s.GetFn = nil }()
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", u, nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var res regula.Ruleset
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				require.Len(t, res.Versions, len(e.Versions))
-				require.Equal(t, e.Path, res.Path)
-				require.Equal(t, e.Signature, res.Signature)
-				require.Equal(t, e.Version, res.Version)
-				require.Equal(t, e.Rules, res.Rules)
-			}
+		tests := []struct {
+			name    string
+			path    string
+			status  int
+			ruleset *regula.Ruleset
+			err     error
+		}{
+			{"Root", "/rulesets/a", http.StatusOK, &rs1, nil},
+			{"NotFound", "/rulesets/b", http.StatusNotFound, &rs1, api.ErrRulesetNotFound},
+			{"UnexpectedError", "/rulesets/a", http.StatusInternalServerError, &rs1, errors.New("unexpected error")},
+			{"Specific version", "/rulesets/a?version=version2", http.StatusOK, &rs2, nil},
 		}
 
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
-		})
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				uu, err := url.Parse(test.path)
+				require.NoError(t, err)
+				version := uu.Query().Get("version")
+				s.GetFn = func(ctx context.Context, path, v string) (*regula.Ruleset, error) {
+					require.Equal(t, v, version)
+					return test.ruleset, err
+				}
+				defer func() { s.GetFn = nil }()
 
-		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/b", http.StatusNotFound, &e1, api.ErrRulesetNotFound)
-		})
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("GET", test.path, nil)
+				h.ServeHTTP(w, r)
 
-		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, &e1, errors.New("unexpected error"))
-		})
+				require.Equal(t, test.status, w.Code)
 
-		t.Run("Specific version", func(t *testing.T) {
-			call(t, "/rulesets/a?version=version2", http.StatusOK, &e2, nil)
-		})
+				if test.status == http.StatusOK {
+					var res regula.Ruleset
+					err := json.NewDecoder(w.Body).Decode(&res)
+					require.NoError(t, err)
+					require.Len(t, res.Versions, len(test.ruleset.Versions))
+					require.Equal(t, test.ruleset.Path, res.Path)
+					require.Equal(t, test.ruleset.Signature, res.Signature)
+					require.Equal(t, test.ruleset.Version, res.Version)
+					require.Equal(t, test.ruleset.Rules, res.Rules)
+				}
+			})
+		}
 	})
 
 	t.Run("List", func(t *testing.T) {
-		l := api.Rulesets{
-			Rulesets: []regula.Ruleset{
-				{Path: "aa", Rules: r1},
-				{Path: "bb", Rules: r2},
-			},
+		rss := api.Rulesets{
+			Paths:    []string{"aa", "bb"},
 			Revision: "somerev",
-			Continue: "sometoken",
+			Cursor:   "somecursor",
 		}
 
-		call := func(t *testing.T, u string, code int, l *api.Rulesets, lopt *api.ListOptions, err error) {
-			t.Helper()
+		tests := []struct {
+			name   string
+			path   string
+			status int
+			rss    *api.Rulesets
+			opt    api.ListOptions
+			err    error
+		}{
+			{"OK", "/rulesets/?list", http.StatusOK, &rss, api.ListOptions{}, nil},
+			{"WithLimitAndCursor", "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
+			{"NoResult", "/rulesets/?list", http.StatusOK, new(api.Rulesets), api.ListOptions{}, nil},
+			{"InvalidCursor", "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{}, api.ErrInvalidCursor},
+			{"UnexpectedError", "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), api.ListOptions{}, errors.New("unexpected error")},
+			{"InvalidLimit", "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, api.ListOptions{}, nil},
+		}
 
-			uu, uerr := url.Parse(u)
-			require.NoError(t, uerr)
-			limit := uu.Query().Get("limit")
-			if limit == "" {
-				limit = "0"
-			}
-			token := uu.Query().Get("continue")
-
-			s.ListFn = func(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
-				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
-				assert.Equal(t, token, opt.ContinueToken)
-				assert.Equal(t, lopt, opt)
-				return l, err
-			}
-			defer func() { s.ListFn = nil }()
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", u, nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var res api.Rulesets
-				err := json.NewDecoder(w.Body).Decode(&res)
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				uu, err := url.Parse(test.path)
 				require.NoError(t, err)
-				require.Equal(t, len(l.Rulesets), len(res.Rulesets))
-				for i := range l.Rulesets {
-					require.EqualValues(t, l.Rulesets[i], res.Rulesets[i])
+				limit := uu.Query().Get("limit")
+				if limit == "" {
+					limit = "0"
 				}
-				if len(l.Rulesets) > 0 {
-					require.Equal(t, "sometoken", res.Continue)
+				cursor := uu.Query().Get("cursor")
+
+				s.ListFn = func(ctx context.Context, opt api.ListOptions) (*api.Rulesets, error) {
+					assert.Equal(t, limit, strconv.Itoa(opt.Limit))
+					assert.Equal(t, cursor, opt.Cursor)
+					assert.Equal(t, test.opt, opt)
+					return test.rss, err
 				}
-			}
+				defer func() { s.ListFn = nil }()
+
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("GET", test.path, nil)
+				h.ServeHTTP(w, r)
+
+				require.Equal(t, test.status, w.Code)
+
+				if test.status == http.StatusOK {
+					var res api.Rulesets
+					err := json.NewDecoder(w.Body).Decode(&res)
+					require.NoError(t, err)
+					require.Equal(t, len(test.rss.Paths), len(res.Paths))
+					for i := range test.rss.Paths {
+						require.EqualValues(t, test.rss.Paths[i], res.Paths[i])
+					}
+					if len(test.rss.Paths) > 0 {
+						require.Equal(t, "somecursor", res.Cursor)
+					}
+				}
+			})
 		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, &api.ListOptions{}, nil)
-		})
-
-		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, &api.ListOptions{}, nil)
-		})
-
-		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			opt := api.ListOptions{
-				Limit:         10,
-				ContinueToken: "abc123",
-			}
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, &opt, nil)
-		})
-
-		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(api.Rulesets), &api.ListOptions{}, nil)
-		})
-
-		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(api.Rulesets), &api.ListOptions{}, api.ErrRulesetNotFound)
-		})
-
-		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), &api.ListOptions{}, api.ErrInvalidContinueToken)
-		})
-
-		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), &api.ListOptions{}, errors.New("unexpected error"))
-		})
-
-		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
-		})
-
-		t.Run("PathsParameter", func(t *testing.T) {
-			opt := api.ListOptions{
-				PathsOnly: true,
-			}
-			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, &opt, nil)
-		})
-
-		t.Run("VersionsParameter", func(t *testing.T) {
-			opt := api.ListOptions{
-				AllVersions: true,
-			}
-			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, &opt, nil)
-		})
-
-		t.Run("InvalidParametersCombination", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
-		})
 	})
 
 	t.Run("Eval", func(t *testing.T) {
+
 		call := func(t *testing.T, url string, code int, result *regula.EvalResult, testParamsFn func(params rule.Params)) {
 			t.Helper()
 			resetStore(s)

@@ -40,7 +40,7 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		if _, ok := r.URL.Query()["list"]; ok {
-			s.list(w, r, path)
+			s.list(w, r)
 			return
 		}
 		if _, ok := r.URL.Query()["eval"]; ok {
@@ -110,9 +110,8 @@ func (s *rulesetAPI) get(w http.ResponseWriter, r *http.Request, path string) {
 	reghttp.EncodeJSON(w, r, ruleset, http.StatusOK)
 }
 
-// list fetches all the rulesets from the store and writes them to the http response if
-// the paths parameter is not given otherwise it fetches the rulesets paths only.
-func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string) {
+// list fetches all the rulesets paths from the store and writes them to the http response.
+func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request) {
 	var (
 		opt api.ListOptions
 		err error
@@ -126,22 +125,11 @@ func (s *rulesetAPI) list(w http.ResponseWriter, r *http.Request, prefix string)
 		}
 	}
 
-	opt.ContinueToken = r.URL.Query().Get("continue")
-	_, opt.PathsOnly = r.URL.Query()["paths"]
-	_, opt.AllVersions = r.URL.Query()["versions"]
-	if opt.PathsOnly && opt.AllVersions {
-		writeError(w, r, errors.New("'paths' and 'versions' parameters can't be given in the same query"), http.StatusBadRequest)
-		return
-	}
+	opt.Cursor = r.URL.Query().Get("cursor")
 
-	rulesets, err := s.rulesets.List(r.Context(), prefix, &opt)
+	rulesets, err := s.rulesets.List(r.Context(), opt)
 	if err != nil {
-		if err == api.ErrRulesetNotFound {
-			writeError(w, r, err, http.StatusNotFound)
-			return
-		}
-
-		if err == api.ErrInvalidContinueToken {
+		if err == api.ErrInvalidCursor {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
@@ -212,8 +200,13 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	ruleset, err := s.rulesets.Put(r.Context(), path, rules)
-	if err != nil && err != api.ErrRulesetNotModified {
+	version, err := s.rulesets.Put(r.Context(), path, rules)
+	if err != nil {
+		if err == api.ErrRulesetNotModified {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		if api.IsValidationError(err) {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
@@ -223,5 +216,5 @@ func (s *rulesetAPI) put(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 
-	reghttp.EncodeJSON(w, r, ruleset, http.StatusOK)
+	reghttp.EncodeJSON(w, r, version, http.StatusOK)
 }
