@@ -14,7 +14,6 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	rerrors "github.com/heetch/regula/errors"
-	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/mock"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
@@ -166,9 +165,9 @@ func TestAPI(t *testing.T) {
 		result := regula.EvalResult{Value: rule.StringValue("success"), Version: "123"}
 
 		tests := []struct {
-			name         string
-			path         string
-			status       int
+			name   string
+			path   string
+			status int
 			mockFn func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 		}{
 			{"OK", "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
@@ -192,30 +191,20 @@ func TestAPI(t *testing.T) {
 			}},
 			{"NOK - Ruleset not found", "/rulesets/path/to/my/ruleset?eval&foo=10", http.StatusNotFound, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
 				return nil, rerrors.ErrRulesetNotFound
-			}}
+			}},
 		}
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
 				resetStore(s)
 
-				s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-					test.testParamsFn(params)
-					return test.result, nil
-				}
+				s.EvalFn = test.mockFn
 
 				w := httptest.NewRecorder()
 				r := httptest.NewRequest("GET", test.path, nil)
 				h.ServeHTTP(w, r)
 
 				require.Equal(t, test.status, w.Code)
-
-				if test.status == http.StatusOK {
-					var res regula.EvalResult
-					err := json.NewDecoder(w.Body).Decode(&res)
-					require.NoError(t, err)
-					require.EqualValues(t, test.result, &res)
-				}
 			})
 		}
 
@@ -250,44 +239,44 @@ func TestAPI(t *testing.T) {
 			Revision: "rev",
 		}
 
-		call := func(t *testing.T, url string, code int, es *api.RulesetEvents, err error) {
-			t.Helper()
+		tests := []struct {
+			name   string
+			path   string
+			status int
+			es     *api.RulesetEvents
+			err    error
+		}{
+			{"Root", "/rulesets/?watch", http.StatusOK, &l, nil},
+			{"WithPrefix", "/rulesets/a?watch", http.StatusOK, &l, nil},
+			{"NotFound", "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound},
+			{"Timeout", "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded},
+			{"ContextCanceled", "/rulesets/?watch", http.StatusOK, nil, context.Canceled},
+		}
 
+		for _, test := range tests {
 			s.WatchFn = func(context.Context, string, string) (*api.RulesetEvents, error) {
-				return es, err
+				return test.es, test.err
 			}
 			defer func() { s.WatchFn = nil }()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", url, nil)
+			r := httptest.NewRequest("GET", test.path, nil)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
+			require.Equal(t, test.status, w.Code)
 
-			if code == http.StatusOK {
+			if test.status == http.StatusOK {
 				var res api.RulesetEvents
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				if es != nil {
-					require.Equal(t, len(es.Events), len(res.Events))
+				if test.es != nil {
+					require.Equal(t, len(test.es.Events), len(res.Events))
 					for i := range l.Events {
 						require.Equal(t, l.Events[i], res.Events[i])
 					}
 				}
 			}
 		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, &l, nil)
-		})
-
-		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusOK, &l, nil)
-		})
-
-		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound)
-		})
 
 		t.Run("WithRevision", func(t *testing.T) {
 			t.Helper()
@@ -312,14 +301,6 @@ func TestAPI(t *testing.T) {
 			for i := range l.Events {
 				require.Equal(t, l.Events[i], res.Events[i])
 			}
-		})
-
-		t.Run("Timeout", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded)
-		})
-
-		t.Run("ContextCanceled", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, nil, context.Canceled)
 		})
 	})
 
