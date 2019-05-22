@@ -174,24 +174,32 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 	reghttp.EncodeJSON(w, r, res, http.StatusOK)
 }
 
-// watch watches a prefix for change and returns anything newer.
+// watch is a long polling endpoint that watches a list of paths for change and returns a list of events containing all the changes
+// that happened since the start of the watch.
+// if the revision query param is specified, it returns anything that happened after that revision.
+// If no paths are specificied, it watches any path.
+// The request context can be used to limit the watch period or to cancel any running one.
 func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
 	var paths []string
 
-	err := json.NewDecoder(r.Body).Decode(&paths)
-	if err != nil {
-		writeError(w, r, err, http.StatusBadRequest)
-		return
+	// an empty body means watch all paths
+	if r.ContentLength > 0 {
+		err := json.NewDecoder(r.Body).Decode(&paths)
+		if err != nil {
+			writeError(w, r, err, http.StatusBadRequest)
+			return
+		}
 	}
 
 	events, err := s.rulesets.Watch(r.Context(), paths, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
-		case context.Canceled, context.DeadlineExceeded:
-			// we do nothing
-		case api.ErrRulesetNotFound:
-			w.WriteHeader(http.StatusNotFound)
-			return
+		case context.Canceled:
+			// server is probably shutting down
+			// we do nothing and return a 200 to the client
+		case context.DeadlineExceeded:
+			// the watch request reached the deadline
+			// we do nothing and return a 200 to the client
 		default:
 			writeError(w, r, err, http.StatusInternalServerError)
 			return

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -256,64 +257,51 @@ func TestServerWatch(t *testing.T) {
 	tests := []struct {
 		name   string
 		path   string
+		body   string
 		status int
-		es     *api.RulesetEvents
-		err    error
+		fn     func(context.Context, []string, string) (*api.RulesetEvents, error)
 	}{
-		{"Root", "/rulesets/?watch", http.StatusOK, &l, nil},
-		{"WithPrefix", "/rulesets/a?watch", http.StatusOK, &l, nil},
-		{"NotFound", "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound},
-		{"Timeout", "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded},
-		{"ContextCanceled", "/rulesets/?watch", http.StatusOK, nil, context.Canceled},
+		{"No paths", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, string) (*api.RulesetEvents, error) { return &l, nil }},
+		{"With paths", "/rulesets/?watch", `["a", "b", "c"]`, http.StatusOK, func(ctx context.Context, paths []string, rev string) (*api.RulesetEvents, error) {
+			require.Equal(t, []string{"a", "b", "c"}, paths)
+			return &l, nil
+		}},
+		{"Bad JSON", "/rulesets/?watch", `["a`, http.StatusBadRequest, func(ctx context.Context, paths []string, rev string) (*api.RulesetEvents, error) { return nil, nil }},
+		{"Timeout", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, string) (*api.RulesetEvents, error) {
+			return nil, context.DeadlineExceeded
+		}},
+		{"ContextCanceled", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, string) (*api.RulesetEvents, error) { return nil, context.Canceled }},
+		{"WithRevision", "/rulesets/?watch&revision=somerev", "", http.StatusOK, func(ctx context.Context, paths []string, rev string) (*api.RulesetEvents, error) {
+			require.Equal(t, "somerev", rev)
+			return &l, nil
+		}},
 	}
 
 	for _, test := range tests {
-		s.WatchFn = func(context.Context, []string, string) (*api.RulesetEvents, error) {
-			return test.es, test.err
-		}
-		defer func() { s.WatchFn = nil }()
+		t.Run(test.name, func(t *testing.T) {
+			s.WatchFn = test.fn
+			defer func() { s.WatchFn = nil }()
 
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", test.path, nil)
-		h.ServeHTTP(w, r)
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", test.path, strings.NewReader(test.body))
+			h.ServeHTTP(w, r)
 
-		require.Equal(t, test.status, w.Code)
+			require.Equal(t, test.status, w.Code)
 
-		if test.status == http.StatusOK {
-			var res api.RulesetEvents
-			err := json.NewDecoder(w.Body).Decode(&res)
-			require.NoError(t, err)
-			if test.es != nil {
-				require.Equal(t, len(test.es.Events), len(res.Events))
-				for i := range l.Events {
-					require.Equal(t, l.Events[i], res.Events[i])
+			if test.status == http.StatusOK {
+				var res api.RulesetEvents
+				require.True(t, w.Body.Len() > 0)
+				err := json.NewDecoder(w.Body).Decode(&res)
+				require.NoError(t, err)
+				if len(res.Events) > 0 {
+					require.Equal(t, len(l.Events), len(res.Events))
+					for i := range l.Events {
+						require.Equal(t, l.Events[i], res.Events[i])
+					}
 				}
 			}
-		}
+		})
 	}
-
-	t.Run("WithRevision", func(t *testing.T) {
-		s.WatchFn = func(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
-			require.Equal(t, "a", prefix)
-			require.Equal(t, "somerev", revision)
-			return &l, nil
-		}
-		defer func() { s.WatchFn = nil }()
-
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/rulesets/a?watch&revision=somerev", nil)
-		h.ServeHTTP(w, r)
-
-		require.Equal(t, http.StatusOK, w.Code)
-
-		var res api.RulesetEvents
-		err := json.NewDecoder(w.Body).Decode(&res)
-		require.NoError(t, err)
-		require.Equal(t, len(l.Events), len(res.Events))
-		for i := range l.Events {
-			require.Equal(t, l.Events[i], res.Events[i])
-		}
-	})
 }
 
 func TestServerPut(t *testing.T) {
