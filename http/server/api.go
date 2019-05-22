@@ -58,7 +58,11 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.create(w, r, path)
+		if len(path) != 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		s.create(w, r)
 		return
 	case "PUT":
 		if path != "" {
@@ -70,8 +74,13 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string) {
-	var sig regula.Signature
+type createSignaturePayload struct {
+	regula.Signature
+	Path string `json:"path"`
+}
+
+func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request) {
+	var sig createSignaturePayload
 
 	err := json.NewDecoder(r.Body).Decode(&sig)
 	if err != nil {
@@ -79,7 +88,7 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 		return
 	}
 
-	err = s.rulesets.Create(r.Context(), path, &sig)
+	err = s.rulesets.Create(r.Context(), sig.Path, &sig.Signature)
 	if err != nil {
 		if err == api.ErrAlreadyExists {
 			writeError(w, r, err, http.StatusConflict)
@@ -101,8 +110,8 @@ func (s *rulesetAPI) create(w http.ResponseWriter, r *http.Request, path string)
 	}
 
 	reghttp.EncodeJSON(w, r, &regula.Ruleset{
-		Path:      path,
-		Signature: &sig,
+		Path:      sig.Path,
+		Signature: &sig.Signature,
 	}, http.StatusCreated)
 }
 
