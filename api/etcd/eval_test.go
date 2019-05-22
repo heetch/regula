@@ -28,7 +28,7 @@ func TestEval(t *testing.T) {
 	ruleset := createRuleset(t, s, "a", r)
 	version := ruleset.Version
 
-	t.Run("OK", func(t *testing.T) {
+	t.Run("SpecificVersion", func(t *testing.T) {
 		res, err := s.Eval(context.Background(), "a", version, regula.Params{
 			"id": "123",
 		})

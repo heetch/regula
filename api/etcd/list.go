@@ -38,7 +38,7 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 	// limit the number of results
 	opts = append(opts, clientv3.WithLimit(int64(opt.GetLimit())))
 
-	// fetch signatures
+	// fetch signatures, the paths will be computed from signature keys
 	resp, err := s.Client.KV.Get(ctx, key, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch signatures")
