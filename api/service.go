@@ -38,15 +38,20 @@ type RulesetService interface {
 // ListOptions is used to customize the List output.
 type ListOptions struct {
 	Limit  int    // If the Limit is lower or equal to 0 or greater than 100, it will be set to 50 by default.
-	Cursor string // pagination cursor
+	Cursor string // Pagination cursor. If empty the list starts from the beginning.
 }
 
-// GetLimit returns a limit that is withing the 0 - 100 boundries.
-// If the limit is incorrect, it returns 50.
+// GetLimit returns a limit that is between 1 and 100.
+// If Limit is lower of equal to zero, it returns 50.
+// If Limit is bigger than 100, it returns 100.
 func (l *ListOptions) GetLimit() int {
-	if l.Limit <= 0 || l.Limit > 100 {
-		return 50 // TODO: make this one configurable
+	if l.Limit <= 0 {
+		return 50
 	}
+	if l.Limit > 100 {
+		return 100
+	}
+
 	return l.Limit
 }
 

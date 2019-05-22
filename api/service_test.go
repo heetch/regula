@@ -14,7 +14,7 @@ func TestListOptionsGetLimit(t *testing.T) {
 	}{
 		{0, 50},
 		{-10, 50},
-		{110, 50},
+		{110, 100},
 		{70, 70},
 	}
 
