@@ -119,11 +119,12 @@ func TestServerList(t *testing.T) {
 		err    error
 	}{
 		{"OK", "/rulesets/?list", http.StatusOK, &rss, api.ListOptions{}, nil},
-		{"WithLimitAndCursor", "/rulesets/a?list&limit=10&cursor=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
+		{"WithLimitAndCursor", "/rulesets/?list&limit=10&cursor=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
 		{"NoResult", "/rulesets/?list", http.StatusOK, new(api.Rulesets), api.ListOptions{}, nil},
-		{"InvalidCursor", "/rulesets/someprefix?list&cursor=abc123", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{Cursor: "abc123"}, api.ErrInvalidCursor},
-		{"UnexpectedError", "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), api.ListOptions{}, errors.New("unexpected error")},
-		{"InvalidLimit", "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, api.ListOptions{}, nil},
+		{"InvalidCursor", "/rulesets/?list&cursor=abc123", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{Cursor: "abc123"}, api.ErrInvalidCursor},
+		{"UnexpectedError", "/rulesets/?list", http.StatusInternalServerError, new(api.Rulesets), api.ListOptions{}, errors.New("unexpected error")},
+		{"InvalidLimit", "/rulesets/?list&limit=badlimit", http.StatusBadRequest, nil, api.ListOptions{}, nil},
+		{"WithPath", "/rulesets/some/path?list&limit=badlimit", http.StatusNotFound, nil, api.ListOptions{}, nil},
 	}
 
 	for _, test := range tests {
@@ -267,7 +268,7 @@ func TestServerWatch(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		s.WatchFn = func(context.Context, string, string) (*api.RulesetEvents, error) {
+		s.WatchFn = func(context.Context, []string, string) (*api.RulesetEvents, error) {
 			return test.es, test.err
 		}
 		defer func() { s.WatchFn = nil }()
