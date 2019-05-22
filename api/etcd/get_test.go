@@ -48,8 +48,15 @@ func TestGet(t *testing.T) {
 		require.Equal(t, rules2, ruleset2.Rules)
 		require.Equal(t, sig, ruleset2.Signature)
 
+		// it should return the first version
+		rs, err := s.Get(context.Background(), path, ruleset1.Version)
+		require.NoError(t, err)
+		require.Equal(t, ruleset1.Path, rs.Path)
+		require.Equal(t, ruleset1.Version, rs.Version)
+		require.Equal(t, ruleset1.Rules, rs.Rules)
+
 		// it should return the second version
-		rs, err := s.Get(context.Background(), path, ruleset2.Version)
+		rs, err = s.Get(context.Background(), path, ruleset2.Version)
 		require.NoError(t, err)
 		require.Equal(t, ruleset2, rs)
 	})
