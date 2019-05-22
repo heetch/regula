@@ -36,17 +36,18 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.eval(w, r, path)
 			return
 		}
+		s.get(w, r, path)
+		return
+	case "POST":
 		if _, ok := r.URL.Query()["watch"]; ok {
 			if len(path) != 0 {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			s.watch(w, r, path)
+			s.watch(w, r)
 			return
 		}
-		s.get(w, r, path)
-		return
-	case "POST":
+
 		s.create(w, r, path)
 		return
 	case "PUT":
@@ -174,8 +175,16 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 }
 
 // watch watches a prefix for change and returns anything newer.
-func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	events, err := s.rulesets.Watch(r.Context(), nil, r.URL.Query().Get("revision"))
+func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
+	var paths []string
+
+	err := json.NewDecoder(r.Body).Decode(&paths)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	events, err := s.rulesets.Watch(r.Context(), paths, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
