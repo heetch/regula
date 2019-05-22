@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
@@ -18,33 +16,32 @@ import (
 )
 
 type rulesetAPI struct {
-	rulesets     api.RulesetService
-	timeout      time.Duration
-	watchTimeout time.Duration
+	rulesets api.RulesetService
 }
 
 func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
-
-	if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
-		ctx, cancel := context.WithTimeout(r.Context(), s.watchTimeout)
-		defer cancel()
-		s.watch(w, r.WithContext(ctx), path)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), s.timeout)
-	defer cancel()
-	r = r.WithContext(ctx)
+	path := r.URL.Path
 
 	switch r.Method {
 	case "GET":
 		if _, ok := r.URL.Query()["list"]; ok {
+			if len(path) != 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			s.list(w, r)
 			return
 		}
 		if _, ok := r.URL.Query()["eval"]; ok {
 			s.eval(w, r, path)
+			return
+		}
+		if _, ok := r.URL.Query()["watch"]; ok {
+			if len(path) != 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			s.watch(w, r, path)
 			return
 		}
 		s.get(w, r, path)
@@ -178,7 +175,7 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 
 // watch watches a prefix for change and returns anything newer.
 func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request, prefix string) {
-	events, err := s.rulesets.Watch(r.Context(), prefix, r.URL.Query().Get("revision"))
+	events, err := s.rulesets.Watch(r.Context(), nil, r.URL.Query().Get("revision"))
 	if err != nil {
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
