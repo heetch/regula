@@ -366,7 +366,7 @@ func TestServerCreate(t *testing.T) {
 		WatchTimeout: 1 * time.Second,
 	})
 
-	sig := regula.Signature{ReturnType: "int64"}
+	sig := createSignaturePayload{Signature: regula.Signature{ReturnType: "int64"}, Path: "a"}
 
 	tests := []struct {
 		name   string
@@ -374,9 +374,9 @@ func TestServerCreate(t *testing.T) {
 		status int
 		err    error
 	}{
-		{"OK", "/rulesets/a", http.StatusCreated, nil},
-		{"StoreError", "/rulesets/a", http.StatusInternalServerError, errors.New("some error")},
-		{"Validation error", "/rulesets/a", http.StatusBadRequest, new(api.ValidationError)},
+		{"OK", "/rulesets/", http.StatusCreated, nil},
+		{"StoreError", "/rulesets/", http.StatusInternalServerError, errors.New("some error")},
+		{"Validation error", "/rulesets/", http.StatusBadRequest, new(api.ValidationError)},
 	}
 
 	for _, test := range tests {
