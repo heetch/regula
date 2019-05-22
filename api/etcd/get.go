@@ -11,7 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Get returns the ruleset related to the given path.
+// Get returns the ruleset related to the given path.By default, it returns the latest one.
+// It returns the related ruleset version if it's specified.
 func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula.Ruleset, error) {
 	if path == "" {
 		return nil, api.ErrRulesetNotFound
