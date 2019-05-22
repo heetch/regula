@@ -15,6 +15,7 @@ import (
 
 // Watch a list of paths for changes and return a list of events. If the list is empty or nil,
 // watch all paths. If the revision is empty, watch from the latest revision.
+// The given context can be used to limit the watch period or to cancel any running one.
 func (s *RulesetService) Watch(ctx context.Context, paths []string, revision string) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
