@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Get returns the ruleset related to the given path. By default, it returns the latest one.
+// Get returns the ruleset related to the given path.By default, it returns the latest one.
 // It returns the related ruleset version if it's specified.
 func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula.Ruleset, error) {
 	if path == "" {
@@ -20,7 +20,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 
 	ops := []clientv3.Op{
 		clientv3.OpGet(s.signaturesPath(path)),
-		clientv3.OpGet(s.versionsPath(path)),
+		clientv3.OpGet(s.rulesPath(path, "")+versionSeparator, clientv3.WithPrefix(), clientv3.WithKeysOnly()),
 	}
 
 	if version == "" {
@@ -28,6 +28,7 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 	} else {
 		ops = append(ops, clientv3.OpGet(s.rulesPath(path, version)))
 	}
+
 	// running all the requests within a single transaction so only one network round trip is performed.
 	resp, err := s.Client.KV.Txn(ctx).Then(ops...).Commit()
 	if err != nil {
@@ -49,21 +50,28 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 		return nil, errors.Wrap(err, "failed to unmarshal signature")
 	}
 
-	// decode versions
-	var versions pb.Versions
-	err = proto.Unmarshal(resp.Responses[1].GetResponseRange().Kvs[0].Value, &versions)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal versions")
+	// the versions must be parsed from the keys returned by the second operation
+	kvs := resp.Responses[1].GetResponseRange().Kvs
+	versions := make([]string, len(kvs))
+	for i, kv := range kvs {
+		_, versions[i] = s.pathVersionFromKey(string(kv.Key))
 	}
 
-	// decode rules
+	// decode rules, might not be filled if only the signature was created
 	var rules pb.Rules
-	err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &rules)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal ruleset")
+	if resp.Responses[2].GetResponseRange().Count > 0 {
+		err = proto.Unmarshal(resp.Responses[2].GetResponseRange().Kvs[0].Value, &rules)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal rules")
+		}
+	} else if version != "" {
+		// if no rules are returned but a version is specified, it means that the version doesn't exist
+		return nil, api.ErrRulesetNotFound
 	}
+
+	// if the version wasn't specified, get the latest returned
 	if version == "" {
-		_, version = s.pathVersionFromKey(string(resp.Responses[2].GetResponseRange().Kvs[0].Key))
+		version = versions[len(versions)-1]
 	}
 
 	return &regula.Ruleset{
@@ -71,6 +79,6 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 		Version:   version,
 		Rules:     rulesFromProtobuf(&rules),
 		Signature: signatureFromProtobuf(&sig),
-		Versions:  versions.Versions,
+		Versions:  versions,
 	}, nil
 }

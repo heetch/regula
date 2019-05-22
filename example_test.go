@@ -103,8 +103,6 @@ func ExampleEngine() {
 		switch err {
 		case errors.ErrRulesetNotFound:
 			// when the ruleset doesn't exist
-		case errors.ErrTypeMismatch:
-			// when the ruleset returns the bad type
 		case errors.ErrNoMatch:
 			// when the ruleset doesn't match
 		default:

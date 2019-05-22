@@ -42,7 +42,7 @@ func (e *Engine) get(ctx context.Context, typ, path string, params rule.Params, 
 	}
 
 	if typ != "" && result.Value.Type != typ {
-		return nil, rerrors.ErrTypeMismatch
+		return nil, errors.New("type returned by rule doesn't match")
 	}
 
 	return result, nil

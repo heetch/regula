@@ -14,7 +14,6 @@ import (
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
 	rerrors "github.com/heetch/regula/errors"
-	reghttp "github.com/heetch/regula/http"
 	"github.com/heetch/regula/mock"
 	"github.com/heetch/regula/rule"
 	"github.com/pkg/errors"
@@ -22,383 +21,329 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAPI(t *testing.T) {
+// Rules
+var r1 = []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+var r2 = []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+
+// Rulesets
+var rs1 = regula.Ruleset{
+	Path:      "a",
+	Version:   "version1",
+	Rules:     r1,
+	Versions:  []string{"version1"},
+	Signature: &regula.Signature{ReturnType: "bool"},
+}
+
+var rs2 = regula.Ruleset{
+	Path:      "a",
+	Version:   "version2",
+	Rules:     r1,
+	Versions:  []string{"version1", "version2"},
+	Signature: &regula.Signature{ReturnType: "bool"},
+}
+
+func TestServer(t *testing.T) {
 	s := new(mock.RulesetService)
-	h := NewHandler(s, Config{
-		WatchTimeout: 1 * time.Second,
-	})
+	h := NewHandler(s, Config{})
 
-	r1 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
-	r2 := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/", nil)
+	h.ServeHTTP(w, r)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
 
-	t.Run("Root", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/", nil)
-		h.ServeHTTP(w, r)
-		require.Equal(t, http.StatusNotFound, w.Code)
-	})
+func TestServerGet(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{})
 
-	t.Run("Get", func(t *testing.T) {
-		e1 := regula.Ruleset{
-			Path:      "a",
-			Version:   "version",
-			Rules:     r1,
-			Versions:  []string{"version"},
-			Signature: &regula.Signature{ReturnType: "bool"},
-		}
+	tests := []struct {
+		name    string
+		path    string
+		status  int
+		ruleset *regula.Ruleset
+		err     error
+	}{
+		{"Root", "/rulesets/a", http.StatusOK, &rs1, nil},
+		{"NotFound", "/rulesets/b", http.StatusNotFound, &rs1, api.ErrRulesetNotFound},
+		{"UnexpectedError", "/rulesets/a", http.StatusInternalServerError, &rs1, errors.New("unexpected error")},
+		{"Specific version", "/rulesets/a?version=version2", http.StatusOK, &rs2, nil},
+	}
 
-		e2 := regula.Ruleset{
-			Path:      "a",
-			Version:   "version2",
-			Rules:     r1,
-			Versions:  []string{"version1", "version2"},
-			Signature: &regula.Signature{ReturnType: "bool"},
-		}
-
-		call := func(t *testing.T, u string, code int, e *regula.Ruleset, err error) {
-			t.Helper()
-
-			uu, uerr := url.Parse(u)
-			require.NoError(t, uerr)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			uu, err := url.Parse(test.path)
+			require.NoError(t, err)
 			version := uu.Query().Get("version")
 			s.GetFn = func(ctx context.Context, path, v string) (*regula.Ruleset, error) {
 				require.Equal(t, v, version)
-				return e, err
+				return test.ruleset, test.err
 			}
 			defer func() { s.GetFn = nil }()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", u, nil)
+			r := httptest.NewRequest("GET", test.path, nil)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
+			require.Equal(t, test.status, w.Code)
 
-			if code == http.StatusOK {
+			if test.status == http.StatusOK {
 				var res regula.Ruleset
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Len(t, res.Versions, len(e.Versions))
-				require.Equal(t, e.Path, res.Path)
-				require.Equal(t, e.Signature, res.Signature)
-				require.Equal(t, e.Version, res.Version)
-				require.Equal(t, e.Rules, res.Rules)
+				require.Len(t, res.Versions, len(test.ruleset.Versions))
+				require.Equal(t, test.ruleset.Path, res.Path)
+				require.Equal(t, test.ruleset.Signature, res.Signature)
+				require.Equal(t, test.ruleset.Version, res.Version)
+				require.Equal(t, test.ruleset.Rules, res.Rules)
 			}
-		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
 		})
+	}
+}
 
-		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/b", http.StatusNotFound, &e1, api.ErrRulesetNotFound)
-		})
+func TestServerList(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{})
 
-		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, &e1, errors.New("unexpected error"))
-		})
+	rss := api.Rulesets{
+		Paths:    []string{"aa", "bb"},
+		Revision: "somerev",
+		Cursor:   "somecursor",
+	}
 
-		t.Run("Specific version", func(t *testing.T) {
-			call(t, "/rulesets/a?version=version2", http.StatusOK, &e2, nil)
-		})
-	})
+	tests := []struct {
+		name   string
+		path   string
+		status int
+		rss    *api.Rulesets
+		opt    api.ListOptions
+		err    error
+	}{
+		{"OK", "/rulesets/?list", http.StatusOK, &rss, api.ListOptions{}, nil},
+		{"WithLimitAndCursor", "/rulesets/a?list&limit=10&cursor=abc123", http.StatusOK, &rss, api.ListOptions{Limit: 10, Cursor: "abc123"}, nil},
+		{"NoResult", "/rulesets/?list", http.StatusOK, new(api.Rulesets), api.ListOptions{}, nil},
+		{"InvalidCursor", "/rulesets/someprefix?list&cursor=abc123", http.StatusBadRequest, new(api.Rulesets), api.ListOptions{Cursor: "abc123"}, api.ErrInvalidCursor},
+		{"UnexpectedError", "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), api.ListOptions{}, errors.New("unexpected error")},
+		{"InvalidLimit", "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, api.ListOptions{}, nil},
+	}
 
-	t.Run("List", func(t *testing.T) {
-		l := api.Rulesets{
-			Rulesets: []regula.Ruleset{
-				{Path: "aa", Rules: r1},
-				{Path: "bb", Rules: r2},
-			},
-			Revision: "somerev",
-			Continue: "sometoken",
-		}
-
-		call := func(t *testing.T, u string, code int, l *api.Rulesets, lopt *api.ListOptions, err error) {
-			t.Helper()
-
-			uu, uerr := url.Parse(u)
-			require.NoError(t, uerr)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			uu, err := url.Parse(test.path)
+			require.NoError(t, err)
 			limit := uu.Query().Get("limit")
 			if limit == "" {
 				limit = "0"
 			}
-			token := uu.Query().Get("continue")
+			cursor := uu.Query().Get("cursor")
 
-			s.ListFn = func(ctx context.Context, prefix string, opt *api.ListOptions) (*api.Rulesets, error) {
+			s.ListFn = func(ctx context.Context, opt api.ListOptions) (*api.Rulesets, error) {
 				assert.Equal(t, limit, strconv.Itoa(opt.Limit))
-				assert.Equal(t, token, opt.ContinueToken)
-				assert.Equal(t, lopt, opt)
-				return l, err
+				assert.Equal(t, cursor, opt.Cursor)
+				assert.Equal(t, test.opt, opt)
+				return test.rss, test.err
 			}
 			defer func() { s.ListFn = nil }()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", u, nil)
+			r := httptest.NewRequest("GET", test.path, nil)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
+			require.Equal(t, test.status, w.Code)
 
-			if code == http.StatusOK {
+			if test.status == http.StatusOK {
 				var res api.Rulesets
 				err := json.NewDecoder(w.Body).Decode(&res)
 				require.NoError(t, err)
-				require.Equal(t, len(l.Rulesets), len(res.Rulesets))
-				for i := range l.Rulesets {
-					require.EqualValues(t, l.Rulesets[i], res.Rulesets[i])
+				require.Equal(t, len(test.rss.Paths), len(res.Paths))
+				for i := range test.rss.Paths {
+					require.EqualValues(t, test.rss.Paths[i], res.Paths[i])
 				}
-				if len(l.Rulesets) > 0 {
-					require.Equal(t, "sometoken", res.Continue)
+				if len(test.rss.Paths) > 0 {
+					require.Equal(t, "somecursor", res.Cursor)
 				}
 			}
-		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, &l, &api.ListOptions{}, nil)
 		})
+	}
+}
 
-		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?list", http.StatusOK, &l, &api.ListOptions{}, nil)
-		})
+func TestServerEval(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{})
 
-		t.Run("WithLimitAndContinue", func(t *testing.T) {
-			opt := api.ListOptions{
-				Limit:         10,
-				ContinueToken: "abc123",
-			}
-			call(t, "/rulesets/a?list&limit=10&continue=abc123", http.StatusOK, &l, &opt, nil)
-		})
+	result := regula.EvalResult{Value: rule.StringValue("success"), Version: "123"}
 
-		t.Run("NoResultOnRoot", func(t *testing.T) {
-			call(t, "/rulesets/?list", http.StatusOK, new(api.Rulesets), &api.ListOptions{}, nil)
-		})
+	tests := []struct {
+		name   string
+		path   string
+		status int
+		mockFn func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
+	}{
+		{"OK", "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+			s, err := params.GetString("str")
+			require.NoError(t, err)
+			require.Equal(t, "str", s)
+			i, err := params.GetInt64("nb")
+			require.NoError(t, err)
+			require.Equal(t, int64(10), i)
+			b, err := params.GetBool("boolean")
+			require.NoError(t, err)
+			require.True(t, b)
 
-		t.Run("NoResultOnPrefix", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusNotFound, new(api.Rulesets), &api.ListOptions{}, api.ErrRulesetNotFound)
-		})
+			return &result, nil
+		}},
+		{"OK With version", "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+			s, err := params.GetString("str")
+			require.NoError(t, err)
+			require.Equal(t, "str", s)
+			return &result, nil
+		}},
+		{"NOK - Ruleset not found", "/rulesets/path/to/my/ruleset?eval&foo=10", http.StatusNotFound, func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
+			return nil, rerrors.ErrRulesetNotFound
+		}},
+	}
 
-		t.Run("InvalidToken", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusBadRequest, new(api.Rulesets), &api.ListOptions{}, api.ErrInvalidContinueToken)
-		})
-
-		t.Run("UnexpectedError", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list", http.StatusInternalServerError, new(api.Rulesets), &api.ListOptions{}, errors.New("unexpected error"))
-		})
-
-		t.Run("InvalidLimit", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&limit=badlimit", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
-		})
-
-		t.Run("PathsParameter", func(t *testing.T) {
-			opt := api.ListOptions{
-				PathsOnly: true,
-			}
-			call(t, "/rulesets/a?list&paths", http.StatusOK, &l, &opt, nil)
-		})
-
-		t.Run("VersionsParameter", func(t *testing.T) {
-			opt := api.ListOptions{
-				AllVersions: true,
-			}
-			call(t, "/rulesets/a?list&versions", http.StatusOK, &l, &opt, nil)
-		})
-
-		t.Run("InvalidParametersCombination", func(t *testing.T) {
-			call(t, "/rulesets/someprefix?list&paths&versions", http.StatusBadRequest, nil, &api.ListOptions{}, nil)
-		})
-	})
-
-	t.Run("Eval", func(t *testing.T) {
-		call := func(t *testing.T, url string, code int, result *regula.EvalResult, testParamsFn func(params rule.Params)) {
-			t.Helper()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			resetStore(s)
 
-			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-				testParamsFn(params)
-				return result, nil
-			}
+			s.EvalFn = test.mockFn
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", url, nil)
+			r := httptest.NewRequest("GET", test.path, nil)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
+			require.Equal(t, test.status, w.Code)
+		})
+	}
 
-			if code == http.StatusOK {
-				var res regula.EvalResult
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				require.EqualValues(t, result, &res)
-			}
+	t.Run("NOK - errors", func(t *testing.T) {
+		errs := []error{
+			rerrors.ErrParamNotFound,
+			rerrors.ErrParamTypeMismatch,
+			rerrors.ErrNoMatch,
 		}
 
-		t.Run("OK", func(t *testing.T) {
-			exp := regula.EvalResult{
-				Value: rule.StringValue("success"),
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
-				s, err := params.GetString("str")
-				require.NoError(t, err)
-				require.Equal(t, "str", s)
-				i, err := params.GetInt64("nb")
-				require.NoError(t, err)
-				require.Equal(t, int64(10), i)
-				b, err := params.GetBool("boolean")
-				require.NoError(t, err)
-				require.True(t, b)
-			})
-			require.Equal(t, 1, s.EvalCount)
-		})
-
-		t.Run("OK With version", func(t *testing.T) {
-			exp := regula.EvalResult{
-				Value:   rule.StringValue("success"),
-				Version: "123",
-			}
-
-			call(t, "/rulesets/path/to/my/ruleset?eval&version=123&str=str&nb=10&boolean=true", http.StatusOK, &exp, func(params rule.Params) {
-				s, err := params.GetString("str")
-				require.NoError(t, err)
-				require.Equal(t, "str", s)
-			})
-			require.Equal(t, 1, s.EvalCount)
-		})
-
-		t.Run("NOK - Ruleset not found", func(t *testing.T) {
+		for _, e := range errs {
 			s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-				return nil, rerrors.ErrRulesetNotFound
+				return nil, e
 			}
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
 			h.ServeHTTP(w, r)
 
-			exp := reghttp.Error{
-				Err: "the path 'path/to/my/ruleset' doesn't exist",
-			}
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		}
+	})
+}
 
-			var resp reghttp.Error
-			err := json.Unmarshal(w.Body.Bytes(), &resp)
-			require.NoError(t, err)
-			require.Equal(t, http.StatusNotFound, w.Code)
-			require.Equal(t, exp, resp)
-		})
-
-		t.Run("NOK - errors", func(t *testing.T) {
-			errs := []error{
-				rerrors.ErrParamNotFound,
-				rerrors.ErrParamTypeMismatch,
-				rerrors.ErrNoMatch,
-			}
-
-			for _, e := range errs {
-				s.EvalFn = func(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error) {
-					return nil, e
-				}
-
-				w := httptest.NewRecorder()
-				r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
-				h.ServeHTTP(w, r)
-
-				require.Equal(t, http.StatusBadRequest, w.Code)
-			}
-		})
+func TestServerWatch(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{
+		WatchTimeout: 1 * time.Second,
 	})
 
-	t.Run("Watch", func(t *testing.T) {
-		l := api.RulesetEvents{
-			Events: []api.RulesetEvent{
-				{Type: api.RulesetPutEvent, Path: "a", Rules: r1},
-				{Type: api.RulesetPutEvent, Path: "b", Rules: r2},
-				{Type: api.RulesetPutEvent, Path: "a", Rules: r2},
-			},
-			Revision: "rev",
+	l := api.RulesetEvents{
+		Events: []api.RulesetEvent{
+			{Type: api.RulesetPutEvent, Path: "a", Rules: r1},
+			{Type: api.RulesetPutEvent, Path: "b", Rules: r2},
+			{Type: api.RulesetPutEvent, Path: "a", Rules: r2},
+		},
+		Revision: "rev",
+	}
+
+	tests := []struct {
+		name   string
+		path   string
+		status int
+		es     *api.RulesetEvents
+		err    error
+	}{
+		{"Root", "/rulesets/?watch", http.StatusOK, &l, nil},
+		{"WithPrefix", "/rulesets/a?watch", http.StatusOK, &l, nil},
+		{"NotFound", "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound},
+		{"Timeout", "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded},
+		{"ContextCanceled", "/rulesets/?watch", http.StatusOK, nil, context.Canceled},
+	}
+
+	for _, test := range tests {
+		s.WatchFn = func(context.Context, string, string) (*api.RulesetEvents, error) {
+			return test.es, test.err
 		}
+		defer func() { s.WatchFn = nil }()
 
-		call := func(t *testing.T, url string, code int, es *api.RulesetEvents, err error) {
-			t.Helper()
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", test.path, nil)
+		h.ServeHTTP(w, r)
 
-			s.WatchFn = func(context.Context, string, string) (*api.RulesetEvents, error) {
-				return es, err
-			}
-			defer func() { s.WatchFn = nil }()
+		require.Equal(t, test.status, w.Code)
 
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", url, nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusOK {
-				var res api.RulesetEvents
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				if es != nil {
-					require.Equal(t, len(es.Events), len(res.Events))
-					for i := range l.Events {
-						require.Equal(t, l.Events[i], res.Events[i])
-					}
-				}
-			}
-		}
-
-		t.Run("Root", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, &l, nil)
-		})
-
-		t.Run("WithPrefix", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusOK, &l, nil)
-		})
-
-		t.Run("NotFound", func(t *testing.T) {
-			call(t, "/rulesets/a?watch", http.StatusNotFound, &l, api.ErrRulesetNotFound)
-		})
-
-		t.Run("WithRevision", func(t *testing.T) {
-			t.Helper()
-
-			s.WatchFn = func(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
-				require.Equal(t, "a", prefix)
-				require.Equal(t, "somerev", revision)
-				return &l, nil
-			}
-			defer func() { s.WatchFn = nil }()
-
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/rulesets/a?watch&revision=somerev", nil)
-			h.ServeHTTP(w, r)
-
-			require.Equal(t, http.StatusOK, w.Code)
-
+		if test.status == http.StatusOK {
 			var res api.RulesetEvents
 			err := json.NewDecoder(w.Body).Decode(&res)
 			require.NoError(t, err)
-			require.Equal(t, len(l.Events), len(res.Events))
-			for i := range l.Events {
-				require.Equal(t, l.Events[i], res.Events[i])
+			if test.es != nil {
+				require.Equal(t, len(test.es.Events), len(res.Events))
+				for i := range l.Events {
+					require.Equal(t, l.Events[i], res.Events[i])
+				}
 			}
-		})
-
-		t.Run("Timeout", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, nil, context.DeadlineExceeded)
-		})
-
-		t.Run("ContextCanceled", func(t *testing.T) {
-			call(t, "/rulesets/?watch", http.StatusOK, nil, context.Canceled)
-		})
-	})
-
-	t.Run("Put", func(t *testing.T) {
-		e1 := regula.Ruleset{
-			Path:    "a",
-			Version: "version",
-			Rules:   r1,
 		}
+	}
 
-		call := func(t *testing.T, url string, code int, e *regula.Ruleset, putErr error) {
-			t.Helper()
+	t.Run("WithRevision", func(t *testing.T) {
+		s.WatchFn = func(ctx context.Context, prefix string, revision string) (*api.RulesetEvents, error) {
+			require.Equal(t, "a", prefix)
+			require.Equal(t, "somerev", revision)
+			return &l, nil
+		}
+		defer func() { s.WatchFn = nil }()
 
-			s.PutFn = func(context.Context, string, []*rule.Rule) (*regula.Ruleset, error) {
-				return e, putErr
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/rulesets/a?watch&revision=somerev", nil)
+		h.ServeHTTP(w, r)
+
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var res api.RulesetEvents
+		err := json.NewDecoder(w.Body).Decode(&res)
+		require.NoError(t, err)
+		require.Equal(t, len(l.Events), len(res.Events))
+		for i := range l.Events {
+			require.Equal(t, l.Events[i], res.Events[i])
+		}
+	})
+}
+
+func TestServerPut(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{})
+
+	tests := []struct {
+		name    string
+		path    string
+		status  int
+		version string
+		err     error
+	}{
+		{"OK", "/rulesets/a", http.StatusOK, "version", nil},
+		{"NotModified", "/rulesets/a", http.StatusOK, "version", api.ErrRulesetNotModified},
+		{"EmptyPath", "/rulesets/", http.StatusNotFound, "version", nil},
+		{"StoreError", "/rulesets/a", http.StatusInternalServerError, "", errors.New("some error")},
+		{"Bad ruleset name", "/rulesets/a", http.StatusBadRequest, "", new(api.ValidationError)},
+		{"Bad param name", "/rulesets/a", http.StatusBadRequest, "", new(api.ValidationError)},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s.PutFn = func(context.Context, string, []*rule.Rule) (string, error) {
+				return test.version, test.err
+			}
+			s.GetFn = func(ctx context.Context, path string, version string) (*regula.Ruleset, error) {
+				return &regula.Ruleset{
+					Path:    path,
+					Version: version,
+				}, nil
 			}
 			defer func() { s.PutFn = nil }()
 
@@ -407,90 +352,59 @@ func TestAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("PUT", url, &buf)
+			r := httptest.NewRequest("PUT", test.path, &buf)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
+			require.Equal(t, test.status, w.Code)
 
-			if code == http.StatusOK {
+			if test.status == http.StatusOK {
 				var rs regula.Ruleset
 				err := json.NewDecoder(w.Body).Decode(&rs)
 				require.NoError(t, err)
-				require.EqualValues(t, *e, rs)
+				require.Equal(t, test.version, rs.Version)
 			}
-		}
-
-		t.Run("OK", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, nil)
 		})
 
-		t.Run("NotModified", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusOK, &e1, api.ErrRulesetNotModified)
-		})
+	}
+}
 
-		t.Run("EmptyPath", func(t *testing.T) {
-			call(t, "/rulesets/", http.StatusNotFound, &e1, nil)
-		})
-
-		t.Run("StoreError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
-		})
-
-		t.Run("Bad ruleset name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
-
-		t.Run("Bad param name", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
+func TestServerCreate(t *testing.T) {
+	s := new(mock.RulesetService)
+	h := NewHandler(s, Config{
+		WatchTimeout: 1 * time.Second,
 	})
 
-	t.Run("Create", func(t *testing.T) {
-		sig := regula.Signature{ReturnType: "int64"}
+	sig := regula.Signature{ReturnType: "int64"}
 
-		e1 := regula.Ruleset{
-			Path:      "a",
-			Signature: &sig,
-		}
+	tests := []struct {
+		name   string
+		path   string
+		status int
+		err    error
+	}{
+		{"OK", "/rulesets/a", http.StatusCreated, nil},
+		{"StoreError", "/rulesets/a", http.StatusInternalServerError, errors.New("some error")},
+		{"Validation error", "/rulesets/a", http.StatusBadRequest, new(api.ValidationError)},
+	}
 
-		call := func(t *testing.T, url string, code int, e *regula.Ruleset, createErr error) {
-			t.Helper()
-
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resetStore(s)
 			s.CreateFn = func(context.Context, string, *regula.Signature) error {
-				return createErr
+				return test.err
 			}
-			defer func() { s.CreateFn = nil }()
 
 			var buf bytes.Buffer
 			err := json.NewEncoder(&buf).Encode(sig)
 			require.NoError(t, err)
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("POST", url, &buf)
+			r := httptest.NewRequest("POST", test.path, &buf)
 			h.ServeHTTP(w, r)
 
-			require.Equal(t, code, w.Code)
-
-			if code == http.StatusCreated {
-				var rs regula.Ruleset
-				err := json.NewDecoder(w.Body).Decode(&rs)
-				require.NoError(t, err)
-				require.EqualValues(t, *e, rs)
-			}
-		}
-
-		t.Run("OK", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusCreated, &e1, nil)
+			require.Equal(t, test.status, w.Code)
 		})
-
-		t.Run("StoreError", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusInternalServerError, nil, errors.New("some error"))
-		})
-
-		t.Run("Validation error", func(t *testing.T) {
-			call(t, "/rulesets/a", http.StatusBadRequest, nil, new(api.ValidationError))
-		})
-	})
+	}
 }
 
 func resetStore(s *mock.RulesetService) {
