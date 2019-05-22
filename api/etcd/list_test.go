@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// List returns all rulesets rulesets or not depending on the query string.
 func TestList(t *testing.T) {
 	rsTrue := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(true))}
 	rsFalse := []*rule.Rule{rule.New(rule.True(), rule.BoolValue(false))}
