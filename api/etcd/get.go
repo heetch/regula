@@ -50,8 +50,9 @@ func (s *RulesetService) Get(ctx context.Context, path, version string) (*regula
 	}
 
 	// the versions must be parsed from the keys returned by the second operation
-	versions := make([]string, len(resp.Responses[1].GetResponseRange().Kvs))
-	for i, kv := range resp.Responses[1].GetResponseRange().Kvs {
+	kvs := resp.Responses[1].GetResponseRange().Kvs
+	versions := make([]string, len(kvs))
+	for i, kv := range kvs {
 		_, versions[i] = s.pathVersionFromKey(string(kv.Key))
 	}
 
