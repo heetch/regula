@@ -78,7 +78,7 @@ type RulesetEvent struct {
 
 // RulesetEvents holds a list of events occured on a group of rulesets.
 type RulesetEvents struct {
-	Events   []RulesetEvent
-	Revision string
-	Timeout  bool // indicates if the watch did timeout
+	Events   []RulesetEvent `json:"events"`
+	Revision int64          `json:"revision"`
+	Timeout  bool           `json:"timeout"` // indicates if the watch did timeout
 }
