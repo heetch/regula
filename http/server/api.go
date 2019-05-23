@@ -21,6 +21,7 @@ type rulesetAPI struct {
 
 func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
+	r.ParseForm()
 
 	switch r.Method {
 	case "GET":
