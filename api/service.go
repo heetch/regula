@@ -30,8 +30,8 @@ type RulesetService interface {
 	// The listing is paginated and can be customised using the ListOptions type.
 	List(ctx context.Context, opt ListOptions) (*Rulesets, error)
 	// Watch a list of paths for changes and return a list of events. If the list is empty or nil,
-	// watch all paths. If the revision is empty, watch from the latest revision.
-	Watch(ctx context.Context, paths []string, revision string) (*RulesetEvents, error)
+	// watch all paths. If the revision is negative, watch from the latest revision.
+	Watch(ctx context.Context, paths []string, revision int64) (*RulesetEvents, error)
 	// Eval evaluates a ruleset given a path and a set of parameters. It implements the regula.Evaluator interface.
 	Eval(ctx context.Context, path, version string, params rule.Params) (*regula.EvalResult, error)
 }
