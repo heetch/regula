@@ -24,7 +24,7 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if _, ok := r.URL.Query()["list"]; ok {
+		if len(r.Form["list"]) > 0 {
 			if len(path) != 0 {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -32,14 +32,14 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.list(w, r)
 			return
 		}
-		if _, ok := r.URL.Query()["eval"]; ok {
+		if len(r.Form["eval"]) > 0 {
 			s.eval(w, r, path)
 			return
 		}
 		s.get(w, r, path)
 		return
 	case "POST":
-		if _, ok := r.URL.Query()["watch"]; ok {
+		if len(r.Form["watch"]) > 0 {
 			if len(path) != 0 {
 				w.WriteHeader(http.StatusNotFound)
 				return

@@ -49,6 +49,7 @@ func TestServer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/", nil)
+	r.ParseForm()
 	h.ServeHTTP(w, r)
 	require.Equal(t, http.StatusNotFound, w.Code)
 }
@@ -83,6 +84,7 @@ func TestServerGet(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", test.path, nil)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
@@ -107,7 +109,7 @@ func TestServerList(t *testing.T) {
 
 	rss := api.Rulesets{
 		Paths:    []string{"aa", "bb"},
-		Revision: "somerev",
+		Revision: 10,
 		Cursor:   "somecursor",
 	}
 
@@ -148,6 +150,7 @@ func TestServerList(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", test.path, nil)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
@@ -212,6 +215,7 @@ func TestServerEval(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", test.path, nil)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
@@ -232,6 +236,7 @@ func TestServerEval(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/rulesets/path/to/my/ruleset?eval&foo=10", nil)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
@@ -286,6 +291,7 @@ func TestServerWatch(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", test.path, strings.NewReader(test.body))
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
@@ -344,6 +350,7 @@ func TestServerPut(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("PUT", test.path, &buf)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
@@ -391,6 +398,7 @@ func TestServerCreate(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", test.path, &buf)
+			r.ParseForm()
 			h.ServeHTTP(w, r)
 
 			require.Equal(t, test.status, w.Code)
