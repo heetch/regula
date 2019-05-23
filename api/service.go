@@ -59,7 +59,7 @@ func (l *ListOptions) GetLimit() int {
 // Rulesets holds a list of rulesets.
 type Rulesets struct {
 	Paths    []string `json:"paths"`
-	Revision string   `json:"revision"`         // revision when the request was applied
+	Revision int64    `json:"revision"`         // revision when the request was applied
 	Cursor   string   `json:"cursor,omitempty"` // cursor of the next page, if any
 }
 

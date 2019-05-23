@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"encoding/base64"
-	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/heetch/regula/api"
@@ -45,7 +44,7 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 	}
 
 	rulesets := api.Rulesets{
-		Revision: strconv.FormatInt(resp.Header.Revision, 10),
+		Revision: resp.Header.Revision,
 	}
 
 	rulesets.Paths = make([]string, 0, len(resp.Kvs))
