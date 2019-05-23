@@ -35,6 +35,8 @@ func TestWatch(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
+				// wait enought time so that the other goroutine had the time to run the watch method
+				// before writing data to the database.
 				time.Sleep(time.Second)
 
 				r := rule.New(rule.True(), rule.BoolValue(true))
