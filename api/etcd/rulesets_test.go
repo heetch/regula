@@ -50,6 +50,8 @@ func newEtcdRulesetService(t *testing.T) (*RulesetService, func()) {
 }
 
 func createRuleset(t *testing.T, s *RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
+	t.Helper()
+
 	_, err := s.Put(context.Background(), path, rules)
 	if err != nil && err != api.ErrRulesetNotModified {
 		require.NoError(t, err)
@@ -61,6 +63,8 @@ func createRuleset(t *testing.T, s *RulesetService, path string, rules ...*rule.
 }
 
 func createBoolRuleset(t *testing.T, s *RulesetService, path string, rules ...*rule.Rule) *regula.Ruleset {
+	t.Helper()
+
 	err := s.Create(context.Background(), path, &regula.Signature{ReturnType: "bool"})
 	assert.False(t, err != nil && err != api.ErrAlreadyExists)
 	return createRuleset(t, s, path, rules...)
