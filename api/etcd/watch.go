@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/coreos/etcd/clientv3"
@@ -14,18 +13,17 @@ import (
 )
 
 // Watch a list of paths for changes and return a list of events. If the list is empty or nil,
-// watch all paths. If the revision is empty, watch from the latest revision.
+// watch all paths.If the revision is negative, watch from the latest revision.
 // This method blocks until there is a change if one of the paths or until the context is canceled.
 // The given context can be used to limit the watch period or to cancel any running one.
-func (s *RulesetService) Watch(ctx context.Context, paths []string, revision string) (*api.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int64) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	opts := []clientv3.OpOption{clientv3.WithPrefix()}
-	rev, _ := strconv.ParseInt(revision, 10, 64)
-	if rev > 0 {
+	if revision > 0 {
 		// watch from the next revision
-		opts = append(opts, clientv3.WithRev(rev+1))
+		opts = append(opts, clientv3.WithRev(revision+1))
 	}
 
 	var events api.RulesetEvents
@@ -38,7 +36,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 				return nil, errors.Wrapf(err, "failed to watch paths: '%#v'", paths)
 			}
 
-			rev = wresp.Header.Revision
+			revision = wresp.Header.Revision
 
 			if len(wresp.Events) == 0 {
 				continue
@@ -92,7 +90,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 			}
 
 			events.Events = list
-			events.Revision = strconv.FormatInt(rev, 10)
+			events.Revision = revision
 			return &events, nil
 		case <-ctx.Done():
 			events.Timeout = true
@@ -100,7 +98,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision str
 			// this function will go on until the context is canceled.
 			// we need to return the latest received revision so the
 			// caller can start after the filtered events.
-			events.Revision = strconv.FormatInt(rev, 10)
+			events.Revision = revision
 			return &events, ctx.Err()
 		}
 	}
