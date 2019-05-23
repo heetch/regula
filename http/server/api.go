@@ -191,7 +191,13 @@ func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	events, err := s.rulesets.Watch(r.Context(), paths, r.URL.Query().Get("revision"))
+	rev, err := strconv.ParseInt(r.URL.Query().Get("revision"), 10, 64)
+	if err != nil {
+		writeError(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	events, err := s.rulesets.Watch(r.Context(), paths, rev)
 	if err != nil {
 		switch err {
 		case context.Canceled:
