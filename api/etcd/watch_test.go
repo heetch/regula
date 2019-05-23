@@ -48,7 +48,7 @@ func TestWatch(t *testing.T) {
 			defer cancel()
 
 			var events api.RulesetEvents
-			var rev string
+			var rev int64
 			var watchCount int
 			for len(events.Events) != len(test.expected) && watchCount < 4 {
 				evs, err := s.Watch(ctx, test.paths, rev)
@@ -85,7 +85,7 @@ func TestWatch(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		events, err := s.Watch(ctx, nil, "")
+		events, err := s.Watch(ctx, nil, -1)
 		require.Equal(t, context.DeadlineExceeded, err)
 		require.True(t, events.Timeout)
 	})
