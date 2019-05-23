@@ -73,7 +73,8 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 				})
 			}
 
-			// none of the returned events matched the user selection
+    // None of the events matched the user selection, so continue
+    // waiting for more.
 			// we continue watching
 			if len(list) == 0 {
 				continue

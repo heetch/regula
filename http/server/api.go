@@ -182,7 +182,15 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
 	var paths []string
 
-	// an empty body means watch all paths
+	if r.ContentLength > 0 {
+		// There's a non-empty body, which means that the
+		// client has specified a set of paths to watch.
+		err := json.NewDecoder(r.Body).Decode(&paths)
+		if err != nil {
+			writeError(w, r, err, http.StatusBadRequest)
+			return
+		}
+	}
 	if r.ContentLength > 0 {
 		err := json.NewDecoder(r.Body).Decode(&paths)
 		if err != nil {
