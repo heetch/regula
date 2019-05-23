@@ -55,17 +55,17 @@ func TestWatch(t *testing.T) {
 			for len(events.Events) != len(test.expected) && watchCount < 4 {
 				evs, err := s.Watch(ctx, test.paths, rev)
 				if err != nil {
-if err != nil {
-    if err == context.DeadlineExceeded {
-       t.Errorf("timed out waiting for expected events")
-    } else {
-       t.Errorf("unexpected error from watcher: %v", err)
-    }
-   break
-}
+					if err != nil {
+						if err == context.DeadlineExceeded {
+							t.Errorf("timed out waiting for expected events")
+						} else {
+							t.Errorf("unexpected error from watcher: %v", err)
+						}
+						break
+					}
 					break
 				}
-assert.True(t, len(evs.Events) > 0)
+				assert.True(t, len(evs.Events) > 0)
 				assert.NotEmpty(t, evs.Revision)
 				rev = evs.Revision
 				events.Events = append(events.Events, evs.Events...)

@@ -191,13 +191,6 @@ func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if r.ContentLength > 0 {
-		err := json.NewDecoder(r.Body).Decode(&paths)
-		if err != nil {
-			writeError(w, r, err, http.StatusBadRequest)
-			return
-		}
-	}
 
 	revision := r.URL.Query().Get("revision")
 	var rev int64 = -1
