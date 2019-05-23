@@ -59,9 +59,10 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 				var pbrs pb.Rules
 				err := proto.Unmarshal(ev.Kv.Value, &pbrs)
 				if err != nil {
-					s.Logger.Debug().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed")
-					return nil, errors.Wrap(err, "failed to unmarshal entry")
+					s.Logger.Error().Bytes("entry", ev.Kv.Value).Msg("watch: unmarshalling failed, ignoring the event")
+					continue
 				}
+
 				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
 
 				list = append(list, api.RulesetEvent{
