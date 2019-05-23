@@ -43,7 +43,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 			}
 
 			var list []api.RulesetEvent
-			for i, ev := range wresp.Events {
+			for _, ev := range wresp.Events {
 				// filter keys that haven't been selected
 				if !s.shouldIncludeEvent(ev, paths) {
 					s.Logger.Debug().Str("type", string(ev.Type)).Str("key", string(ev.Kv.Key)).Msg("watch: ignoring event key")
@@ -56,10 +56,6 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 					continue
 				}
 
-				list = append(list, api.RulesetEvent{
-					Type: api.RulesetPutEvent,
-				})
-
 				var pbrs pb.Rules
 				err := proto.Unmarshal(ev.Kv.Value, &pbrs)
 				if err != nil {
@@ -67,9 +63,13 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 					return nil, errors.Wrap(err, "failed to unmarshal entry")
 				}
 				path, version := s.pathVersionFromKey(string(ev.Kv.Key))
-				list[i].Path = path
-				list[i].Rules = rulesFromProtobuf(&pbrs)
-				list[i].Version = version
+
+				list = append(list, api.RulesetEvent{
+					Type:    api.RulesetPutEvent,
+					Path:    path,
+					Rules:   rulesFromProtobuf(&pbrs),
+					Version: version,
+				})
 			}
 
 			// none of the returned events matched the user selection
