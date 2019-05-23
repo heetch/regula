@@ -44,19 +44,8 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 
 			var list []api.RulesetEvent
 			for i, ev := range wresp.Events {
-				// detect if the event key is found in the paths list
-				// or that the paths list is empty
-				key := string(ev.Kv.Key)
-				key = key[:strings.Index(key, versionSeparator)]
-				ok := len(paths) == 0
-				for i := 0; i < len(paths) && !ok; i++ {
-					if key == s.rulesPath(paths[i], "") {
-						ok = true
-					}
-				}
-
 				// filter keys that haven't been selected
-				if !ok {
+				if !s.shouldIncludeEvent(ev, paths) {
 					s.Logger.Debug().Str("type", string(ev.Type)).Str("key", string(ev.Kv.Key)).Msg("watch: ignoring event key")
 					continue
 				}
@@ -102,4 +91,21 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 			return &events, ctx.Err()
 		}
 	}
+}
+
+// shouldIncludeEvent reports whether the given event should be included
+// in the Watch data for the given paths.
+func (s *RulesetService) shouldIncludeEvent(ev *clientv3.Event, paths []string) bool {
+	// detect if the event key is found in the paths list
+	// or that the paths list is empty
+	key := string(ev.Kv.Key)
+	key = key[:strings.Index(key, versionSeparator)]
+	ok := len(paths) == 0
+	for i := 0; i < len(paths) && !ok; i++ {
+		if key == s.rulesPath(paths[i], "") {
+			ok = true
+		}
+	}
+
+	return ok
 }
