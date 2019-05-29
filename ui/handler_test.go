@@ -319,10 +319,29 @@ func TestSingleRulesetHandlerWithVersion(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "a/nice/ruleset", srr.Path)
 	require.Equal(t, "1", srr.Version)
+	require.Equal(t, []string{"1", "2"}, srr.Versions)
 	require.Equal(t, []rule{{SExpr: "#false", ReturnValue: "\"Goodbye\""}}, srr.Ruleset)
 	require.Contains(t, srr.Signature.Params, param{"name": "foo", "type": "int64"})
 	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
 	require.Equal(t, "string", srr.Signature.ReturnType)
+	require.Equal(t, 1, s.GetCount)
+}
+
+func TestSingleRulesetHandlerInvalidVersion(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+		require.Equal(t, "a/nice/ruleset", path)
+		// This is the most important part here - the version
+		// string is extracted correctly.
+		require.Equal(t, "flubber", v)
+
+		return nil, store.ErrNotFound
+	}
+	defer func() { s.GetFn = nil }()
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset?version=flubber", nil)
+	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Equal(t, 1, s.GetCount)
 }
 
