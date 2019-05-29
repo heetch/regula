@@ -208,8 +208,11 @@ func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (int, error)
 	return 0, nil
 }
 
-// handleSingleRuleset handles requests for a single ruleset,
-// returning the ruleset itself along with version information
+// handleSingleRuleset handles requests for a single rule set,
+// returning the ruleset itself along with version information.
+// Should a version parameter be passed in the query string of a
+// request, that specific version of the rule set is returned,
+// otherwise, the latest version is returned.
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
