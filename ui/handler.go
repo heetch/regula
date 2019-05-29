@@ -217,11 +217,19 @@ func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Req
 		h.handleListRequest(w, r)
 		return
 	}
+
+	qs := r.URL.Query()
+	version := ""
+	versions, found := qs["version"]
+	if found {
+		version = versions[0]
+	}
+
 	srr := &singleRulesetResponse{
 		Path: path,
 	}
 
-	entry, err := h.service.Get(r.Context(), path, "")
+	entry, err := h.service.Get(r.Context(), path, version)
 	if err != nil {
 		logger := reghttp.LoggerFromRequest(r)
 		logger.Debug().Msg("foo")
