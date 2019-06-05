@@ -14,7 +14,7 @@ import (
 
 // Watch a list of paths for changes and return a list of events. If paths is empty or nil,
 // watch all paths. If the revision is negative, watch from the latest revision.
-// This method blocks until there is a change if one of the paths or until the context is canceled.
+// This method blocks until there is a change in one of the paths or until the context is canceled.
 // The given context can be used to limit the watch period or to cancel any running one.
 func (s *RulesetService) Watch(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -77,7 +77,6 @@ func (s *RulesetService) Watch(ctx context.Context, opt api.WatchOptions) (*api.
 
 			// None of the events matched the user selection, so continue
 			// waiting for more.
-			// we continue watching
 			if len(list) == 0 {
 				continue
 			}
