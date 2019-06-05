@@ -21,11 +21,14 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+const maxLimit = 100
+
 // RulesetService manages the rulesets using etcd.
 type RulesetService struct {
-	Client    *clientv3.Client
-	Logger    zerolog.Logger
-	Namespace string
+	Client       *clientv3.Client
+	DefaultLimit int
+	Logger       zerolog.Logger
+	Namespace    string
 }
 
 // List returns all the rulesets entries under the given prefix.
@@ -34,8 +37,8 @@ func (s *RulesetService) List(ctx context.Context, prefix string, limit int, con
 
 	var key string
 
-	if limit < 0 || limit > 100 {
-		limit = 50 // TODO(asdine): make this configurable in future releases.
+	if limit < 0 || limit > maxLimit {
+		limit = s.DefaultLimit
 	}
 
 	if continueToken != "" {

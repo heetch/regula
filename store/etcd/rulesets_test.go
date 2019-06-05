@@ -24,11 +24,12 @@ var (
 )
 
 var (
-	dialTimeout = 5 * time.Second
-	endpoints   = []string{"localhost:2379", "etcd:2379"}
+	dialTimeout  = 5 * time.Second
+	endpoints    = []string{"localhost:2379", "etcd:2379"}
+	defaultLimit = 50
 )
 
-func Init() {
+func init() {
 	rand.Seed(time.Now().Unix())
 }
 
@@ -42,8 +43,9 @@ func newEtcdRulesetService(t *testing.T) (*etcd.RulesetService, func()) {
 	require.NoError(t, err)
 
 	s := etcd.RulesetService{
-		Client:    cli,
-		Namespace: fmt.Sprintf("regula-store-tests-%d/", rand.Int()),
+		Client:       cli,
+		DefaultLimit: defaultLimit,
+		Namespace:    fmt.Sprintf("regula-store-tests-%d/", rand.Int()),
 	}
 
 	return &s, func() {
@@ -150,6 +152,12 @@ func TestList(t *testing.T) {
 		entries, err = s.List(context.Background(), "y", -10, "")
 		require.NoError(t, err)
 		require.Len(t, entries.Entries, 5)
+
+		// change default limit and check whether it's applied
+		s.DefaultLimit = 3
+		entries, err = s.List(context.Background(), "y", -10, "")
+		require.NoError(t, err)
+		require.Len(t, entries.Entries, 3)
 	})
 }
 

@@ -22,8 +22,9 @@ import (
 // Config holds the server configuration.
 type Config struct {
 	Etcd struct {
-		Endpoints []string `config:"etcd-endpoints"`
-		Namespace string   `config:"etcd-namespace"`
+		Endpoints    []string `config:"etcd-endpoints"`
+		DefaultLimit int      `config:"etcd-default-limit"`
+		Namespace    string   `config:"etcd-namespace"`
 	}
 	Server struct {
 		Address      string        `config:"addr"`
@@ -40,6 +41,7 @@ func LoadConfig(args []string) (*Config, error) {
 	var cfg Config
 	flag := stdflag.NewFlagSet("", stdflag.ContinueOnError)
 	flag.StringVar(&cfg.Etcd.Namespace, "etcd-namespace", "", "etcd namespace to use")
+	flag.IntVar(&cfg.Etcd.DefaultLimit, "etcd-default-limit", 50, "etcd default limit for Get requests")
 	flag.StringVar(&cfg.LogLevel, "log-level", zerolog.DebugLevel.String(), "debug level")
 	cfg.Etcd.Endpoints = []string{"127.0.0.1:2379"}
 	flag.Var(commaSeparatedFlag{&cfg.Etcd.Endpoints}, "etcd-endpoints", "comma separated etcd endpoints")
