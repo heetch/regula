@@ -100,16 +100,15 @@ func (s *RulesetService) Watch(ctx context.Context, opt api.WatchOptions) (*api.
 // shouldIncludeEvent reports whether the given event should be included
 // in the Watch data for the given paths.
 func (s *RulesetService) shouldIncludeEvent(ev *clientv3.Event, paths []string) bool {
-	// detect if the event key is found in the paths list
-	// or that the paths list is empty
+	if len(paths) == 0 {
+		return true
+	}
 	key := string(ev.Kv.Key)
 	key = key[:strings.Index(key, versionSeparator)]
-	ok := len(paths) == 0
-	for i := 0; i < len(paths) && !ok; i++ {
-		if key == s.rulesPath(paths[i], "") {
-			ok = true
+	for _, path := range paths {
+		if s.rulesPath(path, "") == key {
+			return true
 		}
 	}
-
-	return ok
+	return false
 }
