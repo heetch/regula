@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/heetch/regula"
 	"github.com/heetch/regula/api"
@@ -17,6 +18,11 @@ import (
 
 type rulesetAPI struct {
 	rulesets api.RulesetService
+	// Timeout specific for the watch requests.
+	watchTimeout time.Duration
+	// Context used by the Watch endpoint. Used to cancel long running
+	// watch requests when the server is shutting down.
+	watchCancelCtx context.Context
 }
 
 func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +51,10 @@ func (s *rulesetAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			s.watch(w, r)
+
+			ctx, cancel := context.WithTimeout(s.watchCancelCtx, s.watchTimeout)
+			defer cancel()
+			s.watch(w, r.WithContext(ctx))
 			return
 		}
 

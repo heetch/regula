@@ -37,19 +37,14 @@ func NewHandler(rsService api.RulesetService, cfg Config) http.Handler {
 	}
 
 	rulesetsHandler := rulesetAPI{
-		rulesets: rsService,
+		rulesets:       rsService,
+		watchTimeout:   cfg.WatchTimeout,
+		watchCancelCtx: cfg.WatchCancelCtx,
 	}
 
 	// router
 	mux := http.NewServeMux()
 	mux.Handle("/rulesets/", http.StripPrefix("/rulesets/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.URL.Query()["watch"]; ok && r.Method == "GET" {
-			ctx, cancel := context.WithTimeout(cfg.WatchCancelCtx, cfg.WatchTimeout)
-			defer cancel()
-			rulesetsHandler.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-
 		ctx, cancel := context.WithTimeout(r.Context(), cfg.Timeout)
 		defer cancel()
 		rulesetsHandler.ServeHTTP(w, r.WithContext(ctx))
