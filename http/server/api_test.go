@@ -259,24 +259,24 @@ func TestServerWatch(t *testing.T) {
 		path   string
 		body   string
 		status int
-		fn     func(context.Context, []string, int64) (*api.RulesetEvents, error)
+		fn     func(context.Context, api.WatchOptions) (*api.RulesetEvents, error)
 	}{
-		{"No paths", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, int64) (*api.RulesetEvents, error) { return &l, nil }},
-		{"With paths", "/rulesets/?watch", `["a", "b", "c"]`, http.StatusOK, func(ctx context.Context, paths []string, rev int64) (*api.RulesetEvents, error) {
-			require.EqualValues(t, -1, rev)
-			require.Equal(t, []string{"a", "b", "c"}, paths)
+		{"No paths", "/rulesets/?watch", "", http.StatusOK, func(context.Context, api.WatchOptions) (*api.RulesetEvents, error) { return &l, nil }},
+		{"With paths", "/rulesets/?watch", `{"paths": ["a", "b", "c"]}`, http.StatusOK, func(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) {
+			require.EqualValues(t, 0, opt.Revision)
+			require.Equal(t, []string{"a", "b", "c"}, opt.Paths)
 			return &l, nil
 		}},
-		{"Bad JSON", "/rulesets/?watch", `["a`, http.StatusBadRequest, func(ctx context.Context, paths []string, rev int64) (*api.RulesetEvents, error) { return nil, nil }},
-		{"Timeout", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, int64) (*api.RulesetEvents, error) {
+		{"Bad JSON", "/rulesets/?watch", `["a`, http.StatusBadRequest, func(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) { return nil, nil }},
+		{"Timeout", "/rulesets/?watch", "", http.StatusOK, func(context.Context, api.WatchOptions) (*api.RulesetEvents, error) {
 			return nil, context.DeadlineExceeded
 		}},
-		{"ContextCanceled", "/rulesets/?watch", "", http.StatusOK, func(context.Context, []string, int64) (*api.RulesetEvents, error) { return nil, context.Canceled }},
-		{"WithRevision", "/rulesets/?watch&revision=100", "", http.StatusOK, func(ctx context.Context, paths []string, rev int64) (*api.RulesetEvents, error) {
-			require.EqualValues(t, 100, rev)
+		{"ContextCanceled", "/rulesets/?watch", "", http.StatusOK, func(context.Context, api.WatchOptions) (*api.RulesetEvents, error) { return nil, context.Canceled }},
+		{"WithRevision", "/rulesets/?watch", `{"revision": 100}`, http.StatusOK, func(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) {
+			require.EqualValues(t, 100, opt.Revision)
 			return &l, nil
 		}},
-		{"WithBadRevision", "/rulesets/?watch&revision=somerev", "", http.StatusBadRequest, func(ctx context.Context, paths []string, rev int64) (*api.RulesetEvents, error) { return &l, nil }},
+		{"WithBadRevision", "/rulesets/?watch", `{"revision": "somerev"}`, http.StatusBadRequest, func(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) { return &l, nil }},
 	}
 
 	for _, test := range tests {

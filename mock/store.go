@@ -20,7 +20,7 @@ type RulesetService struct {
 	ListCount   int
 	ListFn      func(context.Context, api.ListOptions) (*api.Rulesets, error)
 	WatchCount  int
-	WatchFn     func(context.Context, []string, int64) (*api.RulesetEvents, error)
+	WatchFn     func(context.Context, api.WatchOptions) (*api.RulesetEvents, error)
 	PutCount    int
 	PutFn       func(context.Context, string, []*rule.Rule) (string, error)
 	EvalCount   int
@@ -61,11 +61,11 @@ func (s *RulesetService) List(ctx context.Context, opt api.ListOptions) (*api.Ru
 }
 
 // Watch runs WatchFn if provided and increments WatchCount when invoked.
-func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int64) (*api.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) {
 	s.WatchCount++
 
 	if s.WatchFn != nil {
-		return s.WatchFn(ctx, paths, revision)
+		return s.WatchFn(ctx, opt)
 	}
 
 	return nil, nil

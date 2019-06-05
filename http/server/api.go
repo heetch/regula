@@ -177,34 +177,23 @@ func (s *rulesetAPI) eval(w http.ResponseWriter, r *http.Request, path string) {
 
 // watch is a long polling endpoint that watches a list of paths for change and returns a list of events containing all the changes
 // that happened since the start of the watch.
-// if the revision query param is specified, it returns anything that happened after that revision.
+// If the revision query param is specified, it returns anything that happened after that revision.
 // If no paths are specificied, it watches any path.
 // The request context can be used to limit the watch period or to cancel any running one.
 func (s *rulesetAPI) watch(w http.ResponseWriter, r *http.Request) {
-	var paths []string
+	var wo api.WatchOptions
 
 	if r.ContentLength > 0 {
 		// There's a non-empty body, which means that the
 		// client has specified a set of paths to watch.
-		err := json.NewDecoder(r.Body).Decode(&paths)
+		err := json.NewDecoder(r.Body).Decode(&wo)
 		if err != nil {
 			writeError(w, r, err, http.StatusBadRequest)
 			return
 		}
 	}
 
-	revision := r.URL.Query().Get("revision")
-	var rev int64 = -1
-	var err error
-	if revision != "" {
-		rev, err = strconv.ParseInt(revision, 10, 64)
-		if err != nil {
-			writeError(w, r, err, http.StatusBadRequest)
-			return
-		}
-	}
-
-	events, err := s.rulesets.Watch(r.Context(), paths, rev)
+	events, err := s.rulesets.Watch(r.Context(), wo)
 	if err != nil {
 		switch err {
 		case context.Canceled:
