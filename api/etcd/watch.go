@@ -12,13 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Watch a list of paths for changes and return a list of events. If the list is empty or nil,
-// watch all paths.If the revision is negative, watch from the latest revision.
+// Watch a list of paths for changes and return a list of events. If paths is empty or nil,
+// watch all paths. If the revision is negative, watch from the latest revision.
 // This method blocks until there is a change if one of the paths or until the context is canceled.
 // The given context can be used to limit the watch period or to cancel any running one.
-func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int64) (*api.RulesetEvents, error) {
+func (s *RulesetService) Watch(ctx context.Context, opt api.WatchOptions) (*api.RulesetEvents, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	revision := opt.Revision
 
 	opts := []clientv3.OpOption{clientv3.WithPrefix()}
 	if revision > 0 {
@@ -33,7 +35,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 		select {
 		case wresp := <-wc:
 			if err := wresp.Err(); err != nil {
-				return nil, errors.Wrapf(err, "failed to watch paths: '%#v'", paths)
+				return nil, errors.Wrapf(err, "failed to watch paths: '%#v'", opt.Paths)
 			}
 
 			revision = wresp.Header.Revision
@@ -45,7 +47,7 @@ func (s *RulesetService) Watch(ctx context.Context, paths []string, revision int
 			var list []api.RulesetEvent
 			for _, ev := range wresp.Events {
 				// filter keys that haven't been selected
-				if !s.shouldIncludeEvent(ev, paths) {
+				if !s.shouldIncludeEvent(ev, opt.Paths) {
 					s.Logger.Debug().Str("type", string(ev.Type)).Str("key", string(ev.Kv.Key)).Msg("watch: ignoring event key")
 					continue
 				}
