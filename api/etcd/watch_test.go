@@ -35,7 +35,7 @@ func TestWatch(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				// wait enought time so that the other goroutine had the time to run the watch method
+				// wait enough time so that the other goroutine had the time to run the watch method
 				// before writing data to the database.
 				time.Sleep(time.Second)
 
@@ -55,13 +55,10 @@ func TestWatch(t *testing.T) {
 			for len(events.Events) != len(test.expected) && watchCount < 4 {
 				evs, err := s.Watch(ctx, api.WatchOptions{Paths: test.paths, Revision: rev})
 				if err != nil {
-					if err != nil {
-						if err == context.DeadlineExceeded {
-							t.Errorf("timed out waiting for expected events")
-						} else {
-							t.Errorf("unexpected error from watcher: %v", err)
-						}
-						break
+					if err == context.DeadlineExceeded {
+						t.Errorf("timed out waiting for expected events")
+					} else {
+						t.Errorf("unexpected error from watcher: %v", err)
 					}
 					break
 				}
