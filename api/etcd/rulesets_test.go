@@ -25,12 +25,10 @@ var (
 	endpoints   = []string{"localhost:2379", "etcd:2379"}
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func newEtcdRulesetService(t *testing.T) (*RulesetService, func()) {
 	t.Helper()
+
+	rand.Seed(time.Now().UnixNano())
 
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,

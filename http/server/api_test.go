@@ -290,16 +290,17 @@ func TestServerWatch(t *testing.T) {
 
 			require.Equal(t, test.status, w.Code)
 
-			if test.status == http.StatusOK {
-				var res api.RulesetEvents
-				require.True(t, w.Body.Len() > 0)
-				err := json.NewDecoder(w.Body).Decode(&res)
-				require.NoError(t, err)
-				if len(res.Events) > 0 {
-					require.Equal(t, len(l.Events), len(res.Events))
-					for i := range l.Events {
-						require.Equal(t, l.Events[i], res.Events[i])
-					}
+			if test.status != http.StatusOK {
+				return
+			}
+			var res api.RulesetEvents
+			require.True(t, w.Body.Len() > 0)
+			err := json.NewDecoder(w.Body).Decode(&res)
+			require.NoError(t, err)
+			if len(res.Events) > 0 {
+				require.Equal(t, len(l.Events), len(res.Events))
+				for i := range l.Events {
+					require.Equal(t, l.Events[i], res.Events[i])
 				}
 			}
 		})
