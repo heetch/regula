@@ -120,6 +120,10 @@ func isRetriableError(err error) bool {
 		return false
 	}
 
+	if e, ok := err.(*url.Error); ok {
+		return !e.Timeout()
+	}
+
 	if _, ok := err.(net.Error); ok {
 		return true
 	}
