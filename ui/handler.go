@@ -209,7 +209,10 @@ func updateEntry(entry *store.RulesetEntry, nrr *newRulesetRequest) (int, error)
 }
 
 // handleSingleRuleset handles requests for a single ruleset,
-// returning the ruleset itself along with version information
+// returning the ruleset itself along with version information.
+// Should a version parameter be passed in the query string of a
+// request, that specific version of the ruleset is returned,
+// otherwise, the latest version is returned.
 func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/rulesets/")
 
@@ -217,11 +220,19 @@ func (h *internalHandler) handleSingleRuleset(w http.ResponseWriter, r *http.Req
 		h.handleListRequest(w, r)
 		return
 	}
+
+	qs := r.URL.Query()
+	version := ""
+	versions, found := qs["version"]
+	if found {
+		version = versions[0]
+	}
+
 	srr := &singleRulesetResponse{
 		Path: path,
 	}
 
-	entry, err := h.service.Get(r.Context(), path, "")
+	entry, err := h.service.Get(r.Context(), path, version)
 	if err != nil {
 		logger := reghttp.LoggerFromRequest(r)
 		logger.Debug().Msg("foo")

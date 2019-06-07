@@ -227,6 +227,8 @@ func TestSingleRulesetHandler(t *testing.T) {
 
 	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
 		require.Equal(t, "a/nice/ruleset", path)
+		// No stray data gets put into version
+		require.Equal(t, "", v)
 
 		entry := &store.RulesetEntry{
 			Path:    path,
@@ -268,6 +270,78 @@ func TestSingleRulesetHandler(t *testing.T) {
 	require.Contains(t, srr.Signature.Params, param{"name": "foo", "type": "int64"})
 	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
 	require.Equal(t, "string", srr.Signature.ReturnType)
+	require.Equal(t, 1, s.GetCount)
+}
+
+func TestSingleRulesetHandlerWithVersion(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+		require.Equal(t, "a/nice/ruleset", path)
+
+		// This is the most important part here - the version
+		// string is extracted correctly.
+		require.Equal(t, "1", v)
+
+		entry := &store.RulesetEntry{
+			Path:    path,
+			Version: "1",
+			Ruleset: &regula.Ruleset{
+				Rules: []*regrule.Rule{
+					&regrule.Rule{
+						Expr:   regrule.BoolValue(false),
+						Result: regrule.StringValue("Goodbye"),
+					},
+				},
+				Type: "string",
+			}, //    *regula.Ruleset
+			Signature: &regula.Signature{
+				ParamTypes: map[string]string{
+					"foo": "int64",
+					"bar": "string",
+				},
+				ReturnType: "string",
+			}, //*regula.Signature
+			Versions: []string{"1", "2"},
+		}
+		return entry, nil
+	}
+	defer func() { s.GetFn = nil }()
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset?version=1", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.Bytes()
+	// Note: we could use require.JSONEq here, but the ordering of
+	// params and rules are not stable and JSONEq can't cope with
+	// disparate ordering.
+	srr := &singleRulesetResponse{}
+	err := json.Unmarshal(body, srr)
+	require.NoError(t, err)
+	require.Equal(t, "a/nice/ruleset", srr.Path)
+	require.Equal(t, "1", srr.Version)
+	require.Equal(t, []string{"1", "2"}, srr.Versions)
+	require.Equal(t, []rule{{SExpr: "#false", ReturnValue: "\"Goodbye\""}}, srr.Ruleset)
+	require.Contains(t, srr.Signature.Params, param{"name": "foo", "type": "int64"})
+	require.Contains(t, srr.Signature.Params, param{"name": "bar", "type": "string"})
+	require.Equal(t, "string", srr.Signature.ReturnType)
+	require.Equal(t, 1, s.GetCount)
+}
+
+func TestSingleRulesetHandlerInvalidVersion(t *testing.T) {
+	s := new(mock.RulesetService)
+
+	s.GetFn = func(ctx context.Context, path, v string) (*store.RulesetEntry, error) {
+		require.Equal(t, "a/nice/ruleset", path)
+		// This is the most important part here - the version
+		// string is extracted correctly.
+		require.Equal(t, "flubber", v)
+
+		return nil, store.ErrNotFound
+	}
+	defer func() { s.GetFn = nil }()
+
+	rec := doRequest(NewHandler(s, http.Dir("")), "GET", "/i/rulesets/a/nice/ruleset?version=flubber", nil)
+	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Equal(t, 1, s.GetCount)
 }
 
