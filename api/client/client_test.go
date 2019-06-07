@@ -56,7 +56,7 @@ func (te *timeoutErr) Timeout() bool {
 
 // Error makes timeoutErr comply with the error interface.
 func (te *timeoutErr) Error() string {
-	return "net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers"
+	return "net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
 }
 
 func TestTimeout(t *testing.T) {
