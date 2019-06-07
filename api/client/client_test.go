@@ -77,7 +77,7 @@ func TestTimeout(t *testing.T) {
 	require.NoError(t, err)
 	_, err = c.tryN(context.Background(), req, nil, 3)
 	// // This *must* error
-	require.EqualError(t, err, "foo http://www.example.com/api/test: net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers")
+	require.EqualError(t, err, "foo http://www.example.com/api/test: net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)")
 	// Explicitly check we don't retry
 	require.Equal(t, 1, rtc.Count)
 }
