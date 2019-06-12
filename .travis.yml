@@ -6,22 +6,15 @@ services:
   - docker
 
 before_install:
-  - mkdir -p $GOPATH/bin
-  - wget -O $GOPATH/bin/dep "https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64"
-  - chmod +x $GOPATH/bin/dep
-  - export PATH="$GOPATH/bin:$PATH"
   - docker run -d -p 2379:2379 quay.io/coreos/etcd /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379
 
-install: dep ensure
-
 go:
-  - '1.10'
-  - '1.11'
-  - '1.12'
+  - '1.11.x'
+  - '1.12.x'
   - tip
 
 script:
-  - go test -v -race -cover -timeout=1m ./...
+  - GO111MODULE=on go test -v -race -cover -timeout=1m ./...
 
 deploy:
   provider: script
@@ -29,4 +22,4 @@ deploy:
   script: .ci/docker.sh
   on:
     tags: true
-    go: '1.12'
+    go: '1.12.x'
