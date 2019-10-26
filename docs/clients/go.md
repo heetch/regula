@@ -24,7 +24,7 @@ Regula provides three ways to do so.
 
 #### Server-side evaluation
 
-One of the simplest methods is to deleguate the evaluation of rulesets to the Regula server.
+One of the simplest methods is to delegate the evaluation of rulesets to the Regula server.
 In order to do that, you must use the Regula Client Ruleset API which implements the `Evaluator` interface.
 
 ```go
