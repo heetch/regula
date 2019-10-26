@@ -44,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create an engine and pass the client.Rulesets field whitch instantiates the regula.Evaluator interface.
+	// Create an engine and pass the client.Rulesets field which instantiates the regula.Evaluator interface.
 	ng := regula.NewEngine(cli.Rulesets)
 
 	// Every call to the engine methods will send a request to the server.
