@@ -1,3 +1,5 @@
+⚠️ regula library has been archived and is no longer under active maintenance.
+
 # Regula
 
 [![Build Status](https://travis-ci.org/heetch/regula.svg?branch=master)](https://travis-ci.org/heetch/regula)
